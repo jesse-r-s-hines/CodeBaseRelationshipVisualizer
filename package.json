@@ -12,25 +12,19 @@
         "Visualization", "Debuggers"
     ],
     "activationEvents": [
-        "onCommand:catCoding.start",
-        "onCommand:catCoding.doRefactor",
-        "onWebviewPanel:catCoding"
+        "onCommand:codeStructureVisualization.start",
+        "onWebviewPanel:codeStructureVisualization"
     ],
-    "main": "./out/extension.js",
     "contributes": {
         "commands": [
             {
-                "command": "catCoding.start",
-                "title": "Start cat coding session",
-                "category": "Cat Coding"
-            },
-            {
-                "command": "catCoding.doRefactor",
-                "title": "Do some refactoring",
-                "category": "Cat Coding"
+                "command": "codeStructureVisualization.start",
+                "title": "Visualize relationships between source code files",
+                "category": "Code Structure Visualization"
             }
         ]
     },
+    "main": "./out/extension.js",
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
