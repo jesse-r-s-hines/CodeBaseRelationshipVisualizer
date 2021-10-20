@@ -1,6 +1,12 @@
 import * as vscode from 'vscode';
+import {DebugAdapterTracker, DebugSession} from 'vscode'
+import {DebugProtocol} from 'vscode-debugprotocol'
+
 
 export function activate(context: vscode.ExtensionContext) {
+    console.log("Code Structure Visualization active")
+    vscode.debug.registerDebugAdapterTrackerFactory("*", new MyDebugAdapterTrackerFactory())
+
     context.subscriptions.push(
         vscode.commands.registerCommand('codeStructureVisualization.start', () => {
             // Create and show panel
@@ -17,6 +23,23 @@ export function activate(context: vscode.ExtensionContext) {
             panel.webview.html = getWebviewContent();
           })
     );
+}
+
+class MyDebugAdapterTrackerFactory implements vscode.DebugAdapterTrackerFactory {
+    createDebugAdapterTracker(session: DebugSession): DebugAdapterTracker {
+        return {
+            async onDidSendMessage(msg: DebugProtocol.ProtocolMessage) {
+                if (msg.type == "event" && (msg as DebugProtocol.Event).event == "stopped") {
+                    let stoppedMsg = msg as DebugProtocol.StoppedEvent
+                    const threadId = stoppedMsg.body.threadId
+                    let reply = await session.customRequest("stackTrace", {
+                        threadId: threadId,
+                    }) as DebugProtocol.StackTraceResponse;
+                    console.log(reply)
+                }
+            }
+        }
+    }
 }
 
 function getWebviewContent() {

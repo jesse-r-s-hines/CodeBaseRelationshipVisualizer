@@ -9,9 +9,11 @@
         "vscode": "^1.47.0"
     },
     "categories": [
-        "Visualization", "Debuggers"
+        "Visualization",
+        "Debuggers"
     ],
     "activationEvents": [
+        "onDebug",
         "onCommand:codeStructureVisualization.start",
         "onWebviewPanel:codeStructureVisualization"
     ],
@@ -38,6 +40,7 @@
         "@typescript-eslint/eslint-plugin": "^4.16.0",
         "@typescript-eslint/parser": "^4.16.0",
         "eslint": "^7.21.0",
-        "typescript": "^4.4.3"
+        "typescript": "^4.4.3",
+        "vscode-debugprotocol": "^1.49.0"
     }
 }
