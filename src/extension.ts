@@ -1,14 +1,21 @@
 import * as vscode from 'vscode';
-import {DebugAdapterTracker, DebugSession} from 'vscode'
+import {workspace, DebugAdapterTracker, DebugSession, Uri, FileType} from 'vscode'
 import {DebugProtocol} from 'vscode-debugprotocol'
+import * as path from 'path';
 
+interface FileTree {
+    type: FileType
+    filename: string
+    children?: FileTree[]
+    size?: number
+}
 
 export function activate(context: vscode.ExtensionContext) {
     console.log("Code Structure Visualization active")
-    vscode.debug.registerDebugAdapterTrackerFactory("*", new MyDebugAdapterTrackerFactory())
+    // vscode.debug.registerDebugAdapterTrackerFactory("*", new MyDebugAdapterTrackerFactory())
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('codeStructureVisualization.start', () => {
+        vscode.commands.registerCommand('codeStructureVisualization.start', async () => {
             // Create and show panel
             const panel = vscode.window.createWebviewPanel(
                 'codeStructureVisualization',
@@ -20,8 +27,9 @@ export function activate(context: vscode.ExtensionContext) {
             );
 
             // And set its HTML content
-            panel.webview.html = getWebviewContent();
-          })
+            let folder = await getWorkspaceFileTree()
+            console.log(folder)
+        })
     );
 }
 
@@ -42,7 +50,29 @@ class MyDebugAdapterTrackerFactory implements vscode.DebugAdapterTrackerFactory 
     }
 }
 
-function getWebviewContent() {
+async function getWorkspaceFileTree(): Promise<FileTree|undefined> {
+    if(vscode.workspace.workspaceFolders !== undefined) {
+        let base = vscode.workspace.workspaceFolders[0].uri;
+        return await getFileTree(base, FileType.Directory)
+    } else {
+        return undefined
+    }
+}
+
+async function getFileTree(uri: Uri, type: FileType): Promise<FileTree> {
+    let rtrn = {
+        type: type,
+        filename: path.basename(uri.fsPath),
+    }
+    if (type == FileType.Directory) {
+        let files = await workspace.fs.readDirectory(uri)
+        let children = await Promise.all(files.map(([name, type]) => getFileTree(Uri.joinPath(uri, name), type)))
+        return {...rtrn, children: children}
+    } else {
+        return {...rtrn, size: (await workspace.fs.stat(uri)).size || 1}
+    }
+}
+
     return `
         <!DOCTYPE html>
         <html lang="en">
