@@ -70,7 +70,7 @@ async function getWorkspaceFileTree(): Promise<FileTree|undefined> {
 async function getFileTree(uri: Uri, type: FileType): Promise<FileTree> {
     let rtrn = {
         type: type,
-        filename: path.basename(uri.fsPath),
+        name: path.basename(uri.fsPath),
     }
     if (type == FileType.Directory) {
         let files = await workspace.fs.readDirectory(uri)
