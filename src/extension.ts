@@ -27,8 +27,16 @@ export function activate(context: vscode.ExtensionContext) {
             );
 
             // And set its HTML content
-            let folder = await getWorkspaceFileTree()
-            console.log(folder)
+            // let folder = await getWorkspaceFileTree()
+            let extPath = vscode.Uri.file(context.extensionPath)
+            const jsonUri = Uri.joinPath(extPath, "src", "sample.json");
+            let folder = JSON.parse((await vscode.workspace.openTextDocument(jsonUri)).getText()) as FileTree;
+
+            if (folder) {
+                panel.webview.html = getWebviewContent(folder, context);
+            } else {
+                // no workspace
+            }
         })
     );
 }
@@ -73,6 +81,10 @@ async function getFileTree(uri: Uri, type: FileType): Promise<FileTree> {
     }
 }
 
+function getWebviewContent(folder: FileTree, context: vscode.ExtensionContext) {
+    let extPath = vscode.Uri.file(context.extensionPath)
+    const scriptUri = Uri.joinPath(extPath, "src", "diagram.js").with({ 'scheme': 'vscode-resource' });
+
     return `
         <!DOCTYPE html>
         <html lang="en">
@@ -81,22 +93,14 @@ async function getFileTree(uri: Uri, type: FileType): Promise<FileTree> {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Circle</title>
             <script src="https://d3js.org/d3.v7.min.js"></script>
+            <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
         </head>
         <body>
-            <svg id="canvas"></svg>
+            <div id="canvas"></div>
             <script>
-                let [width, height] = [1000, 1000]
-            
-                const canvas = d3.select("#canvas")
-                    .attr("viewBox", [0, 0, width, height])
-                    .style("font", "10px sans-serif")
-                    .attr("text-anchor", "middle");
-        
-                canvas.append("circle")
-                    .attr("r", 450)
-                    .attr("cx", 500).attr("cy", 500)
-                    .attr("fill", "blue");
+                window.folder = ${JSON.stringify(folder)}
             </script>
+            <script src="${scriptUri}"/>
         </body>
         </html>
   `  
