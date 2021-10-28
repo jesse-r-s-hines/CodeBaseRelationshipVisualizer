@@ -5,9 +5,13 @@ import * as path from 'path';
 
 interface FileTree {
     type: FileType
-    filename: string
+    name: string
     children?: FileTree[]
     size?: number
+}
+
+function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -16,27 +20,71 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('codeStructureVisualization.start', async () => {
-            // Create and show panel
-            const panel = vscode.window.createWebviewPanel(
-                'codeStructureVisualization',
-                'Code Structure Visualization',
-                vscode.ViewColumn.One,
-                {
-                  enableScripts: true
+            let session = vscode.debug.activeDebugSession
+            if (session) {
+                let folder = (await getWorkspaceFileTree())!
+                function flatten(file: FileTree, parentPath: string = ""): string[] {
+                    let filePath = path.join(parentPath, file.name)
+                    if (file.children) {
+                        return ([] as string[]).concat(...file.children.map(f => flatten(f, filePath)))
+                    } else {
+                        return [filePath]
+                    }
                 }
-            );
+                let workspacePath = workspace.workspaceFolders![0].uri;
+
+                let files = flatten(folder).filter(f => f.endsWith(".py")).map(
+                    f => f.replace(`${folder.name}/`, "")
+                    // f => Uri.joinPath(workspacePath, f.replace(`${folder.name}/`, ""))
+
+                )
+                let fileBreakpoints: {[file: string]: DebugProtocol.SourceBreakpoint[]} = {}
+                for (let file of files) {
+                    let lines = (await workspace.openTextDocument(Uri.joinPath(workspacePath, file))).getText().split("\n").length
+                    fileBreakpoints[file] =  [...Array(lines).keys()].map(i => ({line: i + 1}))
+                }
+
+                let threadId = (await session.customRequest('threads')).threads[0].id
+
+                while (true) {
+                    let stackFrames: DebugProtocol.StackFrame[] = (await session.customRequest("stackTrace", { threadId: threadId })).stackFrames;
+                    let currentFile = stackFrames[stackFrames.length - 1].source!.path!
+                    
+                    for (let file of files) {
+                        let breakpoints = currentFile.endsWith(file) ? [] : fileBreakpoints[file]
+                        console.log(await session.customRequest("setBreakpoints", {
+                            source: {path: file},
+                            breakpoints: breakpoints,
+                        }));
+                    }
+
+
+                    await session.customRequest("continue", { threadId: threadId })
+                    await sleep(1000)
+                }
+            }
+
+            // // Create and show panel
+            // const panel = vscode.window.createWebviewPanel(
+            //     'codeStructureVisualization',
+            //     'Code Structure Visualization',
+            //     vscode.ViewColumn.One,
+            //     {
+            //       enableScripts: true
+            //     }
+            // );
 
             // And set its HTML content
             // let folder = await getWorkspaceFileTree()
-            let extPath = vscode.Uri.file(context.extensionPath)
-            const jsonUri = Uri.joinPath(extPath, "src", "sample.json");
-            let folder = JSON.parse((await vscode.workspace.openTextDocument(jsonUri)).getText()) as FileTree;
+            // let extPath = vscode.Uri.file(context.extensionPath)
+            // const jsonUri = Uri.joinPath(extPath, "src", "sample.json");
+            // let folder = JSON.parse((await vscode.workspace.openTextDocument(jsonUri)).getText()) as FileTree;
 
-            if (folder) {
-                panel.webview.html = getWebviewContent(folder, context);
-            } else {
-                // no workspace
-            }
+            // if (folder) {
+            //     panel.webview.html = getWebviewContent(folder, context);
+            // } else {
+            //     // no workspace
+            // }
         })
     );
 }
