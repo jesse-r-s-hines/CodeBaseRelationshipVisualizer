@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import {workspace, DebugAdapterTracker, DebugSession, Uri, FileType} from 'vscode'
+import {workspace, DebugAdapterTracker, DebugSession, Uri, FileType, SourceBreakpoint, Location, Range, Position} from 'vscode'
 import {DebugProtocol} from 'vscode-debugprotocol'
 import * as path from 'path';
 
@@ -34,14 +34,17 @@ export function activate(context: vscode.ExtensionContext) {
                 let workspacePath = workspace.workspaceFolders![0].uri;
 
                 let files = flatten(folder).filter(f => f.endsWith(".py")).map(
-                    f => f.replace(`${folder.name}/`, "")
-                    // f => Uri.joinPath(workspacePath, f.replace(`${folder.name}/`, ""))
-
+                    f => Uri.joinPath(workspacePath, f.replace(`${folder.name}/`, ""))
                 )
-                let fileBreakpoints: {[file: string]: DebugProtocol.SourceBreakpoint[]} = {}
+                let fileBreakpoints: {[file: string]: SourceBreakpoint[]} = {}
                 for (let file of files) {
-                    let lines = (await workspace.openTextDocument(Uri.joinPath(workspacePath, file))).getText().split("\n").length
-                    fileBreakpoints[file] =  [...Array(lines).keys()].map(i => ({line: i + 1}))
+                    let lines = (await workspace.openTextDocument(file)).getText().split("\n")
+                    fileBreakpoints[file.fsPath] =  [...Array(lines.length).keys()].map(i =>
+                        new SourceBreakpoint(new Location(file, new Position(i, 0))
+                    ))
+                    // fileBreakpoints[file.fsPath] = [new SourceBreakpoint(new Location(file, new Range(
+                    //     new Position(0, 0), new Position(lines.length - 1, lines[lines.length - 1].length - 1))
+                    // ))]
                 }
 
                 let threadId = (await session.customRequest('threads')).threads[0].id
@@ -51,16 +54,12 @@ export function activate(context: vscode.ExtensionContext) {
                     let currentFile = stackFrames[stackFrames.length - 1].source!.path!
                     
                     for (let file of files) {
-                        let breakpoints = currentFile.endsWith(file) ? [] : fileBreakpoints[file]
-                        console.log(await session.customRequest("setBreakpoints", {
-                            source: {path: file},
-                            breakpoints: breakpoints,
-                        }));
+                        let breakpoints = currentFile == file.fsPath ? [] : fileBreakpoints[file.fsPath]
+                        vscode.debug.addBreakpoints(breakpoints)
                     }
 
-
                     await session.customRequest("continue", { threadId: threadId })
-                    await sleep(1000)
+                    await sleep(4000)
                 }
             }
 
