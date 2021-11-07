@@ -1,8 +1,8 @@
 {
-    "name": "code-structure-visualization",
+    "name": "codebase-relationship-visualizer",
     "description": "Visualize relationships between source code files.",
     "version": "0.0.1",
-    "publisher": "JesseHines0",
+    "publisher": "jesse-r-s-hines",
     "private": true,
     "license": "MIT",
     "engines": {
@@ -14,15 +14,15 @@
     ],
     "activationEvents": [
         "onDebug",
-        "onCommand:codeStructureVisualization.start",
-        "onWebviewPanel:codeStructureVisualization"
+        "onCommand:codeBaseRelationshipVisualizer.start",
+        "onWebviewPanel:codeBaseRelationshipVisualizer"
     ],
     "contributes": {
         "commands": [
             {
-                "command": "codeStructureVisualization.start",
-                "title": "Visualize relationships between source code files",
-                "category": "Code Structure Visualization"
+                "command": "codeBaseRelationshipVisualizer.start",
+                "title": "Visualize your code base",
+                "category": "CodeBase Relationship Visualizer"
             }
         ]
     },

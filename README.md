@@ -1,3 +1,3 @@
-# Code Structure Visualization
+# CBRV - The CodeBase Relationship Visualizer
 
 Display nested groups of source code, such as files/folders or packages/classes, and display relations between arbitrary points in the source code as lines. It will display nested bubbles, with source code files at the lowest level of the bubbles, visually reminiscent to [Repo Visualizer](https://github.com/githubocto/repo-visualizer) but interactive and zoomable. The render should consume JSON formatted data, or offer an API, so that multiple tools can generate different data to be displayed.
