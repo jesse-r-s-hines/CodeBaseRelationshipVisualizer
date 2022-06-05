@@ -1,13 +1,7 @@
 import * as vscode from 'vscode';
 import {workspace, Uri, FileType} from 'vscode';
 import * as path from 'path';
-
-interface FileTree {
-    type: FileType
-    name: string
-    children?: FileTree[]
-    size?: number
-}
+import { FileTree } from "./util";
 
 export function activate(context: vscode.ExtensionContext) {
     console.log("CodeBase Relationship Visualizer active");
@@ -23,11 +17,14 @@ export function activate(context: vscode.ExtensionContext) {
                     'CodeBase Relationship Visualizer',
                     vscode.ViewColumn.One,
                     {
-                    enableScripts: true
+                        enableScripts: true,
+                        localResourceRoots: [vscode.Uri.file(context.extensionPath)],
                     }
                 );
 
-                panel.webview.html = getWebviewContent(folder, context);
+                panel.webview.html = getWebviewContent(context);
+
+                panel.webview.postMessage({ type: "update-folder", folder: folder });
             } else {
                 // no workspace
             }
@@ -58,9 +55,9 @@ async function getFileTree(uri: Uri, type: FileType): Promise<FileTree> {
     }
 }
 
-function getWebviewContent(folder: FileTree, context: vscode.ExtensionContext) {
+function getWebviewContent(context: vscode.ExtensionContext) {
     const extPath = vscode.Uri.file(context.extensionPath);
-    const scriptUri = Uri.joinPath(extPath, "src", "diagram.js").with({ 'scheme': 'vscode-resource' });
+    const scriptUri = Uri.joinPath(extPath, "out", "webview", "webview.js").with({ 'scheme': 'vscode-resource' }); // TODO asWebviewUri
 
     return `
         <!DOCTYPE html>
@@ -69,14 +66,10 @@ function getWebviewContent(folder: FileTree, context: vscode.ExtensionContext) {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Circle</title>
-            <script src="https://d3js.org/d3.v7.min.js"></script>
-            <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
         </head>
         <body>
             <div id="canvas"></div>
-            <script>
-                window.folder = ${JSON.stringify(folder)}
-            </script>
+            <script>var exports = {}</script>
             <script src="${scriptUri}"/>
         </body>
         </html>

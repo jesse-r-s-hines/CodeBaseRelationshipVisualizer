@@ -29,18 +29,35 @@
     "main": "./out/extension.js",
     "scripts": {
         "vscode:prepublish": "npm run compile",
-        "compile": "tsc -p ./",
+        "compile": "npm-run-all compile:*",
+        "compile:extension": "tsc -p ./",
+        "compile:webview": "webpack --mode development",
         "lint": "eslint . --ext .ts,.tsx",
-        "watch": "tsc -w -p ./"
+        "watch": "npm-run-all -p watch:*",
+        "watch:extension": "tsc -w -p ./",
+        "watch:webview": "webpack --watch --mode development"
     },
     "devDependencies": {
+        "@types/d3": "^7.4.0",
+        "@types/d3-selection-multi": "^1.0.10",
         "@types/node": "^12.12.0",
         "@types/vscode": "^1.47.0",
         "@types/vscode-webview": "^1.57.0",
+        "@types/webpack": "^5.28.0",
         "@typescript-eslint/eslint-plugin": "^4.16.0",
         "@typescript-eslint/parser": "^4.16.0",
+        "css-loader": "^6.7.1",
         "eslint": "^7.21.0",
+        "npm-run-all": "^4.1.5",
+        "style-loader": "^3.3.1",
+        "ts-loader": "^9.3.0",
         "typescript": "^4.4.3",
-        "vscode-debugprotocol": "^1.49.0"
+        "vscode-debugprotocol": "^1.49.0",
+        "webpack": "^5.73.0",
+        "webpack-cli": "^4.9.2"
+    },
+    "dependencies": {
+        "d3": "^7.4.4",
+        "d3-selection-multi": "^1.0.1"
     }
 }
