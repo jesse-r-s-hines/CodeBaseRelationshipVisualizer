@@ -57,7 +57,7 @@ async function getFileTree(uri: Uri, type: FileType): Promise<FileTree> {
 
 function getWebviewContent(context: vscode.ExtensionContext) {
     const extPath = vscode.Uri.file(context.extensionPath);
-    const scriptUri = Uri.joinPath(extPath, "out", "webview", "webview.js").with({ 'scheme': 'vscode-resource' }); // TODO asWebviewUri
+    const scriptUri = Uri.joinPath(extPath, "dist", "webview", "webview.js").with({ 'scheme': 'vscode-resource' }); // TODO asWebviewUri
 
     return `
         <!DOCTYPE html>

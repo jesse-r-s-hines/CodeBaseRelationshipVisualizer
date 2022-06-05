@@ -26,7 +26,7 @@
             }
         ]
     },
-    "main": "./out/extension.js",
+    "main": "./dist/extension.js",
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "npm-run-all compile:*",
