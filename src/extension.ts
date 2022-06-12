@@ -12,9 +12,9 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 async function visualizerStart(context: vscode.ExtensionContext) {
-    const folder = await getWorkspaceFileTree();
+    const codebase = await getWorkspaceFileTree();
 
-    if (folder) {
+    if (codebase) {
         // Create and show panel
         const panel = vscode.window.createWebviewPanel(
             'codeBaseRelationshipVisualizer',
@@ -28,7 +28,7 @@ async function visualizerStart(context: vscode.ExtensionContext) {
 
         panel.webview.html = getWebviewContent(context, panel.webview);
 
-        panel.webview.postMessage({ type: "set-codebase", folder: folder });
+        panel.webview.postMessage({ type: "set-codebase", codebase: codebase });
     } else {
         // TODO: no workspace
     }
