@@ -26,9 +26,17 @@ async function visualizerStart(context: vscode.ExtensionContext) {
             }
         );
 
+        panel.webview.onDidReceiveMessage(message => {
+                if (message.type == "ready") {
+                    panel.webview.postMessage({ type: "set-codebase", codebase: codebase });
+                }
+            },  
+            undefined,
+            context.subscriptions
+        );
+
         panel.webview.html = getWebviewContent(context, panel.webview);
 
-        panel.webview.postMessage({ type: "set-codebase", codebase: codebase });
     } else {
         // TODO: no workspace
     }
