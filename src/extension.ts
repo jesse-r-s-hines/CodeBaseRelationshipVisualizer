@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { workspace, Uri, FileType } from 'vscode';
+import { workspace, Uri, Webview } from 'vscode';
 import * as path from 'path';
-import { AnyFile } from "./util";
+import { AnyFile, FileType } from "./util";
 
 export function activate(context: vscode.ExtensionContext) {
     console.log("CodeBase Relationship Visualizer active");
@@ -9,7 +9,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('codeBaseRelationshipVisualizer.start', async () => {
             const folder = await getWorkspaceFileTree();
-            
+
             if (folder) {
                 // Create and show panel
                 const panel = vscode.window.createWebviewPanel(
@@ -22,11 +22,11 @@ export function activate(context: vscode.ExtensionContext) {
                     }
                 );
 
-                panel.webview.html = getWebviewContent(context);
+                panel.webview.html = getWebviewContent(context, panel.webview);
 
-                panel.webview.postMessage({ type: "update-folder", folder: folder });
+                panel.webview.postMessage({ type: "set-codebase", folder: folder });
             } else {
-                // no workspace
+                // TODO: no workspace
             }
         })
     );
@@ -54,9 +54,9 @@ async function getFileTree(uri: Uri, type: FileType): Promise<AnyFile> {
     }
 }
 
-function getWebviewContent(context: vscode.ExtensionContext) {
+function getWebviewContent(context: vscode.ExtensionContext, webview: Webview) {
     const extPath = vscode.Uri.file(context.extensionPath);
-    const scriptUri = Uri.joinPath(extPath, "dist", "webview", "webview.js").with({ 'scheme': 'vscode-resource' }); // TODO asWebviewUri
+    const scriptUri = webview.asWebviewUri(Uri.joinPath(extPath, "dist", "webview", "webview.js"));
 
     return `
         <!DOCTYPE html>

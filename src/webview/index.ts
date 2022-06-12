@@ -1,3 +1,10 @@
-import { main } from "./diagram";
+import CBRVWebview from "./CBRVWebview";
 
-addEventListener('load', main);
+let view: CBRVWebview|undefined;
+
+addEventListener('message', event => {
+    const message = event.data;
+    if (message.type == "set-codebase") {
+        view = new CBRVWebview("#canvas", message.folder);
+    }
+});

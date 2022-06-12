@@ -27,3 +27,12 @@ export interface Directory extends BaseFile {
     type: FileType.Directory
     children: AnyFile[]
 }
+
+/**
+ * Returns the extension from a file name excluding the ".", or "" if there is none.
+ * Hidden files count as having no extension
+ */
+export function getExtension(filename: string): string {
+    const dotPos = filename.lastIndexOf(".");
+    return dotPos > 0 ? filename.slice(dotPos + 1) : ""; // TODO hidden files and such?
+}

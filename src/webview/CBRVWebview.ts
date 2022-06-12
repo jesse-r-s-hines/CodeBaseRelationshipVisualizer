@@ -1,18 +1,44 @@
 import * as d3 from 'd3';
 import { ValueFn, BaseType } from 'd3-selection';
-import { FileType, AnyFile } from '../util';
+import { FileType, Directory, AnyFile, getExtension } from '../util';
 
-// TODO clean up types
+/**
+ * This is the class that renders the actual diagram.
+ */
+export default class CBRVWebview {
+    canvas: HTMLElement
+    codebase: Directory
+
+    /** Pass the selector for the canvas */
+    constructor(canvas: string, codebase: Directory) {
+        this.canvas = document.querySelector(canvas)!;
+        this.codebase = codebase;
+        this.draw();
+    }
+
+    draw() {
+        const exts = new Set(d3.hierarchy(this.codebase).descendants().map(d => getExtension(d.data.name)));
+        const color = d3.scaleOrdinal(exts, d3.quantize(d3.interpolateRainbow, exts.size));
+
+        const diagram = Pack(this.codebase, {
+            value: d => d.type == FileType.File ? d.size : 0, // size of each node (file); null for internal nodes (folders)
+            label: (d) => d.data.name,
+            title: (d) => d.ancestors().reverse().map((d) => d.data.name).join("/"),
+            fill: d => color(getExtension(d.data.name)),
+            width: 1152,
+            height: 1152
+        });
+
+        this.canvas.replaceChildren(diagram);
+    }
+
+}
+
+// TODO: clean up types
 
 type D3Val = null | string | number | boolean | ReadonlyArray<string | number>
 type D3Attr<Datum, Rtrn = D3Val> = Rtrn | ValueFn<BaseType, Datum, Rtrn>;
 type PackAttr<Rtrn = D3Val> = D3Attr<d3.HierarchyNode<AnyFile>, Rtrn>;
-
-
-let uniqIdCount = 0;
-function uniqId(prefix = "uniq") {
-    return `${prefix}-${uniqIdCount++}`;
-}
 
 interface PackSettings {
     children?: (d: AnyFile) => Iterable<AnyFile>, // if hierarchical data, given a d in data, returns its children
@@ -60,7 +86,7 @@ function Pack(data: AnyFile, { // data is either tabular (array of objects) or h
     stroke = "#bbb", // stroke for internal circles
     strokeWidth, // stroke width for internal circles
     strokeOpacity, // stroke opacity for internal circles
-}: PackSettings) {
+}: PackSettings): SVGSVGElement {
     const root = d3.hierarchy(data, children);
 
     // Compute the values of internal nodes by aggregating from the leaves.
@@ -123,38 +149,12 @@ function Pack(data: AnyFile, { // data is either tabular (array of objects) or h
                 .text(d => L[getIndex(d)]);
     }
 
-    return svg.node();
+    return svg.node()!;
 }
 
-function ext(filename: string): string {
-    return filename.includes(".") ? filename.split(".").slice(-1)[0] : ""; // hidden files?
-}
 
-export function main() {
-    let folder;
 
-    addEventListener('message', event => {
-        const message = event.data; // The JSON data our extension sent
-        if (message.type == "update-folder") {
-            folder = message.folder;
-            console.log(folder);
 
-            const exts = new Set(d3.hierarchy(folder).descendants().map(d => ext(d.data.name)));
-            const color = d3.scaleOrdinal(exts, d3.quantize(d3.interpolateRainbow, exts.size));
-
-            const diagram = Pack(folder, {
-                value: d => d.type == FileType.File ? d.size : 0, // size of each node (file); 0 for internal nodes (folders)
-                label: (d) => d.data.name,
-                title: (d) => d.ancestors().reverse().map((d) => d.data.name).join("/"),
-                fill: d => color(ext(d.data.name)),
-                width: 1152,
-                height: 1152
-            })!;
-
-            document.getElementById("canvas")!.append(diagram);
-        }
-    });
-}
 
 
 
