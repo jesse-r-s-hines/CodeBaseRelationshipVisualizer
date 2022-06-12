@@ -30,11 +30,11 @@
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "npm-run-all compile:*",
-        "compile:extension": "tsc -p ./",
+        "compile:extension": "tsc -p ./src",
         "compile:webview": "webpack --mode development",
         "lint": "eslint . --ext .ts,.tsx",
         "watch": "npm-run-all -p watch:*",
-        "watch:extension": "tsc -w -p ./",
+        "watch:extension": "tsc -w -p ./src",
         "watch:webview": "webpack --watch --mode development"
     },
     "devDependencies": {

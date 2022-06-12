@@ -1,12 +1,13 @@
 {
-    "extends": "./tsconfig.base.json",
     "compilerOptions": {
         "module": "commonjs",
+        "target": "es2019",
+        "lib": ["ES2019"],
+        "outDir": "dist",
+        "sourceMap": true,
+        "strict": true,
+        "rootDir": "src",
+        "skipLibCheck": true,
     },
-    "include": [
-        "src/**/*"
-    ],
-    "exclude": [
-        "src/webview/**"
-    ]
+    "exclude": ["node_modules"]
 }
