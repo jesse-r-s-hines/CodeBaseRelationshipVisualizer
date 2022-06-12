@@ -16,11 +16,13 @@ export default class CBRVWebview {
     /** Margins of the svg diagram [top, right, bottom, left] */
     margins = [1, 1, 1, 1]
     /** Padding between file circles */
-    padding = 3
+    filePadding = 3
     /** Directory outline stroke color */
     stroke = "#bbb"
     /** Directory outline stroke width */
     strokeWidth = 1;
+    /** Padding between labels and the outline of each file circle */
+    textPadding = 2
 
     /** Pass the selector for the canvas */
     constructor(canvas: string, codebase: Directory) {
@@ -51,7 +53,7 @@ export default class CBRVWebview {
         const [marginTop, marginRight, marginBottom, marginLeft] = this.margins;
         const packed = d3.pack<AnyFile>()
             .size([this.viewBoxSize - marginLeft - marginRight, this.viewBoxSize - marginTop - marginBottom])
-            .padding(this.padding)(root);
+            .padding(this.filePadding)(root);
     
         // render it to a SVG
         const svg = d3.select(this.canvas)
@@ -77,18 +79,25 @@ export default class CBRVWebview {
         node.append("title")
             .text(d => d.ancestors().reverse().map(d => d.data.name).join("/"));
     
-        const fileCircles = node.filter(d => d.data.type == FileType.File); 
-        // TODO: Fix name cropping
-        fileCircles.append("clipPath")
-            .attr("id", (d, i) => `clip-${i}`)
-            .append("circle")
-                .attr("r", d => d.r);
-
-        fileCircles.append("text")
-            .attr("clip-path", (d, i) => `url(#clip-${i})`)
+        const files = node.filter(d => d.data.type == FileType.File); 
+        files.append("text")
             .append("tspan")
                 .attr("x", 0)
                 .attr("y", 0)
-                .text(d => d.data.name);
+                .text(d => d.data.name)
+                .each((d, i, nodes) => this.ellipsisElementText(nodes[i], d.r * 2, this.textPadding));
+    }
+    
+    /**
+     * If el's text is wider than width, cut it and add an ellipsis until if fits. Returns the new text in the node.
+     * There are pure CSS ways of doing this, but they don't seem to work SVGs unless we do an foreignObject
+     */
+    ellipsisElementText(el: SVGTextContentElement, width: number, padding = 0): string {
+        let text = el.textContent ?? "";
+        while (el.getComputedTextLength() > (width - 2 * padding) && text.length > 0) {
+            text = text.slice(0, -1);
+            el.textContent = text + "...";
+        }
+        return el.textContent!;
     }
 }
