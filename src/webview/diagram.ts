@@ -90,9 +90,9 @@ function Pack(data: FileTree, { // data is either tabular (array of objects) or 
         .attr("font-size", 10)
         .attr("text-anchor", "middle");
 
-    const node = svg.selectAll("a")
+    const node = svg.selectAll("g")
         .data(descendants)
-        .join("a")
+        .join("g")
         .attr("xlink:href", link == null ? null : (d, i) => link(d))
         .attr("target", link == null ? null : linkTarget)
         .attr("transform", d => `translate(${(d as any).x},${(d as any).y})`);

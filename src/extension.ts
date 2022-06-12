@@ -65,13 +65,13 @@ function getWebviewContent(context: vscode.ExtensionContext) {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Circle</title>
+            <title>CodeBase Relationship Visualizer</title>
         </head>
         <body>
             <div id="canvas"></div>
             <script>var exports = {}</script>
-            <script src="${scriptUri}"/>
+            <script src="${scriptUri}"></script>
         </body>
         </html>
-  `;
+    `;
 }
