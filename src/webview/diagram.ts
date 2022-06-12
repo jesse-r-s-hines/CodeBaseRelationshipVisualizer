@@ -1,12 +1,12 @@
 import * as d3 from 'd3';
 import { ValueFn, BaseType } from 'd3-selection';
-import { FileTree } from '../util';
+import { FileType, AnyFile } from '../util';
 
 // TODO clean up types
 
 type D3Val = null | string | number | boolean | ReadonlyArray<string | number>
 type D3Attr<Datum, Rtrn = D3Val> = Rtrn | ValueFn<BaseType, Datum, Rtrn>;
-type PackAttr<Rtrn = D3Val> = D3Attr<d3.HierarchyNode<FileTree>, Rtrn>;
+type PackAttr<Rtrn = D3Val> = D3Attr<d3.HierarchyNode<AnyFile>, Rtrn>;
 
 
 let uniqIdCount = 0;
@@ -15,12 +15,12 @@ function uniqId(prefix = "uniq") {
 }
 
 interface PackSettings {
-    children?: (d: FileTree) => Iterable<FileTree>, // if hierarchical data, given a d in data, returns its children
-    value?: (d: FileTree) => number, // given a node d, returns a quantitative value (for area encoding; null for count)
-    sort?: (a: d3.HierarchyNode<FileTree>, b: d3.HierarchyNode<FileTree>) => number, // how to sort nodes prior to layout
-    label?: (d: d3.HierarchyNode<FileTree>) => string, // given a leaf node d, returns the display name
-    title?: (d: d3.HierarchyNode<FileTree>) => string, // given a node d, returns its hover text
-    link?: (d: d3.HierarchyNode<FileTree>) => string, // given a node d, its link (if any)
+    children?: (d: AnyFile) => Iterable<AnyFile>, // if hierarchical data, given a d in data, returns its children
+    value?: (d: AnyFile) => number, // given a node d, returns a quantitative value (for area encoding; null for count)
+    sort?: (a: d3.HierarchyNode<AnyFile>, b: d3.HierarchyNode<AnyFile>) => number, // how to sort nodes prior to layout
+    label?: (d: d3.HierarchyNode<AnyFile>) => string, // given a leaf node d, returns the display name
+    title?: (d: d3.HierarchyNode<AnyFile>) => string, // given a node d, returns its hover text
+    link?: (d: d3.HierarchyNode<AnyFile>) => string, // given a node d, its link (if any)
     linkTarget?: PackAttr<string>,
     width?: number, // outer width, in pixels
     height?: number, // outer height, in pixels
@@ -30,7 +30,7 @@ interface PackSettings {
     marginBottom?: number, // bottom margin, in pixels
     marginLeft?: number, // left margin, in pixels
     padding?: number, // separation between circles
-    fill?: (d: d3.HierarchyNode<FileTree>) => string, // fill for leaf circles
+    fill?: (d: d3.HierarchyNode<AnyFile>) => string, // fill for leaf circles
     fillOpacity?: string, // fill opacity for leaf circles
     stroke?: string, // stroke for internal circles
     strokeWidth?: number, // stroke width for internal circles
@@ -39,7 +39,7 @@ interface PackSettings {
 
 // This method is based on https://observablehq.com/@d3/pack
 // Copyright 2021 Observable, Inc., Released under the ISC license.
-function Pack(data: FileTree, { // data is either tabular (array of objects) or hierarchy (nested objects)
+function Pack(data: AnyFile, { // data is either tabular (array of objects) or hierarchy (nested objects)
     children,
     value,
     sort = (a, b) => d3.descending(a.value, b.value),
@@ -143,7 +143,7 @@ export function main() {
             const color = d3.scaleOrdinal(exts, d3.quantize(d3.interpolateRainbow, exts.size));
 
             const diagram = Pack(folder, {
-                value: d => d.size, // size of each node (file); null for internal nodes (folders)
+                value: d => d.type == FileType.File ? d.size : null, // size of each node (file); null for internal nodes (folders)
                 label: (d) => d.data.name,
                 title: (d) => d.ancestors().reverse().map((d) => d.data.name).join("/"),
                 fill: d => color(ext(d.data.name)),

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import {workspace, Uri, FileType} from 'vscode';
+import { workspace, Uri, FileType } from 'vscode';
 import * as path from 'path';
-import { FileTree } from "./util";
+import { AnyFile } from "./util";
 
 export function activate(context: vscode.ExtensionContext) {
     console.log("CodeBase Relationship Visualizer active");
@@ -32,8 +32,8 @@ export function activate(context: vscode.ExtensionContext) {
     );
 }
 
-async function getWorkspaceFileTree(): Promise<FileTree|undefined> {
-    if(vscode.workspace.workspaceFolders !== undefined) {
+async function getWorkspaceFileTree(): Promise<AnyFile | undefined> {
+    if (vscode.workspace.workspaceFolders !== undefined) {
         const base = vscode.workspace.workspaceFolders[0].uri;
         return await getFileTree(base, FileType.Directory);
     } else {
@@ -41,17 +41,16 @@ async function getWorkspaceFileTree(): Promise<FileTree|undefined> {
     }
 }
 
-async function getFileTree(uri: Uri, type: FileType): Promise<FileTree> {
-    const rtrn = {
-        type: type,
-        name: path.basename(uri.fsPath),
-    };
+async function getFileTree(uri: Uri, type: FileType): Promise<AnyFile> {
+    const name = path.basename(uri.fsPath);
     if (type == FileType.Directory) {
         const files = await workspace.fs.readDirectory(uri);
         const children = await Promise.all(files.map(([name, type]) => getFileTree(Uri.joinPath(uri, name), type)));
-        return {...rtrn, children: children};
+        return { type, name, children: children };
+    } else if (type == FileType.File) {
+        return { type, name, size: (await workspace.fs.stat(uri)).size || 1 };
     } else {
-        return {...rtrn, size: (await workspace.fs.stat(uri)).size || 1};
+        throw new Error("Other file types not supported"); // TODO handle symlinks and other special files
     }
 }
 
