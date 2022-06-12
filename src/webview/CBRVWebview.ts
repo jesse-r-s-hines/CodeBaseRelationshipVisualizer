@@ -60,6 +60,7 @@ export default class CBRVWebview {
             .attr("viewBox", [-marginLeft, -marginTop, this.viewBoxSize, this.viewBoxSize])
             .attr("style", "max-width: 100%; height: auto; height: intrinsic;") // auto-resize // TODO: move this into HTML
             .attr("text-anchor", "middle")
+            .attr("dominant-baseline", 'middle')
             .attr("font-family", "sans-serif")
             .attr("font-size", 10);
     
@@ -89,7 +90,7 @@ export default class CBRVWebview {
             .attr("clip-path", (d, i) => `url(#clip-${i})`)
             .append("tspan")
                 .attr("x", 0)
-                .attr("y", '0.35em')
+                .attr("y", 0)
                 .text(d => d.data.name);
     
         return svg.node()!;
