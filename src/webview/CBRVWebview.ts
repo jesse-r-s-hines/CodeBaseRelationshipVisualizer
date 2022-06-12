@@ -6,7 +6,7 @@ import { FileType, Directory, AnyFile, getExtension } from '../util';
  * This is the class that renders the actual diagram.
  */
 export default class CBRVWebview {
-    canvas: HTMLElement
+    canvas: SVGSVGElement
     codebase: Directory
 
     // Settings and constants for the diagram
@@ -30,11 +30,10 @@ export default class CBRVWebview {
     }
 
     draw() {
-        const diagram = this.drawDiagram();
-        this.canvas.replaceChildren(diagram);
+        this.drawDiagram();
     }
 
-    drawDiagram(): SVGSVGElement {
+    drawDiagram() {
         const root = d3.hierarchy<AnyFile>(this.codebase, d => d.type == FileType.Directory ? d.children : undefined);
 
         // Compute size of folders
@@ -55,10 +54,9 @@ export default class CBRVWebview {
             .padding(this.padding)(root);
     
         // render it to a SVG
-        const svg = d3.create("svg")
+        const svg = d3.select(this.canvas)
             // use negatives to add margin since pack() starts at 0 0
             .attr("viewBox", [-marginLeft, -marginTop, this.viewBoxSize, this.viewBoxSize])
-            .attr("style", "max-width: 100%; height: auto; height: intrinsic;") // auto-resize // TODO: move this into HTML
             .attr("text-anchor", "middle")
             .attr("dominant-baseline", 'middle')
             .attr("font-family", "sans-serif")
@@ -92,7 +90,5 @@ export default class CBRVWebview {
                 .attr("x", 0)
                 .attr("y", 0)
                 .text(d => d.data.name);
-    
-        return svg.node()!;
     }
 }

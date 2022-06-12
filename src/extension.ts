@@ -47,7 +47,7 @@ function getWebviewContent(context: vscode.ExtensionContext, webview: Webview) {
             <title>CodeBase Relationship Visualizer</title>
         </head>
         <body>
-            <div id="canvas"></div>
+            <svg id="canvas" style="max-width: 100%"></svg>
             <script>var exports = {}</script>
             <script src="${scriptUri}"></script>
         </body>
