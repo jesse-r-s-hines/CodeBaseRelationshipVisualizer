@@ -69,7 +69,7 @@ function Pack(data: AnyFile, { // data is either tabular (array of objects) or h
     // Compute labels and titles.
     const descendants = root.descendants();
     const leaves = descendants.filter(d => !d.children);
-    const getIndex = d => leaves.findIndex(needle => needle === d);
+    const getIndex = (d: d3.HierarchyNode<AnyFile>) => leaves.findIndex(needle => needle === d);
     const L = label == null ? null : leaves.map(d => label(d));
     const T = title == null ? null : descendants.map(d => title(d));
 
@@ -99,10 +99,10 @@ function Pack(data: AnyFile, { // data is either tabular (array of objects) or h
 
     node.append("circle")
         .attr("fill", d => d.children ? "#fff" : fill(d))
-        .attr("fill-opacity", d => d.children ? null : fillOpacity)
+        .attr("fill-opacity", d => d.children ? null : (fillOpacity ?? null))
         .attr("stroke", d => d.children ? stroke : null)
-        .attr("stroke-width", d => d.children ? strokeWidth : null)
-        .attr("stroke: number|string-opacity", d => d.children ? strokeOpacity : null)
+        .attr("stroke-width", d => d.children ? (strokeWidth ?? null) : null)
+        .attr("stroke: number|string-opacity", d => d.children ? (strokeOpacity ?? null) : null)
         .attr("r", d => (d as any).r);
 
     if (T) node.append("title").text((d, i) => T[i]);
@@ -126,8 +126,8 @@ function Pack(data: AnyFile, { // data is either tabular (array of objects) or h
     return svg.node();
 }
 
-function ext(filename) {
-    return filename.includes(".") ? filename.split(".").pop() : ""; // hidden files?
+function ext(filename: string): string {
+    return filename.includes(".") ? filename.split(".").slice(-1)[0] : ""; // hidden files?
 }
 
 export function main() {
@@ -143,15 +143,15 @@ export function main() {
             const color = d3.scaleOrdinal(exts, d3.quantize(d3.interpolateRainbow, exts.size));
 
             const diagram = Pack(folder, {
-                value: d => d.type == FileType.File ? d.size : null, // size of each node (file); null for internal nodes (folders)
+                value: d => d.type == FileType.File ? d.size : 0, // size of each node (file); 0 for internal nodes (folders)
                 label: (d) => d.data.name,
                 title: (d) => d.ancestors().reverse().map((d) => d.data.name).join("/"),
                 fill: d => color(ext(d.data.name)),
                 width: 1152,
                 height: 1152
-            });
+            })!;
 
-            document.getElementById("canvas").append(diagram);
+            document.getElementById("canvas")!.append(diagram);
         }
     });
 }
