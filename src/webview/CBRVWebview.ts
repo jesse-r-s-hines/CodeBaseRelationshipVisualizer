@@ -1,5 +1,4 @@
 import * as d3 from 'd3';
-import { ValueFn, BaseType } from 'd3-selection';
 import { FileType, Directory, AnyFile, getExtension } from '../util';
 
 /**
@@ -90,7 +89,7 @@ export default class CBRVWebview {
     
     /**
      * If el's text is wider than width, cut it and add an ellipsis until if fits. Returns the new text in the node.
-     * There are pure CSS ways of doing this, but they don't seem to work SVGs unless we do an foreignObject
+     * There are pure CSS ways of doing this, but they don't seem to work in SVGs unless we do an foreignObject.
      */
     ellipsisElementText(el: SVGTextContentElement, width: number, padding = 0): string {
         let text = el.textContent ?? "";
