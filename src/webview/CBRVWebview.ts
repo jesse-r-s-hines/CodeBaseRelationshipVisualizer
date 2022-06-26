@@ -13,7 +13,7 @@ export default class CBRVWebview {
     /** Size (width and height) of the svg viewbox (not the actual pixel size, that's dynamic) */
     viewBoxSize = 1000
     /** Margins of the svg diagram [top, right, bottom, left] */
-    margins = [1, 1, 1, 1]
+    margins = [10, 5, 5, 5]
     /** Padding between file circles */
     filePadding = 3
     /** Directory outline stroke color */
@@ -48,6 +48,15 @@ export default class CBRVWebview {
         const colorScale = d3.scaleOrdinal(extensions, d3.quantize(d3.interpolateRainbow, extensions.size));
         const fileColor = (d: AnyFile) => d.type == FileType.Directory ? "#fff" : colorScale(getExtension(d.name));
 
+        // Compute stuff about the file
+        const fullPath = (d: d3.HierarchyNode<AnyFile>) => d.ancestors().reverse().map(d => d.data.name).join("/");
+        const ids = new Map<string, string>();
+        const id = (d: d3.HierarchyNode<AnyFile>) => {
+            const path = fullPath(d);
+            if (!ids.has(path)) ids.set(path, `file-${ids.size}`);
+            return ids.get(path)!;
+        };
+
         // Make the circle packing diagram
         const [marginTop, marginRight, marginBottom, marginLeft] = this.margins;
         const packed = d3.pack<AnyFile>()
@@ -67,16 +76,21 @@ export default class CBRVWebview {
             .data(packed.descendants())
             .join("g")
             .attr("transform", d => `translate(${d.x},${d.y})`);
-    
-        node.append("circle")
-            .attr("fill", d => fileColor(d.data))
-            .attr("fill-opacity", d => d.data.type == FileType.Directory ? 0.0 : 1.0) // directories are transparent
+
+        // Draw the circles.
+        const arc = d3.arc();
+        node.append("path")
+            .attr("id", d => id(d))
+            // Use path instead of circle so we can use textPath on it for the folder name. -pi to pi so that the path
+            // starts at the bottom and we don't cut off the name
+            .attr("d", d => arc({innerRadius: 0, outerRadius: d.r, startAngle: -Math.PI, endAngle: Math.PI}))
             .attr("stroke", d => d.data.type == FileType.Directory ? this.stroke : "none") // only directories have an outline
             .attr("stroke-width", d => d.data.type == FileType.Directory ? this.strokeWidth : null)
-            .attr("r", d => d.r);
-    
+            .attr("fill", d => fileColor(d.data))
+            .attr("fill-opacity", d => d.data.type == FileType.Directory ? 0.0 : 1.0); // directories are transparent
+
         node.append("title")
-            .text(d => d.ancestors().reverse().map(d => d.data.name).join("/"));
+            .text(d => fullPath(d));
     
         const files = node.filter(d => d.data.type == FileType.File); 
         files.append("text")
@@ -85,6 +99,26 @@ export default class CBRVWebview {
                 .attr("y", 0)
                 .text(d => d.data.name)
                 .each((d, i, nodes) => this.ellipsisElementText(nodes[i], d.r * 2, this.textPadding));
+
+        const folders = node.filter(d => d.data.type == FileType.Directory);
+
+        // Add a "background" copy of the text with a stroke to provide contrast with the circle outline
+        folders.append("text")
+            .style("fill", "none")
+            .style("stroke", "var(--vscode-editor-background)")
+            .attr("stroke-width", 6)
+            .append("textPath")
+                .attr("href", d => `#${id(d)}`)
+                .attr("startOffset", "50%")
+                .text(d => d.data.name);
+
+        // add a folder name at the top
+        folders.append("text")
+            .style("fill", "var(--vscode-editor-foreground)")
+            .append("textPath")
+                .attr("href", d => `#${id(d)}`)
+                .attr("startOffset", "50%")
+                .text(d => d.data.name);
     }
     
     /**
