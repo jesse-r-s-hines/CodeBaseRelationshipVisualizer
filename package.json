@@ -31,11 +31,11 @@
         "vscode:prepublish": "npm run build",
         "build": "npm-run-all build:*",
         "build:extension": "tsc -p ./src",
-        "build:webview": "webpack --mode development",
+        "build:webview": "webpack --env dev",
         "lint": "eslint . --ext .ts,.tsx",
         "watch": "npm-run-all -p watch:*",
         "watch:extension": "tsc -w -p ./src",
-        "watch:webview": "webpack --watch --mode development"
+        "watch:webview": "webpack --env dev --watch"
     },
     "devDependencies": {
         "@types/d3": "^7.4.0",

@@ -6,6 +6,7 @@ module.exports = (env) => ({
     webview: "./src/webview/index.ts"
   },
   mode: (env.prod) ? "production" : "development",
+  devtool: (env.prod) ? 'source-map' : 'inline-source-map', // inline-source-map makes debugging work better.
   optimization: {
     minimize: env.prod ? true : false // Debugger has trouble if you minify, even with the source map.
   },
@@ -13,7 +14,6 @@ module.exports = (env) => ({
     path: path.resolve(__dirname, "dist", "webview"),
     filename: "[name].js"
   },
-  devtool: "eval-source-map",
   resolve: {
     extensions: [".js", ".ts", ".tsx"]
   },
