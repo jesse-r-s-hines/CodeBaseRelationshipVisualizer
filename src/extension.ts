@@ -80,7 +80,7 @@ async function getFileTree(uri: Uri, type: FileType): Promise<AnyFile> {
         const children = await Promise.all(files.map(([name, type]) => getFileTree(Uri.joinPath(uri, name), type)));
         return { type, name, children: children };
     } else if (type == FileType.File) {
-        return { type, name, size: (await workspace.fs.stat(uri)).size || 1 };
+        return { type, name, size: Math.max((await workspace.fs.stat(uri)).size, 1) };
     } else {
         throw new Error("Other file types not supported"); // TODO: handle symlinks and other special files
     }
