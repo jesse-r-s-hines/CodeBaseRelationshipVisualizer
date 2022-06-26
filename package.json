@@ -13,7 +13,6 @@
         "Debuggers"
     ],
     "activationEvents": [
-        "onDebug",
         "onCommand:codeBaseRelationshipVisualizer.start",
         "onWebviewPanel:codeBaseRelationshipVisualizer"
     ],
