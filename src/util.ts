@@ -45,3 +45,8 @@ export function uniqId(key: any, prefix = "id") {
     return `${prefix}-${uniqIds.get(key)}`;
 }
 const uniqIds = new Map<any, number>();
+
+/** Limits the number into the given range (inclusive) */
+export function clamp(val: number, min: number, max: number) {
+    return Math.max(min, Math.min(val, max));
+}
