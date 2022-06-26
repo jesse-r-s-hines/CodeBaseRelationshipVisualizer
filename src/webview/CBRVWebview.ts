@@ -1,5 +1,5 @@
 import * as d3 from 'd3';
-import { FileType, Directory, AnyFile, getExtension } from '../util';
+import { FileType, Directory, AnyFile, getExtension, uniqId } from '../util';
 
 /**
  * This is the class that renders the actual diagram.
@@ -50,12 +50,6 @@ export default class CBRVWebview {
 
         // Compute stuff about the file
         const fullPath = (d: d3.HierarchyNode<AnyFile>) => d.ancestors().reverse().map(d => d.data.name).join("/");
-        const ids = new Map<string, string>();
-        const id = (d: d3.HierarchyNode<AnyFile>) => {
-            const path = fullPath(d);
-            if (!ids.has(path)) ids.set(path, `file-${ids.size}`);
-            return ids.get(path)!;
-        };
 
         // Make the circle packing diagram
         const [marginTop, marginRight, marginBottom, marginLeft] = this.margins;
@@ -80,7 +74,7 @@ export default class CBRVWebview {
         // Draw the circles.
         const arc = d3.arc();
         node.append("path")
-            .attr("id", d => id(d))
+            .attr("id", d => uniqId(fullPath(d), "file"))
             // Use path instead of circle so we can use textPath on it for the folder name. -pi to pi so that the path
             // starts at the bottom and we don't cut off the name
             .attr("d", d => arc({innerRadius: 0, outerRadius: d.r, startAngle: -Math.PI, endAngle: Math.PI}))
@@ -109,7 +103,7 @@ export default class CBRVWebview {
             .style("dominant-baseline", 'middle')
             .attr("stroke-width", 6)
             .append("textPath")
-                .attr("href", d => `#${id(d)}`)
+                .attr("href", d => `#${uniqId(fullPath(d), "file")}`)
                 .attr("startOffset", "50%")
                 .text(d => d.data.name)
                 .each((d, i, nodes) => this.ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
@@ -119,7 +113,7 @@ export default class CBRVWebview {
             .style("fill", "var(--vscode-editor-foreground)")
             .style("dominant-baseline", 'middle')
             .append("textPath")
-                .attr("href", d => `#${id(d)}`)
+                .attr("href", d => `#${uniqId(fullPath(d), "file")}`)
                 .attr("startOffset", "50%")
                 .text(d => d.data.name)
                 .each((d, i, nodes) => this.ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));

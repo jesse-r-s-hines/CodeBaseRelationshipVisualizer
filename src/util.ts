@@ -36,3 +36,12 @@ export function getExtension(filename: string): string {
     const dotPos = filename.lastIndexOf(".");
     return dotPos > 0 ? filename.slice(dotPos + 1) : ""; // TODO hidden files and such?
 }
+
+/**
+ * Returns a unique id generated from an arbitrary key
+ */
+export function uniqId(key: any, prefix = "id") {
+    if (!uniqIds.has(key)) uniqIds.set(key, uniqIds.size);
+    return `${prefix}-${uniqIds.get(key)}`;
+}
+const uniqIds = new Map<any, number>();
