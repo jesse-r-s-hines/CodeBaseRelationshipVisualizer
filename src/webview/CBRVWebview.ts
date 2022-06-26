@@ -98,7 +98,7 @@ export default class CBRVWebview {
                 .attr("x", 0)
                 .attr("y", 0)
                 .text(d => d.data.name)
-                .each((d, i, nodes) => this.ellipsisElementText(nodes[i], d.r * 2, this.textPadding));
+                .each((d, i, nodes) => this.ellipsisElementText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
 
         const folders = node.filter(d => d.data.type == FileType.Directory);
 
@@ -106,35 +106,59 @@ export default class CBRVWebview {
         folders.append("text")
             .style("fill", "none")
             .style("stroke", "var(--vscode-editor-background)")
-            .style("dominant-baseline", 'auto')
+            .style("dominant-baseline", 'middle')
             .attr("stroke-width", 6)
             .append("textPath")
                 .attr("href", d => `#${id(d)}`)
                 .attr("startOffset", "50%")
                 .text(d => d.data.name)
-                .each((d, i, nodes) => this.ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */, 0));
+                .each((d, i, nodes) => this.ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
 
         // add a folder name at the top
         folders.append("text")
             .style("fill", "var(--vscode-editor-foreground)")
-            .style("dominant-baseline", 'auto')
+            .style("dominant-baseline", 'middle')
             .append("textPath")
                 .attr("href", d => `#${id(d)}`)
                 .attr("startOffset", "50%")
                 .text(d => d.data.name)
-                .each((d, i, nodes) => this.ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */, 0));
+                .each((d, i, nodes) => this.ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
     }
     
     /**
-     * If el's text is wider than width, cut it and add an ellipsis until if fits. Returns the new text in the node.
-     * There are pure CSS ways of doing this, but they don't seem to work in SVGs unless we do an foreignObject.
+     * If el's text is wider than width, cut it and add an ellipsis until if fits. Returns the new text in the node. If
+     * the text won't fit at all, sets the text to empty. There are pure CSS ways of doing this, but they don't work in
+     * SVGs unless we do an foreignObject.
      */
-    ellipsisElementText(el: SVGTextContentElement, width: number, padding = 0): string {
-        let text = el.textContent ?? "";
-        while (el.getComputedTextLength() > (width - 2 * padding) && text.length > 0) {
-            text = text.slice(0, -1);
-            el.textContent = text + "...";
+    ellipsisElementText(el: SVGTextContentElement, width: number, height = Infinity, padding = 0): string {
+        const [availableWidth, availableHeight] = [width - 2 * padding, height - 2 * padding];
+        const fontHeight = parseInt(getComputedStyle(el).fontSize, 10);
+
+        if (fontHeight > availableHeight) {
+            el.textContent = "";
+        } else if (el.getComputedTextLength() > availableWidth) { // need to crop it
+            const originalText = el.textContent ?? "";
+
+            // binary search to find the optimal length
+            let fits = 0, doesntFit = originalText.length;
+            while (fits + 1 < doesntFit) { // go until adding one more character doesn't fit
+                const mid = Math.floor((fits + doesntFit) / 2);
+                el.textContent = originalText.slice(0, mid) + "...";
+
+                if (el.getComputedTextLength() > availableWidth) {
+                    doesntFit = mid;
+                } else { // length <= width
+                    fits = mid;
+                }
+            }
+
+            if (fits > 0) {
+                el.textContent = originalText.slice(0, fits) + "...";
+            } else {
+                el.textContent = ""; // text can't fit at all
+            }
         }
-        return el.textContent!;
+
+        return el.textContent ?? "";
     }
 }
