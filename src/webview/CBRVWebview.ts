@@ -106,19 +106,23 @@ export default class CBRVWebview {
         folders.append("text")
             .style("fill", "none")
             .style("stroke", "var(--vscode-editor-background)")
+            .style("dominant-baseline", 'auto')
             .attr("stroke-width", 6)
             .append("textPath")
                 .attr("href", d => `#${id(d)}`)
                 .attr("startOffset", "50%")
-                .text(d => d.data.name);
+                .text(d => d.data.name)
+                .each((d, i, nodes) => this.ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */, 0));
 
         // add a folder name at the top
         folders.append("text")
             .style("fill", "var(--vscode-editor-foreground)")
+            .style("dominant-baseline", 'auto')
             .append("textPath")
                 .attr("href", d => `#${id(d)}`)
                 .attr("startOffset", "50%")
-                .text(d => d.data.name);
+                .text(d => d.data.name)
+                .each((d, i, nodes) => this.ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */, 0));
     }
     
     /**
