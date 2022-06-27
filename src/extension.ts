@@ -9,6 +9,9 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('codeBaseRelationshipVisualizer.start', async () => visualizerStart(context)),
     );
+
+    // TODO: Remove this. Launching automatically for convenience during testing. Also remove "*" activationEvent.
+    vscode.commands.executeCommand('codeBaseRelationshipVisualizer.start');
 }
 
 async function visualizerStart(context: vscode.ExtensionContext) {
