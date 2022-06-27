@@ -37,6 +37,15 @@ export function getExtension(filename: string): string {
     return dotPos > 0 ? filename.slice(dotPos + 1) : ""; // TODO hidden files and such?
 }
 
+/** Filters a tree structure */
+export function filterFileTree(root: AnyFile, condition: (node: AnyFile) => boolean): AnyFile {
+    if (root.type == FileType.Directory) {
+        return { ...root, children: root.children.filter(condition).map(child => filterFileTree(child, condition)) };
+    } else {
+        return root;
+    }
+}
+
 /**
  * Returns a unique id generated from an arbitrary key
  */

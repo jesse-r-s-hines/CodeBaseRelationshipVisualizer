@@ -1,5 +1,5 @@
 import * as d3 from 'd3';
-import { FileType, Directory, AnyFile, getExtension, uniqId, clamp } from '../util';
+import { FileType, Directory, AnyFile, getExtension, uniqId, clamp, filterFileTree } from '../util';
 
 /**
  * This is the class that renders the actual diagram.
@@ -35,7 +35,9 @@ export default class CBRVWebview {
     }
 
     drawDiagram() {
-        const root = d3.hierarchy<AnyFile>(this.codebase, d => d.type == FileType.Directory ? d.children : undefined);
+        // filter empty directories
+        const codebase = filterFileTree(this.codebase, f => !(f.type == FileType.Directory && f.children.length == 0));
+        const root = d3.hierarchy<AnyFile>(codebase, d => d.type == FileType.Directory ? d.children : undefined);
 
         // Compute size of folders
         root.sum(d => d.type == FileType.File ? clamp(d.size, 16, 1024 ** 2) : 0);
