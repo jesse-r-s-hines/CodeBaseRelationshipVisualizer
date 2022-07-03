@@ -1,6 +1,6 @@
 import * as d3 from 'd3';
-import { FileType, Directory, AnyFile } from '../shared';
-import { getExtension, uniqId, clamp, filterFileTree } from '../util';
+import { FileType, Directory, AnyFile, Connection } from '../shared';
+import { getExtension, clamp, filterFileTree } from '../util';
 
 /**
  * This is the class that renders the actual diagram.
@@ -8,6 +8,7 @@ import { getExtension, uniqId, clamp, filterFileTree } from '../util';
 export default class CBRVWebview {
     canvas: SVGSVGElement
     codebase: Directory
+    connections: Connection[]
 
     // Settings and constants for the diagram
 
@@ -16,7 +17,7 @@ export default class CBRVWebview {
     /** Margins of the svg diagram [top, right, bottom, left] */
     margins = [10, 5, 5, 5]
     /** Padding between file circles */
-    filePadding = 3
+    filePadding = 20
     /** Directory outline stroke color */
     stroke = "#bbb"
     /** Directory outline stroke width */
@@ -25,9 +26,10 @@ export default class CBRVWebview {
     textPadding = 2
 
     /** Pass the selector for the canvas */
-    constructor(canvas: string, codebase: Directory) {
+    constructor(canvas: string, codebase: Directory, connections: Connection[]) {
         this.canvas = document.querySelector(canvas)!;
         this.codebase = codebase;
+        this.connections = connections;
         this.draw();
     }
 
@@ -52,7 +54,7 @@ export default class CBRVWebview {
         const fileColor = (d: AnyFile) => d.type == FileType.Directory ? "#fff" : colorScale(getExtension(d.name));
 
         // Compute stuff about the file
-        const fullPath = (d: d3.HierarchyNode<AnyFile>) => d.ancestors().reverse().map(d => d.data.name).join("/");
+        const fullPath = (d: d3.HierarchyNode<AnyFile>) => d.ancestors().reverse().slice(1).map(d => d.data.name).join("/");
 
         // Make the circle packing diagram
         const [marginTop, marginRight, marginBottom, marginLeft] = this.margins;
@@ -60,6 +62,17 @@ export default class CBRVWebview {
             .size([this.viewBoxSize - marginLeft - marginRight, this.viewBoxSize - marginTop - marginBottom])
             .padding(this.filePadding)(root);
     
+        const pathMap: Map<string, {node: d3.HierarchyCircularNode<AnyFile>, id: string}> = new Map();
+        let uniqId = 0;
+        packed.each((d) => {
+            pathMap.set(fullPath(d), {
+                node: d,
+                id: `${d.data.type == FileType.File ? 'file' : 'directory'}-${uniqId}`
+            });
+            uniqId++;
+        });
+        const getId = (d: d3.HierarchyNode<AnyFile>) => pathMap.get(fullPath(d))!.id;
+
         // render it to a SVG
         const svg = d3.select(this.canvas)
             // use negatives to add margin since pack() starts at 0 0
@@ -69,15 +82,22 @@ export default class CBRVWebview {
             .attr("font-family", "sans-serif")
             .attr("font-size", 10);
     
-        const node = svg.selectAll("g")
+        const connectionSection = svg.append('g')
+            .classed("connection-section", true);
+        const fileSection = svg.append('g')
+            .classed("file-section", true);
+
+        const nodes = fileSection.selectAll(".file, .directory")
             .data(packed.descendants())
             .join("g")
-            .attr("transform", d => `translate(${d.x},${d.y})`);
+                .classed("file", d => d.data.type == FileType.File)
+                .classed("directory", d => d.data.type == FileType.Directory)
+                .attr("transform", d => `translate(${d.x},${d.y})`);
 
         // Draw the circles.
         const arc = d3.arc();
-        node.append("path")
-            .attr("id", d => uniqId(fullPath(d), "file"))
+        nodes.append("path")
+            .attr("id", d => getId(d))
             // Use path instead of circle so we can use textPath on it for the folder name. -pi to pi so that the path
             // starts at the bottom and we don't cut off the name
             .attr("d", d => arc({innerRadius: 0, outerRadius: d.r, startAngle: -Math.PI, endAngle: Math.PI}))
@@ -86,10 +106,10 @@ export default class CBRVWebview {
             .attr("fill", d => fileColor(d.data))
             .attr("fill-opacity", d => d.data.type == FileType.Directory ? 0.0 : 1.0); // directories are transparent
 
-        node.append("title")
+        nodes.append("title")
             .text(d => fullPath(d));
     
-        const files = node.filter(d => d.data.type == FileType.File); 
+        const files = nodes.filter(d => d.data.type == FileType.File); 
         files.append("text")
             .append("tspan")
                 .attr("x", 0)
@@ -97,7 +117,7 @@ export default class CBRVWebview {
                 .text(d => d.data.name)
                 .each((d, i, nodes) => this.ellipsisElementText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
 
-        const folders = node.filter(d => d.data.type == FileType.Directory);
+        const folders = nodes.filter(d => d.data.type == FileType.Directory);
 
         // Add a "background" copy of the text with a stroke to provide contrast with the circle outline
         folders.append("text")
@@ -106,7 +126,7 @@ export default class CBRVWebview {
             .style("dominant-baseline", 'middle')
             .attr("stroke-width", 6)
             .append("textPath")
-                .attr("href", d => `#${uniqId(fullPath(d), "file")}`)
+                .attr("href", d => `#${getId(d)}`)
                 .attr("startOffset", "50%")
                 .text(d => d.data.name)
                 .each((d, i, nodes) => this.ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
@@ -116,10 +136,25 @@ export default class CBRVWebview {
             .style("fill", "var(--vscode-editor-foreground)")
             .style("dominant-baseline", 'middle')
             .append("textPath")
-                .attr("href", d => `#${uniqId(fullPath(d), "file")}`)
+                .attr("href", d => `#${getId(d)}`)
                 .attr("startOffset", "50%")
                 .text(d => d.data.name)
                 .each((d, i, nodes) => this.ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
+
+
+        const line = d3.line();
+        const connections = connectionSection.selectAll(".connection")
+            .data(this.connections)
+            .join("path")
+                .classed("connection", true)
+                .attr("stroke-width", "2")
+                .attr("stroke", "yellow")
+                .attr("d", conn => {
+                    // TODO normalize conn before this
+                    const from = pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!.node;
+                    const to = pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!.node;
+                    return line([[from.x, from.y], [to.x, to.y]]);
+                });
     }
     
     /**

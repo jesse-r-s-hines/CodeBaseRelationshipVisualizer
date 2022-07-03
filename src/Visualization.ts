@@ -48,8 +48,9 @@ export class Visualization {
         panel.webview.onDidReceiveMessage(message => {
                 if (message.type == "ready") {
                     panel.webview.postMessage({
-                        type: "set-codebase",
-                        codebase: this.codebase
+                        type: "set",
+                        codebase: this.codebase,
+                        connections: this.connections,
                     });
                 }
             },  

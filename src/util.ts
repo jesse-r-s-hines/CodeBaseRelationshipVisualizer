@@ -18,15 +18,6 @@ export function filterFileTree(root: AnyFile, condition: (node: AnyFile) => bool
     }
 }
 
-/**
- * Returns a unique id generated from an arbitrary key
- */
-export function uniqId(key: any, prefix = "id") {
-    if (!uniqIds.has(key)) uniqIds.set(key, uniqIds.size);
-    return `${prefix}-${uniqIds.get(key)}`;
-}
-const uniqIds = new Map<any, number>();
-
 /** Limits the number into the given range (inclusive) */
 export function clamp(val: number, min: number, max: number) {
     return Math.max(min, Math.min(val, max));
