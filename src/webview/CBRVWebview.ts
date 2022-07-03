@@ -82,8 +82,6 @@ export default class CBRVWebview {
             .attr("font-family", "sans-serif")
             .attr("font-size", 10);
     
-        const connectionSection = svg.append('g')
-            .classed("connection-section", true);
         const fileSection = svg.append('g')
             .classed("file-section", true);
 
@@ -142,18 +140,23 @@ export default class CBRVWebview {
                 .each((d, i, nodes) => this.ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
 
 
-        const line = d3.line();
+        const connectionSection = svg.append('g')
+            .classed("connection-section", true);
+
+        const link = d3.link(d3.curveCatmullRom); // TODO find a better curve
         const connections = connectionSection.selectAll(".connection")
             .data(this.connections)
             .join("path")
                 .classed("connection", true)
                 .attr("stroke-width", "2")
                 .attr("stroke", "yellow")
+                .attr("fill", "none")
                 .attr("d", conn => {
                     // TODO normalize conn before this
                     const from = pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!.node;
                     const to = pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!.node;
-                    return line([[from.x, from.y], [to.x, to.y]]);
+                    const [source, target] = this.cropLine([[from.x, from.y], [to.x, to.y]], from.r, to.r);
+                    return link({ source, target });
                 });
     }
     
@@ -193,4 +196,17 @@ export default class CBRVWebview {
 
         return el.textContent ?? "";
     }
+
+    /** Crops both ends of the line from a to b .*/
+    cropLine([a, b]: [Point, Point], cropStart: number, cropEnd: number): [Point, Point] {
+        const dx = b[0] - a[0];
+        const dy = b[1] - a[1];
+        const origDist = Math.hypot(dx, dy);
+        return [
+            [a[0] + cropStart * dx / origDist, a[1] + cropStart * dy / origDist],
+            [b[0] - cropEnd * dx / origDist, b[1] - cropEnd * dy / origDist],
+        ];
+      }
 }
+
+type Point = [number, number]

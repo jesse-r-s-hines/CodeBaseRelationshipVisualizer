@@ -10,7 +10,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('codeBaseRelationshipVisualizer.start', async () => {
             const visualization = new Visualization(context, {}, [
-                { from: "A/E.txt", to: "A/F.txt" },
+                { from: "A/E.txt", to: "deoxyribonucleicAcid/I" },
             ]);
             await visualization.launch();
         }),
