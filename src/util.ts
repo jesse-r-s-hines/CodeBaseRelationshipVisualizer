@@ -2,7 +2,7 @@
  * Just an alias for VSCode's FileType enum.
  * I've redeclared it from scratch here so that it can be used inside the webview (vscode isn't available there)
  */
- export enum FileType {
+export enum FileType {
     Unknown = 0,
     File = 1,
     Directory = 2,
