@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { Uri } from "vscode";
 import * as path from 'path';
-import { AnyFile, Directory, FileType } from "./util";
+import { AnyFile, Directory, FileType } from "./shared";
 
 export async function getWorkspaceFileTree(): Promise<Directory | undefined> {
     if (vscode.workspace.workspaceFolders !== undefined) {

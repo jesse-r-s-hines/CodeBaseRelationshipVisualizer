@@ -1,5 +1,6 @@
 import * as d3 from 'd3';
-import { FileType, Directory, AnyFile, getExtension, uniqId, clamp, filterFileTree } from '../util';
+import { FileType, Directory, AnyFile } from '../shared';
+import { getExtension, uniqId, clamp, filterFileTree } from '../util';
 
 /**
  * This is the class that renders the actual diagram.
