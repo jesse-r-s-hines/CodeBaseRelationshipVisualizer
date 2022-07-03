@@ -2,9 +2,9 @@
     "extends": "../../tsconfig.json",
     "compilerOptions": {
         "module": "es6",
-        "lib": ["dom", "dom.iterable", "ES2019"], // TODO figure out how to only have this in the webviews
+        "lib": ["dom", "dom.iterable", "ES2019"],
     },
     "include": [
-        "**/*"
+        "**/*.ts"
     ]
 }
