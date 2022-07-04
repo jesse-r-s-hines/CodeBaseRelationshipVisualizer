@@ -1,6 +1,7 @@
 import * as d3 from 'd3';
 import { FileType, Directory, AnyFile, Connection } from '../shared';
 import { getExtension, clamp, filterFileTree } from '../util';
+import { cropLine, ellipsisElementText, Point } from './rendering';
 
 /**
  * This is the class that renders the actual diagram.
@@ -28,7 +29,8 @@ export default class CBRVWebview {
     /** Pass the selector for the canvas */
     constructor(canvas: string, codebase: Directory, connections: Connection[]) {
         this.canvas = document.querySelector(canvas)!;
-        this.codebase = codebase;
+        // filter empty directories
+        this.codebase = filterFileTree(codebase, f => !(f.type == FileType.Directory && f.children.length == 0));
         this.connections = connections;
         this.draw();
     }
@@ -38,9 +40,7 @@ export default class CBRVWebview {
     }
 
     drawDiagram() {
-        // filter empty directories
-        const codebase = filterFileTree(this.codebase, f => !(f.type == FileType.Directory && f.children.length == 0));
-        const root = d3.hierarchy<AnyFile>(codebase, d => d.type == FileType.Directory ? d.children : undefined);
+        const root = d3.hierarchy<AnyFile>(this.codebase, d => d.type == FileType.Directory ? d.children : undefined);
 
         // Compute size of folders
         root.sum(d => d.type == FileType.File ? clamp(d.size, 16, 1024 ** 2) : 0);
@@ -53,9 +53,6 @@ export default class CBRVWebview {
         const colorScale = d3.scaleOrdinal(extensions, d3.quantize(d3.interpolateRainbow, extensions.size));
         const fileColor = (d: AnyFile) => d.type == FileType.Directory ? "#fff" : colorScale(getExtension(d.name));
 
-        // Compute stuff about the file
-        const fullPath = (d: d3.HierarchyNode<AnyFile>) => d.ancestors().reverse().slice(1).map(d => d.data.name).join("/");
-
         // Make the circle packing diagram
         const [marginTop, marginRight, marginBottom, marginLeft] = this.margins;
         const packed = d3.pack<AnyFile>()
@@ -65,13 +62,13 @@ export default class CBRVWebview {
         const pathMap: Map<string, {node: d3.HierarchyCircularNode<AnyFile>, id: string}> = new Map();
         let uniqId = 0;
         packed.each((d) => {
-            pathMap.set(fullPath(d), {
+            pathMap.set(this.fullPath(d), {
                 node: d,
                 id: `${d.data.type == FileType.File ? 'file' : 'directory'}-${uniqId}`
             });
             uniqId++;
         });
-        const getId = (d: d3.HierarchyNode<AnyFile>) => pathMap.get(fullPath(d))!.id;
+        const getId = (d: d3.HierarchyNode<AnyFile>) => pathMap.get(this.fullPath(d))!.id;
 
         // render it to a SVG
         const svg = d3.select(this.canvas)
@@ -105,7 +102,7 @@ export default class CBRVWebview {
             .attr("fill-opacity", d => d.data.type == FileType.Directory ? 0.0 : 1.0); // directories are transparent
 
         nodes.append("title")
-            .text(d => fullPath(d));
+            .text(d => this.fullPath(d));
     
         const files = nodes.filter(d => d.data.type == FileType.File); 
         files.append("text")
@@ -113,7 +110,7 @@ export default class CBRVWebview {
                 .attr("x", 0)
                 .attr("y", 0)
                 .text(d => d.data.name)
-                .each((d, i, nodes) => this.ellipsisElementText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
+                .each((d, i, nodes) => ellipsisElementText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
 
         const folders = nodes.filter(d => d.data.type == FileType.Directory);
 
@@ -127,7 +124,7 @@ export default class CBRVWebview {
                 .attr("href", d => `#${getId(d)}`)
                 .attr("startOffset", "50%")
                 .text(d => d.data.name)
-                .each((d, i, nodes) => this.ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
+                .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
 
         // add a folder name at the top
         folders.append("text")
@@ -137,7 +134,7 @@ export default class CBRVWebview {
                 .attr("href", d => `#${getId(d)}`)
                 .attr("startOffset", "50%")
                 .text(d => d.data.name)
-                .each((d, i, nodes) => this.ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
+                .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
 
 
         const connectionSection = svg.append('g')
@@ -155,58 +152,12 @@ export default class CBRVWebview {
                     // TODO normalize conn before this
                     const from = pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!.node;
                     const to = pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!.node;
-                    const [source, target] = this.cropLine([[from.x, from.y], [to.x, to.y]], from.r, to.r);
+                    const [source, target] = cropLine([[from.x, from.y], [to.x, to.y]], from.r, to.r);
                     return link({ source, target });
                 });
     }
-    
-    /**
-     * If el's text is wider than width, cut it and add an ellipsis until if fits. Returns the new text in the node. If
-     * the text won't fit at all, sets the text to empty. There are pure CSS ways of doing this, but they don't work in
-     * SVGs unless we do an foreignObject.
-     */
-    ellipsisElementText(el: SVGTextContentElement, width: number, height = Infinity, padding = 0): string {
-        const [availableWidth, availableHeight] = [width - 2 * padding, height - 2 * padding];
-        const fontHeight = parseInt(getComputedStyle(el).fontSize, 10);
 
-        if (fontHeight > availableHeight) {
-            el.textContent = "";
-        } else if (el.getComputedTextLength() > availableWidth) { // need to crop it
-            const originalText = el.textContent ?? "";
-
-            // binary search to find the optimal length
-            let fits = 0, doesntFit = originalText.length;
-            while (fits + 1 < doesntFit) { // go until adding one more character doesn't fit
-                const mid = Math.floor((fits + doesntFit) / 2);
-                el.textContent = originalText.slice(0, mid) + "...";
-
-                if (el.getComputedTextLength() > availableWidth) {
-                    doesntFit = mid;
-                } else { // length <= width
-                    fits = mid;
-                }
-            }
-
-            if (fits > 0) {
-                el.textContent = originalText.slice(0, fits) + "...";
-            } else {
-                el.textContent = ""; // text can't fit at all
-            }
-        }
-
-        return el.textContent ?? "";
+    fullPath(d: d3.HierarchyNode<AnyFile>): string {
+        return d.ancestors().reverse().slice(1).map(d => d.data.name).join("/");
     }
-
-    /** Crops both ends of the line from a to b .*/
-    cropLine([a, b]: [Point, Point], cropStart: number, cropEnd: number): [Point, Point] {
-        const dx = b[0] - a[0];
-        const dy = b[1] - a[1];
-        const origDist = Math.hypot(dx, dy);
-        return [
-            [a[0] + cropStart * dx / origDist, a[1] + cropStart * dy / origDist],
-            [b[0] - cropEnd * dx / origDist, b[1] - cropEnd * dy / origDist],
-        ];
-      }
 }
-
-type Point = [number, number]
