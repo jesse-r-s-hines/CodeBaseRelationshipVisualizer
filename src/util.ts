@@ -10,7 +10,7 @@ export function getExtension(filename: string): string {
 }
 
 /** Filters a tree structure */
-export function filterFileTree(root: AnyFile, condition: (node: AnyFile) => boolean): AnyFile {
+export function filterFileTree<T extends AnyFile>(root: T, condition: (node: AnyFile) => boolean): T {
     if (root.type == FileType.Directory) {
         return { ...root, children: root.children.filter(condition).map(child => filterFileTree(child, condition)) };
     } else {
