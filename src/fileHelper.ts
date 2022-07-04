@@ -25,3 +25,26 @@ export async function getFileTree(uri: Uri, type?: FileType): Promise<AnyFile> {
         throw new Error("Other file types not supported"); // TODO: handle symlinks and other special files
     }
 }
+
+export async function getPathSet(base: Uri): Promise<Set<string>> {
+    const type = (await vscode.workspace.fs.stat(base)).type;
+    const pathSet = new Set<string>();
+    await pathSetHelper(pathSet, base, [], type);
+    return pathSet;
+}
+
+/** Return set of the paths of all files under base, relative to base */
+async function pathSetHelper(pathSet: Set<string>, base: Uri, parts: string[], type: FileType): Promise<void> {
+    if (type == FileType.Directory) {
+        const children = await vscode.workspace.fs.readDirectory(Uri.joinPath(base, ...parts));
+        await Promise.all(
+            children.map(([name, subType]) => 
+                pathSetHelper(pathSet, base, [...parts, name], subType)
+            )
+        );
+    } else if (type == FileType.File) {
+        pathSet.add(parts.join("/"));
+    } else {
+        throw new Error("Other file types not supported");
+    }
+}
