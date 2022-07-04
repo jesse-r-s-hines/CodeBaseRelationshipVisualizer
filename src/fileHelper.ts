@@ -12,7 +12,8 @@ export async function getWorkspaceFileTree(): Promise<Directory | undefined> {
     }
 }
 
-export async function getFileTree(uri: Uri, type: FileType): Promise<AnyFile> {
+export async function getFileTree(uri: Uri, type?: FileType): Promise<AnyFile> {
+    type = type ?? (await vscode.workspace.fs.stat(uri)).type;
     const name = path.basename(uri.fsPath);
     if (type == FileType.Directory) {
         const files = await vscode.workspace.fs.readDirectory(uri);
