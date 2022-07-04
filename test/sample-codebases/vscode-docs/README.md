@@ -1,0 +1,1 @@
+This sample repository is taken from https://github.com/microsoft/vscode-docs.
