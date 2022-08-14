@@ -63,3 +63,13 @@ export interface Directory extends BaseFile {
  * TODO: maybe use Uri instead
  */
 export type Endpoint = string | { file: string, line?: number }
+
+/**
+ * Settings and configuration for a Visualization.
+ */
+ export interface VisualizationSettings {
+    /**
+     * Title for the internal webview. See https://code.visualstudio.com/api/references/vscode-api#WebviewPanel
+     */
+    title: string
+}

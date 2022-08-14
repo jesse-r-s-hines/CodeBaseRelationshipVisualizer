@@ -1,5 +1,5 @@
 import * as d3 from 'd3';
-import { FileType, Directory, AnyFile, Connection } from '../shared';
+import { FileType, Directory, AnyFile, Connection, VisualizationSettings } from '../shared';
 import { getExtension, clamp, filterFileTree } from '../util';
 import { cropLine, ellipsisElementText, Point } from './rendering';
 
@@ -8,6 +8,7 @@ import { cropLine, ellipsisElementText, Point } from './rendering';
  */
 export default class CBRVWebview {
     canvas: SVGSVGElement
+    settings: VisualizationSettings
     codebase: Directory
     connections: Connection[]
 
@@ -31,10 +32,11 @@ export default class CBRVWebview {
     fileIds = new Map<string, number>()
 
     /** Pass the selector for the canvas */
-    constructor(canvas: string, codebase: Directory, connections: Connection[]) {
+    constructor(canvas: string, codebase: Directory, settings: VisualizationSettings, connections: Connection[]) {
         this.canvas = document.querySelector(canvas)!;
         // filter empty directories
         this.codebase = filterFileTree(codebase, f => !(f.type == FileType.Directory && f.children.length == 0));
+        this.settings = settings;
         this.connections = connections;
         this.draw();
     }

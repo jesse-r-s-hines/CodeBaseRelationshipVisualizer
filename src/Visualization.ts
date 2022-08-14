@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Uri, ViewColumn, Webview } from 'vscode';
-import { AnyFile, Directory, Connection } from "./shared";
+import { AnyFile, Directory, Connection, VisualizationSettings } from "./shared";
 import * as fileHelper from "./fileHelper";
 
 /**
@@ -16,11 +16,14 @@ export class Visualization {
 
     constructor(
         context: vscode.ExtensionContext,
-        settings: VisualizationSettings = {},
+        settings: Partial<VisualizationSettings> = {},
         connections: Iterable<Connection> = []
     ) {
         this.context = context;
-        this.settings = settings;
+        const defaultSettings = {
+            title: 'CodeBase Relationship Visualizer',
+        };
+        this.settings = { ...defaultSettings, ...settings };
         this.connections = [...connections];
     }
 
@@ -37,7 +40,7 @@ export class Visualization {
         // Create and show panel
         const panel = vscode.window.createWebviewPanel(
             'codeBaseRelationshipVisualizer',
-            'CodeBase Relationship Visualizer',
+            this.settings.title,
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -50,6 +53,7 @@ export class Visualization {
                     panel.webview.postMessage({
                         type: "set",
                         codebase: this.codebase,
+                        settings: this.settings,
                         connections: this.connections,
                     });
                 }
@@ -85,14 +89,4 @@ export class Visualization {
     }
 }
 
-/**
- * Settings and configuration for a Visualization.
- * TODO can we make this an "inner class"?
- */
- export interface VisualizationSettings {
-    /**
-     * Title for the internal webview. See https://code.visualstudio.com/api/references/vscode-api#WebviewPanel
-     */
-    title?: string
-}
 

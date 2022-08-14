@@ -14,7 +14,9 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('codeBaseRelationshipVisualizer.start', async () => {
             const codebase = vscode.workspace.workspaceFolders![0]!.uri;
             const links = await getHyperlinks(codebase, "");
-            const visualization = new Visualization(context, {}, links);
+            const visualization = new Visualization(context, {
+                title: "Hyperlink Visualization",
+            }, links);
             await visualization.launch();
         }),
     );
