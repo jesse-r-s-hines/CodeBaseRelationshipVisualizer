@@ -16,6 +16,7 @@ export function activate(context: vscode.ExtensionContext) {
             const links = await getHyperlinks(codebase, "");
             const visualization = new Visualization(context, {
                 title: "Hyperlink Visualization",
+                directed: true,
             }, links);
             await visualization.launch();
         }),

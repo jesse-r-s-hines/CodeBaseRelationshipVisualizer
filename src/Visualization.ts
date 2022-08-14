@@ -22,6 +22,7 @@ export class Visualization {
         this.context = context;
         const defaultSettings = {
             title: 'CodeBase Relationship Visualizer',
+            directed: false,
         };
         this.settings = { ...defaultSettings, ...settings };
         this.connections = [...connections];

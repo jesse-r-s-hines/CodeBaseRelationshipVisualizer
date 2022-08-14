@@ -72,4 +72,10 @@ export type Endpoint = string | { file: string, line?: number }
      * Title for the internal webview. See https://code.visualstudio.com/api/references/vscode-api#WebviewPanel
      */
     title: string
+
+    /**
+     * Whether each connection is directed (an arrow) or not (a line).
+     * Default false.
+     */
+    directed: boolean
 }

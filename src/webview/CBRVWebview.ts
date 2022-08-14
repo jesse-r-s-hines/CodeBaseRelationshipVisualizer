@@ -84,6 +84,19 @@ export default class CBRVWebview {
             .attr("dominant-baseline", 'middle')
             .attr("font-family", "sans-serif")
             .attr("font-size", 10);
+
+        const defs = svg.append("defs");
+        const arrow = defs.append("marker")
+            .attr("id", "arrow")
+            .attr("viewBox", "0 0 10 10")
+            .attr("refX", 5)
+            .attr("refY", 5)
+            .attr("markerWidth", 6)
+            .attr("markerHeight", 6)
+            .attr("orient", "auto-start-reverse");
+        arrow.append("path")
+            .attr("d", "M 0 0 L 10 5 L 0 10 z")
+            .attr("fill", "yellow");
     
         const fileSection = svg.append('g')
             .classed("file-section", true);
@@ -154,6 +167,7 @@ export default class CBRVWebview {
                 .attr("stroke-width", "2")
                 .attr("stroke", "yellow")
                 .attr("fill", "none")
+                .attr("marker-end", conn => this.settings.directed ? "url(#arrow)" : null)
                 .attr("d", conn => {
                     // TODO normalize conn before this
                     const from = pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!.node;
