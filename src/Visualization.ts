@@ -23,6 +23,8 @@ export class Visualization {
         const defaultSettings = {
             title: 'CodeBase Relationship Visualizer',
             directed: false,
+            strokeWidth: 2,
+            color: "yellow",
         };
         this.settings = { ...defaultSettings, ...settings };
         this.connections = [...connections];

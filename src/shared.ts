@@ -55,6 +55,12 @@ export interface Directory extends BaseFile {
  export interface Connection {
     from: Endpoint
     to: Endpoint
+
+    /** Width of the SVG path */
+    strokeWidth?: number
+
+     /** CSS color string */
+     color?: string
 }
 
 /**
@@ -78,4 +84,10 @@ export type Endpoint = string | { file: string, line?: number }
      * Default false.
      */
     directed: boolean
+
+    /** Default width of the SVG path for connections. Can be overridden per connection via `Connection.weight` */
+    strokeWidth: number
+
+    /** Default CSS color string for connections. Can be overridden per connection via `Connection.color` */
+    color: string
 }

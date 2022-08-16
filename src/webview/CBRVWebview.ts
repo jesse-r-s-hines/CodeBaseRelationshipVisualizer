@@ -96,7 +96,9 @@ export default class CBRVWebview {
             .attr("orient", "auto-start-reverse");
         arrow.append("path")
             .attr("d", "M 0 0 L 10 5 L 0 10 z")
-            .attr("fill", "yellow");
+            // .attr("fill", this.settings.color);
+            // TODO context-fill doesn't work (SVG2 not supported)
+            // need to either put the arrowhead in the path directly or probably just create the markers as we go
     
         const fileSection = svg.append('g')
             .classed("file-section", true);
@@ -164,8 +166,8 @@ export default class CBRVWebview {
             .data(this.connections)
             .join("path")
                 .classed("connection", true)
-                .attr("stroke-width", "2")
-                .attr("stroke", "yellow")
+                .attr("stroke-width", conn => conn.strokeWidth ?? this.settings.strokeWidth)
+                .attr("stroke", conn => conn.color ?? this.settings.color)
                 .attr("fill", "none")
                 .attr("marker-end", conn => this.settings.directed ? "url(#arrow)" : null)
                 .attr("d", conn => {
