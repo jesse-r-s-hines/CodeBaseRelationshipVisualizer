@@ -86,19 +86,27 @@ export default class CBRVWebview {
             .attr("font-size", 10);
 
         const defs = svg.append("defs");
-        const arrow = defs.append("marker")
-            .attr("id", "arrow")
-            .attr("viewBox", "0 0 10 10")
-            .attr("refX", 5)
-            .attr("refY", 5)
-            .attr("markerWidth", 6)
-            .attr("markerHeight", 6)
-            .attr("orient", "auto-start-reverse");
-        arrow.append("path")
+        // const colors = this.connections.reduceRight((accum, c, i) => {
+        //     accum[c.color ?? this.settings.color] = i;
+        //     return accum
+        // }, {} as Record<string, number>);
+        const arrowColors = [...new Set(this.connections.map(c => c.color ?? this.settings.color))];
+        const arrowColorMap = arrowColors.reduce((o, c, i) => { o[c] = i; return o; }, {} as Record<string, number>);
+
+        const arrows = defs.selectAll("marker")
+            .data(arrowColors)
+            .join("marker")
+                .classed("arrow-head", true)
+                .attr("id", d => `arrow-${arrowColorMap[d]}`)
+                .attr("viewBox", "0 0 10 10")
+                .attr("refX", 5)
+                .attr("refY", 5)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto-start-reverse");
+        arrows.append("path")
             .attr("d", "M 0 0 L 10 5 L 0 10 z")
-            // .attr("fill", this.settings.color);
-            // TODO context-fill doesn't work (SVG2 not supported)
-            // need to either put the arrowhead in the path directly or probably just create the markers as we go
+            .attr("fill", d => d);
     
         const fileSection = svg.append('g')
             .classed("file-section", true);
@@ -169,7 +177,9 @@ export default class CBRVWebview {
                 .attr("stroke-width", conn => conn.strokeWidth ?? this.settings.strokeWidth)
                 .attr("stroke", conn => conn.color ?? this.settings.color)
                 .attr("fill", "none")
-                .attr("marker-end", conn => this.settings.directed ? "url(#arrow)" : null)
+                .attr("marker-end",
+                    conn => this.settings.directed ? `url(#arrow-${arrowColorMap[conn.color ?? this.settings.color]})` : null
+                )
                 .attr("d", conn => {
                     // TODO normalize conn before this
                     const from = pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!.node;
