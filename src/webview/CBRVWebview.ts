@@ -28,8 +28,8 @@ export default class CBRVWebview {
     textPadding = 2
 
     // Some rendering helpers
-    /** Returns a unique id generated from an arbitrary key. The same key will return the same id */
-    fileIds = new Map<string, number>()
+    /** Maps keys to uniq ids */
+    ids = new Map<string, number>()
 
     /** Pass the selector for the canvas */
     constructor(canvas: string, codebase: Directory, settings: VisualizationSettings, connections: Connection[]) {
@@ -64,16 +64,10 @@ export default class CBRVWebview {
             .size([this.diagramSize, this.diagramSize])
             .padding(this.filePadding)(root);
     
-        const pathMap: Map<string, {node: d3.HierarchyCircularNode<AnyFile>, id: string}> = new Map();
-        let uniqId = 0;
-        packed.each((d) => {
-            pathMap.set(this.fullPath(d), {
-                node: d,
-                id: `${d.data.type == FileType.File ? 'file' : 'directory'}-${uniqId}`
-            });
-            uniqId++;
-        });
-        const getId = (d: d3.HierarchyNode<AnyFile>) => pathMap.get(this.fullPath(d))!.id;
+        const pathMap: Map<string, d3.HierarchyCircularNode<AnyFile>> = new Map();
+        packed.each((d) =>
+            pathMap.set(this.fullPath(d), d)
+        );
 
         // render it to a SVG
         const { top, right, bottom, left } = this.margins;
@@ -91,13 +85,12 @@ export default class CBRVWebview {
         //     return accum
         // }, {} as Record<string, number>);
         const arrowColors = [...new Set(this.connections.map(c => c.color ?? this.settings.color))];
-        const arrowColorMap = arrowColors.reduce((o, c, i) => { o[c] = i; return o; }, {} as Record<string, number>);
 
         const arrows = defs.selectAll("marker")
             .data(arrowColors)
             .join("marker")
                 .classed("arrow-head", true)
-                .attr("id", d => `arrow-${arrowColorMap[d]}`)
+                .attr("id", color => this.getId(color, 'arrow'))
                 .attr("viewBox", "0 0 10 10")
                 .attr("refX", 5)
                 .attr("refY", 5)
@@ -121,7 +114,7 @@ export default class CBRVWebview {
         // Draw the circles.
         const arc = d3.arc();
         nodes.append("path")
-            .attr("id", d => getId(d))
+            .attr("id", d => this.getId(this.fullPath(d)))
             // Use path instead of circle so we can use textPath on it for the folder name. -pi to pi so that the path
             // starts at the bottom and we don't cut off the name
             .attr("d", d => arc({innerRadius: 0, outerRadius: d.r, startAngle: -Math.PI, endAngle: Math.PI}))
@@ -150,7 +143,7 @@ export default class CBRVWebview {
             .style("dominant-baseline", 'middle')
             .attr("stroke-width", 6)
             .append("textPath")
-                .attr("href", d => `#${getId(d)}`)
+                .attr("href", d => `#${this.getId(this.fullPath(d))}`)
                 .attr("startOffset", "50%")
                 .text(d => d.data.name)
                 .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
@@ -160,7 +153,7 @@ export default class CBRVWebview {
             .style("fill", "var(--vscode-editor-foreground)")
             .style("dominant-baseline", 'middle')
             .append("textPath")
-                .attr("href", d => `#${getId(d)}`)
+                .attr("href", d => `#${this.getId(this.fullPath(d))}`)
                 .attr("startOffset", "50%")
                 .text(d => d.data.name)
                 .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
@@ -178,15 +171,21 @@ export default class CBRVWebview {
                 .attr("stroke", conn => conn.color ?? this.settings.color)
                 .attr("fill", "none")
                 .attr("marker-end",
-                    conn => this.settings.directed ? `url(#arrow-${arrowColorMap[conn.color ?? this.settings.color]})` : null
+                    conn => this.settings.directed ? `url(#${this.getId(conn.color ?? this.settings.color, 'arrow')})` : null
                 )
                 .attr("d", conn => {
-                    // TODO normalize conn before this
-                    const from = pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!.node;
-                    const to = pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!.node;
+                    // TODO normalize conn before this and check for valid from/to
+                    const from = pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!;
+                    const to = pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!;
                     const [source, target] = cropLine([[from.x, from.y], [to.x, to.y]], from.r, to.r);
                     return link({ source, target });
                 });
+    }
+
+    // TODO maybe factor this out into its own id generator class
+    getId(key: string, prefix = "") {
+        if (!this.ids.has(key)) this.ids.set(key, this.ids.size);
+        return `${prefix}${this.ids.get(key)}`;
     }
 
     fullPath(d: d3.HierarchyNode<AnyFile>): string {
