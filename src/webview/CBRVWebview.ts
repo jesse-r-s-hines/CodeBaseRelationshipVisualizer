@@ -101,7 +101,9 @@ export default class CBRVWebview {
             .attr("d", "M 0 0 L 10 5 L 0 10 z")
             .attr("fill", d => d);
     
-        const fileSection = svg.append('g')
+        const svgBody = svg.append("g");
+
+        const fileSection = svgBody.append('g')
             .classed("file-section", true);
 
         const nodes = fileSection.selectAll(".file, .directory")
@@ -159,7 +161,7 @@ export default class CBRVWebview {
                 .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
 
 
-        const connectionSection = svg.append('g')
+        const connectionSection = svgBody.append('g')
             .classed("connection-section", true);
 
         const link = d3.link(d3.curveCatmullRom); // TODO find a better curve
@@ -180,6 +182,9 @@ export default class CBRVWebview {
                     const [source, target] = cropLine([[from.x, from.y], [to.x, to.y]], from.r, to.r);
                     return link({ source, target });
                 });
+
+        const zoom = d3.zoom().on('zoom', (e) => this.handleZoom(e));
+        zoom(svg as any);
     }
 
     // TODO maybe factor this out into its own id generator class
@@ -190,5 +195,9 @@ export default class CBRVWebview {
 
     fullPath(d: d3.HierarchyNode<AnyFile>): string {
         return d.ancestors().reverse().slice(1).map(d => d.data.name).join("/");
+    }
+
+    handleZoom(e: d3.D3ZoomEvent<SVGSVGElement, Connection>) {
+        d3.select(this.canvas).select("g").attr('transform', e.transform.toString());
     }
 }
