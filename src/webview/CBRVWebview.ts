@@ -80,10 +80,6 @@ export default class CBRVWebview {
             .attr("font-size", 10);
 
         const defs = svg.append("defs");
-        // const colors = this.connections.reduceRight((accum, c, i) => {
-        //     accum[c.color ?? this.settings.color] = i;
-        //     return accum
-        // }, {} as Record<string, number>);
         const arrowColors = [...new Set(this.connections.map(c => c.color ?? this.settings.color))];
 
         const arrows = defs.selectAll("marker")
