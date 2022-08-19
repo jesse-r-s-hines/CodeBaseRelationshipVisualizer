@@ -14,8 +14,6 @@ export default class CBRVWebview {
 
     // Settings and constants for the diagram
 
-    /** Size (width and height) of the svg viewbox (not the actual pixel size, that's dynamic) */
-    diagramSize = 1000
     /** Margins of the svg diagram */
     margins = { top: 10, right: 5, bottom: 5, left: 5 }
     /** Padding between file circles */
@@ -27,9 +25,14 @@ export default class CBRVWebview {
     /** Padding between labels and the outline of each file circle */
     textPadding = 2
 
-    // Some rendering helpers
+    // Some rendering variables
+    /** Size (width and height) of the svg viewbox (not the actual pixel size, that's dynamic) */
+    width = 1000
+    height = 1000
+    
     /** Maps keys to uniq ids */
     ids = new Map<string, number>()
+
 
     /** Pass the selector for the canvas */
     constructor(canvas: string, codebase: Directory, settings: VisualizationSettings, connections: Connection[]) {
@@ -59,9 +62,11 @@ export default class CBRVWebview {
         const colorScale = d3.scaleOrdinal(extensions, d3.quantize(d3.interpolateRainbow, extensions.size));
         const fileColor = (d: AnyFile) => d.type == FileType.Directory ? "#fff" : colorScale(getExtension(d.name));
 
+        const margins = this.margins;
+
         // Make the circle packing diagram
         const packed = d3.pack<AnyFile>()
-            .size([this.diagramSize, this.diagramSize])
+            .size([this.width - margins.left - margins.right, this.height - margins.top - margins.bottom ])
             .padding(this.filePadding)(root);
     
         const pathMap: Map<string, d3.HierarchyCircularNode<AnyFile>> = new Map();
@@ -70,10 +75,9 @@ export default class CBRVWebview {
         );
 
         // render it to a SVG
-        const { top, right, bottom, left } = this.margins;
         const svg = d3.select(this.canvas)
-            // use negatives to add margin since pack() starts at 0 0, viewBox is minX, minY, width, height
-            .attr("viewBox", [ -left, -top, this.diagramSize + left + right, this.diagramSize + top + bottom ])
+            // use negatives to add margin since pack() starts at 0 0.
+            .attr("viewBox", [ -margins.left, - margins.top, this.width, this.height ]) // minX, minY, width, height
             .attr("text-anchor", "middle")
             .attr("dominant-baseline", 'middle')
             .attr("font-family", "sans-serif")
