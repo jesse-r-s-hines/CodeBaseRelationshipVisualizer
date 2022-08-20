@@ -19,9 +19,9 @@ export default class CBRVWebview {
     /** Padding between file circles */
     filePadding = 20
     /** Directory outline stroke color */
-    stroke = "#bbb"
+    directoryStrokeColor = "#bbb"
     /** Directory outline stroke width */
-    strokeWidth = 1;
+    directoryStrokeWidth = 1;
     /** Padding between labels and the outline of each file circle */
     textPadding = 2
 
@@ -120,8 +120,8 @@ export default class CBRVWebview {
             // Use path instead of circle so we can use textPath on it for the folder name. -pi to pi so that the path
             // starts at the bottom and we don't cut off the name
             .attr("d", d => arc({innerRadius: 0, outerRadius: d.r, startAngle: -Math.PI, endAngle: Math.PI}))
-            .attr("stroke", d => d.data.type == FileType.Directory ? this.stroke : "none") // only directories have an outline
-            .attr("stroke-width", d => d.data.type == FileType.Directory ? this.strokeWidth : null)
+            .attr("stroke", d => d.data.type == FileType.Directory ? this.directoryStrokeColor : "none") // only directories have an outline
+            .attr("stroke-width", d => d.data.type == FileType.Directory ? this.directoryStrokeWidth : null)
             .attr("fill", d => fileColor(d.data))
             .attr("fill-opacity", d => d.data.type == FileType.Directory ? 0.0 : 1.0); // directories are transparent
 
