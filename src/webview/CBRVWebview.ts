@@ -14,6 +14,8 @@ export default class CBRVWebview {
 
     // Settings and constants for the diagram
 
+    /** Size (width and height) of the svg viewbox (not the actual pixel size, that's dynamic) */
+    viewBoxSize = 1000
     /** Margins of the svg diagram */
     margins = { top: 10, right: 5, bottom: 5, left: 5 }
     /** Padding between file circles */
@@ -77,7 +79,7 @@ export default class CBRVWebview {
         // render it to a SVG
         const svg = d3.select(this.canvas)
             // use negatives to add margin since pack() starts at 0 0.
-            .attr("viewBox", [ -margins.left, - margins.top, this.width, this.height ]) // minX, minY, width, height
+            .attr("viewBox", [ -margins.left, - margins.top, this.viewBoxSize, this.viewBoxSize ]) // minX, minY, width, height
             .attr("text-anchor", "middle")
             .attr("dominant-baseline", 'middle')
             .attr("font-family", "sans-serif")
