@@ -26,6 +26,12 @@ export default class CBRVWebview {
     directoryStrokeWidth = 1;
     /** Padding between labels and the outline of each file circle */
     textPadding = 2
+    /** Maximum area of file circles (in viewbox units) */
+    minFileSize = 16
+    /** Minimum area of file circles (in viewbox units) */
+    maxFileSize = 1024 ** 2
+    /** Radius when a directory's contents will be hidden (in px) */
+    dynamicZoomBreakPoint = 16
 
     // Some rendering variables
     /** Size (width and height) of the svg viewbox (not the actual pixel size, that's dynamic) */
@@ -54,7 +60,7 @@ export default class CBRVWebview {
         const root = d3.hierarchy<AnyFile>(this.codebase, d => d.type == FileType.Directory ? d.children : undefined);
 
         // Compute size of folders
-        root.sum(d => d.type == FileType.File ? clamp(d.size, 16, 1024 ** 2) : 0);
+        root.sum(d => d.type == FileType.File ? clamp(d.size, this.minFileSize, this.maxFileSize) : 0);
 
         // Sort by descending size for pleasing layout
         root.sort((a, b) => d3.descending(a.value, b.value));
@@ -62,7 +68,7 @@ export default class CBRVWebview {
         // Compute colors based on file extensions
         const extensions = new Set(root.descendants().map(d => getExtension(d.data.name)));
         const colorScale = d3.scaleOrdinal(extensions, d3.quantize(d3.interpolateRainbow, extensions.size));
-        const fileColor = (d: AnyFile) => d.type == FileType.Directory ? "#fff" : colorScale(getExtension(d.name));
+        const fileColor = (d: AnyFile) => d.type == FileType.Directory ? null : colorScale(getExtension(d.name));
 
         const margins = this.margins;
 
@@ -108,8 +114,16 @@ export default class CBRVWebview {
         const fileSection = svgBody.append('g')
             .classed("file-section", true);
 
+        const rect = this.canvas.getBoundingClientRect();
+        this.width = rect.width;
+        this.height = rect.height;
+        const viewToRenderedRatio = Math.min(this.width, this.height) / this.viewBoxSize;
+        const shouldHideContents = (d: d3.HierarchyCircularNode<AnyFile>) => {
+            return d.data.type == FileType.Directory && !!d.parent && d.r * viewToRenderedRatio <= this.dynamicZoomBreakPoint;
+        };
+
         const nodes = fileSection.selectAll(".file, .directory")
-            .data(packed.descendants())
+            .data(packed.descendants().filter(d => !d.parent || !shouldHideContents(d.parent)))
             .join("g")
                 .classed("file", d => d.data.type == FileType.File)
                 .classed("directory", d => d.data.type == FileType.Directory)
@@ -162,6 +176,11 @@ export default class CBRVWebview {
                 .text(d => d.data.name)
                 .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
 
+        // TODO make this show an elipsis or something
+        folders.filter(shouldHideContents)
+            .select("path")
+                .attr("fill", d => 'white')
+                .attr("fill-opacity", d => 1.0);
 
         const connectionSection = svgBody.append('g')
             .classed("connection-section", true);
