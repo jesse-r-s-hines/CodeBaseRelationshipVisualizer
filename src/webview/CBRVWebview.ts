@@ -1,22 +1,21 @@
 import * as d3 from 'd3';
 import { FileType, Directory, AnyFile, Connection, VisualizationSettings } from '../shared';
-import { getExtension, clamp, filterFileTree } from '../util';
-import { cropLine, ellipsisElementText, Point } from './rendering';
+import { getExtension, clamp, filterFileTree, Lazy, UniqIdGenerator } from '../util';
+import { cropLine, ellipsisElementText } from './rendering';
 
 /**
  * This is the class that renders the actual diagram.
  */
 export default class CBRVWebview {
-    canvas: SVGSVGElement
     settings: VisualizationSettings
     codebase: Directory
     connections: Connection[]
 
     // Settings and constants for the diagram
 
-    /** Size (width and height) of the svg viewbox (not the actual pixel size, that's dynamic) */
-    viewBoxSize = 1000
-    /** Margins of the svg diagram */
+    /** Size (width and height) of the diagram within the svg viewbox (in viewbox units) */
+    diagramSize = 1000
+    /** Margins of the svg diagram (in viewbox units). The viewbox will be diagramSize plus these. */
     margins = { top: 10, right: 5, bottom: 5, left: 5 }
     /** Padding between file circles */
     filePadding = 20
@@ -33,97 +32,80 @@ export default class CBRVWebview {
     /** Radius when a directory's contents will be hidden (in px) */
     dynamicZoomBreakPoint = 16
 
+    // Parts of the d3 diagram
+
+    diagram: d3.Selection<SVGSVGElement, unknown, null, undefined>
+    defs: d3.Selection<SVGDefsElement, unknown, null, undefined>
+    zoomWindow: d3.Selection<SVGGElement, unknown, null, undefined>
+    fileGroup: d3.Selection<SVGGElement, unknown, null, undefined>
+    connectionGroup: d3.Selection<SVGGElement, unknown, null, undefined>
+
     // Some rendering variables
-    /** Size (width and height) of the svg viewbox (not the actual pixel size, that's dynamic) */
-    width = 1000
-    height = 1000
-    
+
+    /** Actual pixel width of the svg diagram */
+    width = 0
+    /** Actual pixel height of the svg diagram */
+    height = 0
     /** Maps keys to uniq ids */
-    ids = new Map<string, number>()
+    ids: UniqIdGenerator = new UniqIdGenerator();
+    /** Maps filepaths to hierarchy nodes */
+    pathMap: Map<string, d3.HierarchyCircularNode<AnyFile>> = new Map();
 
 
-    /** Pass the selector for the canvas */
-    constructor(canvas: string, codebase: Directory, settings: VisualizationSettings, connections: Connection[]) {
-        this.canvas = document.querySelector(canvas)!;
+    /** Pass the selector for the canvas svg */
+    constructor(diagram: string, codebase: Directory, settings: VisualizationSettings, connections: Connection[]) {
         // filter empty directories
         this.codebase = filterFileTree(codebase, f => !(f.type == FileType.Directory && f.children.length == 0));
         this.settings = settings;
         this.connections = connections;
-        this.draw();
-    }
 
-    draw() {
-        this.drawDiagram();
-    }
-
-    drawDiagram() {
-        const root = d3.hierarchy<AnyFile>(this.codebase, d => d.type == FileType.Directory ? d.children : undefined);
-
-        // Compute size of folders
-        root.sum(d => d.type == FileType.File ? clamp(d.size, this.minFileSize, this.maxFileSize) : 0);
-
-        // Sort by descending size for pleasing layout
-        root.sort((a, b) => d3.descending(a.value, b.value));
-
-        // Compute colors based on file extensions
-        const extensions = new Set(root.descendants().map(d => getExtension(d.data.name)));
-        const colorScale = d3.scaleOrdinal(extensions, d3.quantize(d3.interpolateRainbow, extensions.size));
-        const fileColor = (d: AnyFile) => d.type == FileType.Directory ? null : colorScale(getExtension(d.name));
-
-        const margins = this.margins;
-
-        // Make the circle packing diagram
-        const packed = d3.pack<AnyFile>()
-            .size([this.width - margins.left - margins.right, this.height - margins.top - margins.bottom ])
-            .padding(this.filePadding)(root);
-    
-        const pathMap: Map<string, d3.HierarchyCircularNode<AnyFile>> = new Map();
-        packed.each((d) =>
-            pathMap.set(this.fullPath(d), d)
-        );
-
-        // render it to a SVG
-        const svg = d3.select(this.canvas)
-            // use negatives to add margin since pack() starts at 0 0.
-            .attr("viewBox", [ -margins.left, - margins.top, this.viewBoxSize, this.viewBoxSize ]) // minX, minY, width, height
+        // Create the SVG
+        const { top, right, bottom, left } = this.margins;
+        this.diagram = d3.select(document.querySelector(diagram) as SVGSVGElement)
+            .classed("diagram", true)
+            // use negatives to add margin since pack() starts at 0 0. Viewbox is [minX, minY, width, height]
+            .attr("viewBox", [ -left, -top, left + this.diagramSize + right, top + this.diagramSize + bottom])
             .attr("text-anchor", "middle")
             .attr("dominant-baseline", 'middle')
             .attr("font-family", "sans-serif")
             .attr("font-size", 10);
 
-        const defs = svg.append("defs");
-        const arrowColors = [...new Set(this.connections.map(c => c.color ?? this.settings.color))];
+        this.defs = this.diagram.append("defs");
 
-        const arrows = defs.selectAll("marker")
-            .data(arrowColors)
-            .join("marker")
-                .classed("arrow-head", true)
-                .attr("id", color => this.getId(color, 'arrow'))
-                .attr("viewBox", "0 0 10 10")
-                .attr("refX", 5)
-                .attr("refY", 5)
-                .attr("markerWidth", 6)
-                .attr("markerHeight", 6)
-                .attr("orient", "auto-start-reverse");
-        arrows.append("path")
-            .attr("d", "M 0 0 L 10 5 L 0 10 z")
-            .attr("fill", d => d);
+        this.zoomWindow = this.diagram.append("g").classed("zoom-window", true);
+
+        this.fileGroup = this.zoomWindow.append("g").classed("file-group", true);
+        this.connectionGroup = this.zoomWindow.append("g").classed("connection-group", true);
+
+        const zoom = d3.zoom().on('zoom', (e) => this.handleZoom(e));
+        zoom(this.diagram as any);
+
+        this.updateFiles();
+    }
+
+    updateFiles() {
+        const root = d3.hierarchy<AnyFile>(this.codebase, f => f.type == FileType.Directory ? f.children : undefined);
+        // Compute size of files and folders
+        root.sum(d => d.type == FileType.File ? clamp(d.size, this.minFileSize, this.maxFileSize) : 0);
+        // Sort by descending size for layout purposes
+        root.sort((a, b) => d3.descending(a.value, b.value));
+
+        // Use d3 to calculate the circle packing layout
+        const packed = d3.pack<AnyFile>()
+            .size([this.diagramSize, this.diagramSize])
+            .padding(this.filePadding)(root);
     
-        const svgBody = svg.append("g");
+        // Store a map of paths to nodes for future use in connections
+        this.pathMap = new Map();
+        packed.each((d) =>
+            this.pathMap.set(this.fullPath(d), d)
+        );
+        // TODO maybe wipe id map?
 
-        const fileSection = svgBody.append('g')
-            .classed("file-section", true);
+        this.updateSize(); // get the actual size of the svg
 
-        const rect = this.canvas.getBoundingClientRect();
-        this.width = rect.width;
-        this.height = rect.height;
-        const viewToRenderedRatio = Math.min(this.width, this.height) / this.viewBoxSize;
-        const shouldHideContents = (d: d3.HierarchyCircularNode<AnyFile>) => {
-            return d.data.type == FileType.Directory && !!d.parent && d.r * viewToRenderedRatio <= this.dynamicZoomBreakPoint;
-        };
-
-        const nodes = fileSection.selectAll(".file, .directory")
-            .data(packed.descendants().filter(d => !d.parent || !shouldHideContents(d.parent)))
+        const nodes = this.fileGroup.selectAll(".file, .directory")
+            .data(packed.descendants().filter(d => !d.parent || !this.shouldHideContents(d.parent)))
             .join("g")
                 .classed("file", d => d.data.type == FileType.File)
                 .classed("directory", d => d.data.type == FileType.Directory)
@@ -131,14 +113,15 @@ export default class CBRVWebview {
 
         // Draw the circles.
         const arc = d3.arc();
+        const colorScale = this.getColorScale(new Lazy(root.descendants()).map(x => x.data));
         nodes.append("path")
-            .attr("id", d => this.getId(this.fullPath(d)))
+            .attr("id", d => this.ids.get(this.fullPath(d)))
             // Use path instead of circle so we can use textPath on it for the folder name. -pi to pi so that the path
             // starts at the bottom and we don't cut off the name
             .attr("d", d => arc({innerRadius: 0, outerRadius: d.r, startAngle: -Math.PI, endAngle: Math.PI}))
             .attr("stroke", d => d.data.type == FileType.Directory ? this.directoryStrokeColor : "none") // only directories have an outline
             .attr("stroke-width", d => d.data.type == FileType.Directory ? this.directoryStrokeWidth : null)
-            .attr("fill", d => fileColor(d.data))
+            .attr("fill", d => colorScale(d.data))
             .attr("fill-opacity", d => d.data.type == FileType.Directory ? 0.0 : 1.0); // directories are transparent
 
         nodes.append("title")
@@ -154,39 +137,61 @@ export default class CBRVWebview {
 
         const folders = nodes.filter(d => d.data.type == FileType.Directory);
 
-        // Add a "background" copy of the text with a stroke to provide contrast with the circle outline
+        // add a folder name at the top
+        // Add a "background" copy of the label first with a wider stroke to provide contrast with the circle outline
+        // If we weren't using textPath, we could use paint-order to make stroke an outline, but textPath causes the
+        // stroke to cover other characters
         folders.append("text")
             .style("fill", "none")
             .style("stroke", "var(--vscode-editor-background)")
             .style("dominant-baseline", 'middle')
             .attr("stroke-width", 6)
             .append("textPath")
-                .attr("href", d => `#${this.getId(this.fullPath(d))}`)
+                .attr("href", d => `#${this.ids.get(this.fullPath(d))}`)
                 .attr("startOffset", "50%")
                 .text(d => d.data.name)
                 .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
 
-        // add a folder name at the top
         folders.append("text")
             .style("fill", "var(--vscode-editor-foreground)")
             .style("dominant-baseline", 'middle')
             .append("textPath")
-                .attr("href", d => `#${this.getId(this.fullPath(d))}`)
+                .attr("href", d => `#${this.ids.get(this.fullPath(d))}`)
                 .attr("startOffset", "50%")
                 .text(d => d.data.name)
                 .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
+        // TODO could ellipsisElementText return different values for background and foreground?
+        // TODO the labels look weird on small folders, and can overlap other folders labels
 
         // TODO make this show an elipsis or something
-        folders.filter(shouldHideContents)
+        folders.filter(this.shouldHideContents)
             .select("path")
                 .attr("fill", d => 'white')
                 .attr("fill-opacity", d => 1.0);
 
-        const connectionSection = svgBody.append('g')
-            .classed("connection-section", true);
+        this.updateConnections();
+    }
+
+    updateConnections() {
+        const arrowColors = [...new Set(new Lazy(this.connections).map(c => c.color ?? this.settings.color))];
+
+        const arrows = this.defs.selectAll("marker.arrow")
+            .data(arrowColors)
+            .join("marker")
+                .classed("arrow", true)
+                .attr("id", color => this.ids.get(color, 'arrow'))
+                .attr("viewBox", "0 0 10 10")
+                .attr("refX", 5)
+                .attr("refY", 5)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto-start-reverse");
+        arrows.append("path")
+            .attr("d", "M 0 0 L 10 5 L 0 10 z")
+            .attr("fill", d => d);
 
         const link = d3.link(d3.curveCatmullRom); // TODO find a better curve
-        const connections = connectionSection.selectAll(".connection")
+        const connections = this.connectionGroup.selectAll(".connection")
             .data(this.connections)
             .join("path")
                 .classed("connection", true)
@@ -194,31 +199,46 @@ export default class CBRVWebview {
                 .attr("stroke", conn => conn.color ?? this.settings.color)
                 .attr("fill", "none")
                 .attr("marker-end",
-                    conn => this.settings.directed ? `url(#${this.getId(conn.color ?? this.settings.color, 'arrow')})` : null
+                    conn => this.settings.directed ? `url(#${this.ids.get(conn.color ?? this.settings.color, 'arrow')})` : null
                 )
                 .attr("d", conn => {
                     // TODO normalize conn before this and check for valid from/to
-                    const from = pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!;
-                    const to = pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!;
+                    const from = this.pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!;
+                    const to = this.pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!;
                     const [source, target] = cropLine([[from.x, from.y], [to.x, to.y]], from.r, to.r);
                     return link({ source, target });
                 });
-
-        const zoom = d3.zoom().on('zoom', (e) => this.handleZoom(e));
-        zoom(svg as any);
     }
 
-    // TODO maybe factor this out into its own id generator class
-    getId(key: string, prefix = "") {
-        if (!this.ids.has(key)) this.ids.set(key, this.ids.size);
-        return `${prefix}${this.ids.get(key)}`;
+    /** Returns a function used to compute color from file extension */
+    getColorScale(files: Iterable<AnyFile>): (d: AnyFile) => string | null {
+        const extensions = new Set<string>();
+        for (const file of files) {
+            extensions.add(getExtension(file.name));
+        }
+        const colorScale = d3.scaleOrdinal(extensions, d3.quantize(d3.interpolateRainbow, extensions.size));
+        return (d: AnyFile) => {
+            return d.type == FileType.Directory ? null : colorScale(getExtension(d.name));
+        };
     }
 
     fullPath(d: d3.HierarchyNode<AnyFile>): string {
         return d.ancestors().reverse().slice(1).map(d => d.data.name).join("/");
     }
 
+    shouldHideContents(d: d3.HierarchyCircularNode<AnyFile>) {
+        return false;
+        const viewToRenderedRatio = Math.min(this.width, this.height) / this.diagramSize;
+        return d.data.type == FileType.Directory && !!d.parent && d.r * viewToRenderedRatio <= this.dynamicZoomBreakPoint;
+    }
+
+    updateSize() {
+        const rect = this.diagram.node()!.getBoundingClientRect();
+        this.width = rect.width;
+        this.height = rect.height;
+    }
+
     handleZoom(e: d3.D3ZoomEvent<SVGSVGElement, Connection>) {
-        d3.select(this.canvas).select("g").attr('transform', e.transform.toString());
+        this.zoomWindow.attr('transform', e.transform.toString());
     }
 }
