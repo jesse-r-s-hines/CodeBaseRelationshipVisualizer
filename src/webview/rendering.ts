@@ -3,7 +3,7 @@ export type Point = [number, number]
 /**
  * If el's text is wider than width, cut it and add an ellipsis until if fits. Returns the new text in the node. If
  * the text won't fit at all, sets the text to empty. There are pure CSS ways of doing this, but they don't work in
- * SVGs unless we do an foreignObject.
+ * SVGs unless we do a foreignObject.
  */
 export function ellipsisElementText(el: SVGTextContentElement, width: number, height = Infinity, padding = 0): string {
     const [availableWidth, availableHeight] = [width - 2 * padding, height - 2 * padding];
