@@ -82,8 +82,8 @@ export class Visualization {
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>CodeBase Relationship Visualizer</title>
             </head>
-            <body style="overflow: hidden; padding: 0">
-                <svg id="canvas" style="width: 100%; height: 100vh; margin: 0"></svg>
+            <body style="width: 100vw; height: 100vh;padding: 0; margin: 0">
+                <svg id="canvas" style="width: 100%; height: 100%;padding: 0; margin: 0"></svg>
                 <script>var exports = {}</script>
                 <script src="${scriptUri}"></script>
             </body>
