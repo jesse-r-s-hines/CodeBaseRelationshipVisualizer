@@ -73,6 +73,7 @@ export class Visualization {
     private getWebviewContent(webview: Webview): string {
         const extPath = vscode.Uri.file(this.context.extensionPath);
         const scriptUri = webview.asWebviewUri(Uri.joinPath(extPath, "dist", "webview", "webview.js"));
+        const stylesUri = webview.asWebviewUri(Uri.joinPath(extPath, "src", "webview", "CBRVStyles.css"));
 
         return `
             <!DOCTYPE html>
@@ -81,9 +82,10 @@ export class Visualization {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>CodeBase Relationship Visualizer</title>
+                <link rel="stylesheet" href="${stylesUri}">
             </head>
-            <body style="width: 100vw; height: 100vh;padding: 0; margin: 0">
-                <svg id="canvas" style="width: 100%; height: 100%;padding: 0; margin: 0"></svg>
+            <body>
+                <svg id="canvas"></svg>
                 <script>var exports = {}</script>
                 <script src="${scriptUri}"></script>
             </body>

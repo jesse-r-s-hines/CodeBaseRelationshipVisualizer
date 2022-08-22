@@ -19,10 +19,6 @@ export default class CBRVWebview {
     margins = { top: 10, right: 5, bottom: 5, left: 5 }
     /** Padding between file circles */
     filePadding = 20
-    /** Directory outline stroke color */
-    directoryStrokeColor = "#bbb"
-    /** Directory outline stroke width */
-    directoryStrokeWidth = 1;
     /** Padding between labels and the outline of each file circle */
     textPadding = 2
     /** Maximum area of file circles (in viewbox units) */
@@ -62,13 +58,8 @@ export default class CBRVWebview {
         // Create the SVG
         const { top, right, bottom, left } = this.margins;
         this.diagram = d3.select(document.querySelector(diagram) as SVGSVGElement)
-            .classed("diagram", true)
             // use negatives to add margin since pack() starts at 0 0. Viewbox is [minX, minY, width, height]
-            .attr("viewBox", [ -left, -top, left + this.diagramSize + right, top + this.diagramSize + bottom])
-            .attr("text-anchor", "middle")
-            .attr("dominant-baseline", 'middle')
-            .attr("font-family", "sans-serif")
-            .attr("font-size", 10);
+            .attr("viewBox", [ -left, -top, left + this.diagramSize + right, top + this.diagramSize + bottom]);
 
         this.defs = this.diagram.append("defs");
 
@@ -119,10 +110,8 @@ export default class CBRVWebview {
             // Use path instead of circle so we can use textPath on it for the folder name. -pi to pi so that the path
             // starts at the bottom and we don't cut off the name
             .attr("d", d => arc({innerRadius: 0, outerRadius: d.r, startAngle: -Math.PI, endAngle: Math.PI}))
-            .attr("stroke", d => d.data.type == FileType.Directory ? this.directoryStrokeColor : "none") // only directories have an outline
-            .attr("stroke-width", d => d.data.type == FileType.Directory ? this.directoryStrokeWidth : null)
-            .attr("fill", d => colorScale(d.data))
-            .attr("fill-opacity", d => d.data.type == FileType.Directory ? 0.0 : 1.0); // directories are transparent
+            .attr("fill", d => colorScale(d.data));
+
 
         nodes.append("title")
             .text(d => this.fullPath(d));
@@ -142,10 +131,7 @@ export default class CBRVWebview {
         // If we weren't using textPath, we could use paint-order to make stroke an outline, but textPath causes the
         // stroke to cover other characters
         folders.append("text")
-            .style("fill", "none")
-            .style("stroke", "var(--vscode-editor-background)")
-            .style("dominant-baseline", 'middle')
-            .attr("stroke-width", 6)
+            .classed("label-background", true)
             .append("textPath")
                 .attr("href", d => `#${this.ids.get(this.fullPath(d))}`)
                 .attr("startOffset", "50%")
@@ -153,8 +139,7 @@ export default class CBRVWebview {
                 .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
 
         folders.append("text")
-            .style("fill", "var(--vscode-editor-foreground)")
-            .style("dominant-baseline", 'middle')
+            .classed("label-foreground", true)
             .append("textPath")
                 .attr("href", d => `#${this.ids.get(this.fullPath(d))}`)
                 .attr("startOffset", "50%")
@@ -164,10 +149,8 @@ export default class CBRVWebview {
         // TODO the labels look weird on small folders, and can overlap other folders labels
 
         // TODO make this show an elipsis or something
-        folders.filter(this.shouldHideContents)
-            .select("path")
-                .attr("fill", d => 'white')
-                .attr("fill-opacity", d => 1.0);
+        folders
+            .classed("contents-hidden", this.shouldHideContents);
 
         this.updateConnections();
     }
@@ -197,7 +180,6 @@ export default class CBRVWebview {
                 .classed("connection", true)
                 .attr("stroke-width", conn => conn.strokeWidth ?? this.settings.strokeWidth)
                 .attr("stroke", conn => conn.color ?? this.settings.color)
-                .attr("fill", "none")
                 .attr("marker-end",
                     conn => this.settings.directed ? `url(#${this.ids.get(conn.color ?? this.settings.color, 'arrow')})` : null
                 )
