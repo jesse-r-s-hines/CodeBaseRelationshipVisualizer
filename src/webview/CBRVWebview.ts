@@ -130,7 +130,7 @@ export default class CBRVWebview {
         // Add a "background" copy of the label first with a wider stroke to provide contrast with the circle outline
         // If we weren't using textPath, we could use paint-order to make stroke an outline, but textPath causes the
         // stroke to cover other characters
-        folders.append("text")
+        const labelBackgrounds = folders.append("text")
             .classed("label-background", true)
             .append("textPath")
                 .attr("href", d => `#${this.ids.get(this.fullPath(d))}`)
@@ -138,14 +138,12 @@ export default class CBRVWebview {
                 .text(d => d.data.name)
                 .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
 
-        folders.append("text")
+        const labelForegrounds = folders.append("text")
             .classed("label-foreground", true)
             .append("textPath")
                 .attr("href", d => `#${this.ids.get(this.fullPath(d))}`)
                 .attr("startOffset", "50%")
-                .text(d => d.data.name)
-                .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
-        // TODO could ellipsisElementText return different values for background and foreground?
+                .text((d, i) => labelBackgrounds.nodes()[i].textContent); // pull already calculated ellipsis text
         // TODO the labels look weird on small folders, and can overlap other folders labels
 
         // TODO make this show an elipsis or something
