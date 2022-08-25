@@ -124,13 +124,13 @@ export default class CBRVWebview {
                 .text(d => d.data.name)
                 .each((d, i, nodes) => ellipsisElementText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
 
-        const folders = nodes.filter(d => d.data.type == FileType.Directory);
+        const directories = nodes.filter(d => d.data.type == FileType.Directory);
 
         // add a folder name at the top
         // Add a "background" copy of the label first with a wider stroke to provide contrast with the circle outline
         // If we weren't using textPath, we could use paint-order to make stroke an outline, but textPath causes the
         // stroke to cover other characters
-        const labelBackgrounds = folders.append("text")
+        const labelBackgrounds = directories.append("text")
             .classed("label-background", true)
             .append("textPath")
                 .attr("href", d => `#${this.ids.get(this.fullPath(d))}`)
@@ -138,7 +138,7 @@ export default class CBRVWebview {
                 .text(d => d.data.name)
                 .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
 
-        const labelForegrounds = folders.append("text")
+        const labelForegrounds = directories.append("text")
             .classed("label-foreground", true)
             .append("textPath")
                 .attr("href", d => `#${this.ids.get(this.fullPath(d))}`)
@@ -147,7 +147,7 @@ export default class CBRVWebview {
         // TODO the labels look weird on small folders, and can overlap other folders labels
 
         // TODO make this show an elipsis or something
-        folders
+        directories
             .classed("contents-hidden", this.shouldHideContents);
 
         this.updateConnections();
