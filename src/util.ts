@@ -60,10 +60,10 @@ export class Lazy<T> implements Iterable<T> {
 export class UniqIdGenerator {
     #ids: Map<string, number>;
     constructor() {
-        this.#ids = new Map()
+        this.#ids = new Map();
     }
 
-    get(key: string, prefix = "") {
+    get(key: string, prefix = "uniq-") {
         if (!this.#ids.has(key)) this.#ids.set(key, this.#ids.size);
         return `${prefix}${this.#ids.get(key)}`;
     }
