@@ -87,7 +87,7 @@ export default class CBRVWebview {
         // Store a map of paths to nodes for future use in connections
         this.pathMap = new Map();
         this.packLayout.each((d) =>
-            this.pathMap.set(this.fullPath(d), d)
+            this.pathMap.set(this.filePath(d), d)
         );
 
         this.updateFiles();
@@ -102,11 +102,11 @@ export default class CBRVWebview {
 
         const data = this.packLayout.descendants().filter(d => !d.parent || !this.shouldHideContents(d.parent));
         this.fileGroup.selectAll(".file, .directory")
-            .data(data, d => this.fullPath(d as any))
+            .data(data, d => this.filePath(d as any))
             .join(
                 enter => {
                     const all = enter.append('g')
-                        // .attr('data-filepath', d => this.fullPath(d))
+                        // .attr('data-filepath', d => this.filePath(d))
                         .classed("file", d => d.data.type == FileType.File)
                         .classed("directory", d => d.data.type == FileType.Directory)
                         .classed("contents-hidden", d => this.shouldHideContents(d)) // TODO make this show an elipsis or something
@@ -114,7 +114,7 @@ export default class CBRVWebview {
 
                     // Draw the circles for each file and directory.
                     all.append("path")
-                        .attr("id", d => this.ids.get(this.fullPath(d)))
+                        .attr("id", d => this.ids.get(this.filePath(d)))
                         // Use path instead of circle so we can use textPath on it for the folder name. -pi to pi so the
                         // path starts at the bottom and we don't cut off the name
                         .attr("d", d => arc({innerRadius: 0, outerRadius: d.r, startAngle: -Math.PI, endAngle: Math.PI}))
@@ -122,7 +122,7 @@ export default class CBRVWebview {
 
                     // Add a tooltip
                     all.append("title")
-                        .text(d => this.fullPath(d));
+                        .text(d => this.filePath(d));
 
                     // Add labels
                     const files = all.filter(d => d.data.type == FileType.File); 
@@ -143,7 +143,7 @@ export default class CBRVWebview {
                     // const labelBackgrounds = directories.append("text")
                     //     .classed("label-background", true)
                     //     .append("textPath")
-                    //         .attr("href", d => `#${this.ids.get(this.fullPath(d))}`)
+                    //         .attr("href", d => `#${this.ids.get(this.filePath(d))}`)
                     //         .attr("startOffset", "50%")
                     //         .text(d => d.data.name)
                     //         .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
@@ -151,7 +151,7 @@ export default class CBRVWebview {
                     // const labelForegrounds = directories.append("text")
                     //     .classed("label-foreground", true)
                     //     .append("textPath")
-                    //         .attr("href", d => `#${this.ids.get(this.fullPath(d))}`)
+                    //         .attr("href", d => `#${this.ids.get(this.filePath(d))}`)
                     //         .attr("startOffset", "50%")
                     //         .text((d, i) => labelBackgrounds.nodes()[i].textContent); // pull already calculated ellipsis text
                     // TODO the labels look weird on small folders, and can overlap other folders labels
@@ -215,7 +215,7 @@ export default class CBRVWebview {
         };
     }
 
-    fullPath(d: d3.HierarchyNode<AnyFile>): string {
+    filePath(d: d3.HierarchyNode<AnyFile>): string {
         return d.ancestors().reverse().slice(1).map(d => d.data.name).join("/");
     }
 
