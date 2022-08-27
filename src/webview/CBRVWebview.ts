@@ -128,10 +128,10 @@ export default class CBRVWebview {
                     const files = all.filter(d => d.data.type == FileType.File); 
                     files.append("text")
                         .append("tspan")
-                .attr("x", 0)
-                .attr("y", 0)
-                .text(d => d.data.name)
-                .each((d, i, nodes) => ellipsisElementText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
+                            .attr("x", 0)
+                            .attr("y", 0)
+                            .text(d => d.data.name)
+                            .each((d, i, nodes) => ellipsisElementText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
 
                     const directories = all.filter(d => d.data.type == FileType.Directory);
 
