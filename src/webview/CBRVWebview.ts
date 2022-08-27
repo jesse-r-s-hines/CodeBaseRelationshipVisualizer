@@ -46,8 +46,6 @@ export default class CBRVWebview {
     transform: d3.ZoomTransform = new d3.ZoomTransform(1, 0, 0);
     /** Maps keys to uniq ids */
     ids: UniqIdGenerator = new UniqIdGenerator()
-    /** Maps filepaths to hierarchy nodes */
-    pathMap: Map<string, d3.HierarchyCircularNode<AnyFile>> = new Map()
 
 
     /** Pass the selector for the canvas svg */
@@ -84,12 +82,6 @@ export default class CBRVWebview {
             .size([this.diagramSize, this.diagramSize])
             .padding(this.filePadding)(root);
     
-        // Store a map of paths to nodes for future use in connections
-        this.pathMap = new Map();
-        this.packLayout.each((d) =>
-            this.pathMap.set(this.filePath(d), d)
-        );
-
         this.updateFiles();
     }
 
@@ -163,11 +155,35 @@ export default class CBRVWebview {
                 exit => exit.remove(),
             );
 
-        // this.updateConnections();
+        this.updateConnections();
     }
 
     updateConnections() {
-        const arrowColors = [...new Set(new Lazy(this.connections).map(c => c.color ?? this.settings.color))];
+        // Store a map of paths to nodes for future use in connections
+        const pathMap = new Map<string, d3.HierarchyCircularNode<AnyFile>>();
+        this.packLayout.each((d) => {
+            // get d or the first ancestor that is visible
+            const firstVisible = d.ancestors().find(p => !p.parent || !this.shouldHideContents(p.parent))!;
+            pathMap.set(this.filePath(d), firstVisible);
+        });
+
+        const merged = new Map<string, Connection[]>();
+        this.connections.forEach(conn => {
+            const from = pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!;
+            const to = pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!;
+            const key = JSON.stringify([this.filePath(from), this.filePath(to)]);
+            
+            // TODO For now just ignore self loops. Also need to figure out what I should do for self loops caused by merging
+            if (from === to) return;
+
+            if (!merged.has(key)) merged.set(key, []);
+            merged.get(key)!.push(conn);
+        }, new Map<string, Connection[]>());
+
+        // TODO do merging logic here
+        const mergedConnections = [...merged.values()].map(m => m[0]);
+
+        const arrowColors = [...new Set(new Lazy(mergedConnections).map(c => c.color ?? this.settings.color))];
 
         const arrows = this.defs.selectAll("marker.arrow")
             .data(arrowColors)
@@ -186,7 +202,7 @@ export default class CBRVWebview {
 
         const link = d3.link(d3.curveCatmullRom); // TODO find a better curve
         const connections = this.connectionGroup.selectAll(".connection")
-            .data(this.connections)
+            .data(mergedConnections)
             .join("path")
                 .classed("connection", true)
                 .attr("stroke-width", conn => conn.strokeWidth ?? this.settings.strokeWidth)
@@ -196,8 +212,8 @@ export default class CBRVWebview {
                 )
                 .attr("d", conn => {
                     // TODO normalize conn before this and check for valid from/to
-                    const from = this.pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!;
-                    const to = this.pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!;
+                    const from = pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!;
+                    const to = pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!;
                     const [source, target] = cropLine([[from.x, from.y], [to.x, to.y]], from.r, to.r);
                     return link({ source, target });
                 });
