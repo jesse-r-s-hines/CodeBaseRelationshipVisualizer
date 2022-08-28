@@ -44,7 +44,6 @@ export default class CBRVWebview {
     height = 0
     pathMap: Map<string, d3.HierarchyCircularNode<AnyFile>> = new Map()
     packLayout: d3.HierarchyCircularNode<AnyFile>
-    data: d3.HierarchyCircularNode<AnyFile>[]
     transform: d3.ZoomTransform = new d3.ZoomTransform(1, 0, 0);
     /** Maps keys to uniq ids */
     ids: UniqIdGenerator = new UniqIdGenerator()
@@ -83,7 +82,6 @@ export default class CBRVWebview {
         this.packLayout = d3.pack<AnyFile>()
             .size([this.diagramSize, this.diagramSize])
             .padding(this.filePadding)(root);
-        this.data = this.packLayout.descendants();
     
         this.updateFiles();
     }
@@ -95,14 +93,10 @@ export default class CBRVWebview {
         const arc = d3.arc();
         const colorScale = this.getColorScale(new Lazy(this.packLayout.descendants()).map(x => x.data));
 
-        const newData = this.packLayout.descendants().filter(d => !d.parent || !this.shouldHideContents(d.parent));
-        if (this.data.length === newData.length && this.data.every((d, i) => this.filePath(d) !== this.filePath(newData[i]))) {
-            return; // no changes
-        }
+        const data = this.packLayout.descendants().filter(d => !d.parent || !this.shouldHideContents(d.parent));
 
-        this.data = newData;
         this.fileGroup.selectAll(".file, .directory")
-            .data(this.data, d => this.filePath(d as any))
+            .data(data, d => this.filePath(d as any))
             .join(
                 enter => {
                     const all = enter.append('g')
