@@ -43,6 +43,7 @@ export default class CBRVWebview {
     /** Actual pixel height of the svg diagram */
     height = 0
     packLayout: d3.HierarchyCircularNode<AnyFile>
+    data: d3.HierarchyCircularNode<AnyFile>[]
     transform: d3.ZoomTransform = new d3.ZoomTransform(1, 0, 0);
     /** Maps keys to uniq ids */
     ids: UniqIdGenerator = new UniqIdGenerator()
@@ -81,6 +82,7 @@ export default class CBRVWebview {
         this.packLayout = d3.pack<AnyFile>()
             .size([this.diagramSize, this.diagramSize])
             .padding(this.filePadding)(root);
+        this.data = this.packLayout.descendants();
     
         this.updateFiles();
     }
@@ -92,70 +94,73 @@ export default class CBRVWebview {
         const arc = d3.arc();
         const colorScale = this.getColorScale(new Lazy(this.packLayout.descendants()).map(x => x.data));
 
-        const data = this.packLayout.descendants().filter(d => !d.parent || !this.shouldHideContents(d.parent));
-        this.fileGroup.selectAll(".file, .directory")
-            .data(data, d => this.filePath(d as any))
-            .join(
-                enter => {
-                    const all = enter.append('g')
-                        // .attr('data-filepath', d => this.filePath(d))
-                        .classed("file", d => d.data.type == FileType.File)
-                        .classed("directory", d => d.data.type == FileType.Directory)
-                        .classed("contents-hidden", d => this.shouldHideContents(d)) // TODO make this show an elipsis or something
-                        .attr("transform", d => `translate(${d.x},${d.y})`);
+        const newData = this.packLayout.descendants().filter(d => !d.parent || !this.shouldHideContents(d.parent));
+        if (this.data.length !== newData.length || this.data.some((d, i) => this.filePath(d) !== this.filePath(newData[i]))) {
+            this.data = newData;
+            this.fileGroup.selectAll(".file, .directory")
+                .data(this.data, d => this.filePath(d as any))
+                .join(
+                    enter => {
+                        const all = enter.append('g')
+                            // .attr('data-filepath', d => this.filePath(d))
+                            .classed("file", d => d.data.type == FileType.File)
+                            .classed("directory", d => d.data.type == FileType.Directory)
+                            .classed("contents-hidden", d => this.shouldHideContents(d)) // TODO make this show an elipsis or something
+                            .attr("transform", d => `translate(${d.x},${d.y})`);
 
-                    // Draw the circles for each file and directory.
-                    all.append("path")
-                        .attr("id", d => this.ids.get(this.filePath(d)))
-                        // Use path instead of circle so we can use textPath on it for the folder name. -pi to pi so the
-                        // path starts at the bottom and we don't cut off the name
-                        .attr("d", d => arc({innerRadius: 0, outerRadius: d.r, startAngle: -Math.PI, endAngle: Math.PI}))
-                        .attr("fill", d => colorScale(d.data));
+                        // Draw the circles for each file and directory.
+                        all.append("path")
+                            .attr("id", d => this.ids.get(this.filePath(d)))
+                            // Use path instead of circle so we can use textPath on it for the folder name. -pi to pi so the
+                            // path starts at the bottom and we don't cut off the name
+                            .attr("d", d => arc({innerRadius: 0, outerRadius: d.r, startAngle: -Math.PI, endAngle: Math.PI}))
+                            .attr("fill", d => colorScale(d.data));
 
-                    // Add a tooltip
-                    all.append("title")
-                        .text(d => this.filePath(d));
+                        // Add a tooltip
+                        all.append("title")
+                            .text(d => this.filePath(d));
 
-                    // Add labels
-                    const files = all.filter(d => d.data.type == FileType.File); 
-                    files.append("text")
-                        .append("tspan")
-                            .attr("x", 0)
-                            .attr("y", 0)
-                            .text(d => d.data.name)
-                            .each((d, i, nodes) => ellipsisElementText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
+                        // Add labels
+                        const files = all.filter(d => d.data.type == FileType.File); 
+                        files.append("text")
+                            .append("tspan")
+                                .attr("x", 0)
+                                .attr("y", 0)
+                                .text(d => d.data.name)
+                                .each((d, i, nodes) => ellipsisElementText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
 
-                    const directories = all.filter(d => d.data.type == FileType.Directory);
+                        const directories = all.filter(d => d.data.type == FileType.Directory);
 
-                    // TODO The textPath labels are causing performance issues
-                    // // add a folder name at the top
-                    // // Add a "background" copy of the label first with a wider stroke to provide contrast with the circle outline
-                    // // If we weren't using textPath, we could use paint-order to make stroke an outline, but textPath causes the
-                    // // stroke to cover other characters
-                    // const labelBackgrounds = directories.append("text")
-                    //     .classed("label-background", true)
-                    //     .append("textPath")
-                    //         .attr("href", d => `#${this.ids.get(this.filePath(d))}`)
-                    //         .attr("startOffset", "50%")
-                    //         .text(d => d.data.name)
-                    //         .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
-            
-                    // const labelForegrounds = directories.append("text")
-                    //     .classed("label-foreground", true)
-                    //     .append("textPath")
-                    //         .attr("href", d => `#${this.ids.get(this.filePath(d))}`)
-                    //         .attr("startOffset", "50%")
-                    //         .text((d, i) => labelBackgrounds.nodes()[i].textContent); // pull already calculated ellipsis text
-                    // TODO the labels look weird on small folders, and can overlap other folders labels
+                        // TODO The textPath labels are causing performance issues
+                        // // add a folder name at the top
+                        // // Add a "background" copy of the label first with a wider stroke to provide contrast with the circle outline
+                        // // If we weren't using textPath, we could use paint-order to make stroke an outline, but textPath causes the
+                        // // stroke to cover other characters
+                        // const labelBackgrounds = directories.append("text")
+                        //     .classed("label-background", true)
+                        //     .append("textPath")
+                        //         .attr("href", d => `#${this.ids.get(this.filePath(d))}`)
+                        //         .attr("startOffset", "50%")
+                        //         .text(d => d.data.name)
+                        //         .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
+                
+                        // const labelForegrounds = directories.append("text")
+                        //     .classed("label-foreground", true)
+                        //     .append("textPath")
+                        //         .attr("href", d => `#${this.ids.get(this.filePath(d))}`)
+                        //         .attr("startOffset", "50%")
+                        //         .text((d, i) => labelBackgrounds.nodes()[i].textContent); // pull already calculated ellipsis text
+                        // TODO the labels look weird on small folders, and can overlap other folders labels
 
-                    return all;
-                },
-                update => update // TODO when I add a file watcher I'll need to address other things changing
-                    .classed("contents-hidden", d => this.shouldHideContents(d)),
-                exit => exit.remove(),
-            );
+                        return all;
+                    },
+                    update => update // TODO when I add a file watcher I'll need to address other things changing
+                        .classed("contents-hidden", d => this.shouldHideContents(d)),
+                    exit => exit.remove(),
+                );
 
-        this.updateConnections();
+            this.updateConnections();
+        }
     }
 
     updateConnections() {
@@ -248,7 +253,11 @@ export default class CBRVWebview {
 
     handleZoom(e: d3.D3ZoomEvent<SVGSVGElement, Connection>) {
         this.zoomWindow.attr('transform', e.transform.toString());
-        this.transform = e.transform;
-        this.updateFiles();
+        if (this.transform.k != e.transform.k) {
+            this.transform = e.transform;
+            this.updateFiles();
+        } else {
+            this.transform = e.transform;
+        }
     }
 }
