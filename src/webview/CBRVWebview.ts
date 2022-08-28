@@ -175,13 +175,12 @@ export default class CBRVWebview {
     updateConnections() {
         const merged = new Map<string, Connection[]>();
         this.connections.forEach(conn => {
-            const from = this.pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!;
-            const to = this.pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!;
-            const key = JSON.stringify([this.filePath(from), this.filePath(to)]);
-            
+            const from = this.pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file);
+            const to = this.pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file);
             // TODO For now just ignore self loops. Also need to figure out what I should do for self loops caused by merging
             if (from === to) return;
 
+            const key = this.connectionKey(conn);
             if (!merged.has(key)) merged.set(key, []);
             merged.get(key)!.push(conn);
         }, new Map<string, Connection[]>());
@@ -192,37 +191,46 @@ export default class CBRVWebview {
         const arrowColors = [...new Set(new Lazy(mergedConnections).map(c => c.color ?? this.settings.color))];
 
         const arrows = this.defs.selectAll("marker.arrow")
-            .data(arrowColors)
-            .join("marker")
-                .classed("arrow", true)
-                .attr("id", color => this.ids.get(color, 'arrow'))
-                .attr("viewBox", "0 0 10 10")
-                .attr("refX", 5)
-                .attr("refY", 5)
-                .attr("markerWidth", 6)
-                .attr("markerHeight", 6)
-                .attr("orient", "auto-start-reverse");
-        arrows.append("path")
-            .attr("d", "M 0 0 L 10 5 L 0 10 z")
-            .attr("fill", d => d);
+            .data(arrowColors, color => color as string)
+            .join(
+                enter => enter.append('marker')
+                    .classed("arrow", true)
+                    .attr("id", color => this.ids.get(color, 'arrow'))
+                    .attr("viewBox", "0 0 10 10")
+                    .attr("refX", 5)
+                    .attr("refY", 5)
+                    .attr("markerWidth", 6)
+                    .attr("markerHeight", 6)
+                    .attr("orient", "auto-start-reverse")
+                    .append("path")
+                        .attr("d", "M 0 0 L 10 5 L 0 10 z")
+                        .attr("fill", color => color),
+                update => update,
+                exit => exit.remove(),
+            );
 
         const link = d3.link(d3.curveCatmullRom); // TODO find a better curve
         const connections = this.connectionGroup.selectAll(".connection")
-            .data(mergedConnections)
-            .join("path")
-                .classed("connection", true)
-                .attr("stroke-width", conn => conn.strokeWidth ?? this.settings.strokeWidth)
-                .attr("stroke", conn => conn.color ?? this.settings.color)
-                .attr("marker-end",
-                    conn => this.settings.directed ? `url(#${this.ids.get(conn.color ?? this.settings.color, 'arrow')})` : null
-                )
-                .attr("d", conn => {
-                    // TODO normalize conn before this and check for valid from/to
-                    const from = this.pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!;
-                    const to = this.pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!;
-                    const [source, target] = cropLine([[from.x, from.y], [to.x, to.y]], from.r, to.r);
-                    return link({ source, target });
-                });
+            // TODO normalize or convert from/to
+            .data(mergedConnections, conn => this.connectionKey(conn as Connection))
+            .join(
+                enter => enter.append("path")
+                    .classed("connection", true)
+                    .attr("stroke-width", conn => conn.strokeWidth ?? this.settings.strokeWidth)
+                    .attr("stroke", conn => conn.color ?? this.settings.color)
+                    .attr("marker-end",
+                        conn => this.settings.directed ? `url(#${this.ids.get(conn.color ?? this.settings.color, 'arrow')})` : null
+                    )
+                    .attr("d", conn => {
+                        // TODO normalize conn before this and check for valid from/to
+                        const from = this.pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!;
+                        const to = this.pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!;
+                        const [source, target] = cropLine([[from.x, from.y], [to.x, to.y]], from.r, to.r);
+                        return link({ source, target });
+                    }),
+                update => update,
+                exit => exit.remove(),
+            );
     }
 
     /** Returns a function used to compute color from file extension */
@@ -239,6 +247,14 @@ export default class CBRVWebview {
 
     filePath(d: d3.HierarchyNode<AnyFile>): string {
         return d.ancestors().reverse().slice(1).map(d => d.data.name).join("/");
+    }
+
+    /** Return unique string key for a connection */
+    connectionKey(conn: Connection): string {
+        // TODO normalize connections
+        const from = this.pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!;
+        const to = this.pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!;
+        return JSON.stringify([this.filePath(from), this.filePath(to)]);
     }
 
     shouldHideContents(d: d3.HierarchyCircularNode<AnyFile>) {
