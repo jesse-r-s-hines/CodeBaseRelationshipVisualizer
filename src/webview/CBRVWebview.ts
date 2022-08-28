@@ -42,6 +42,7 @@ export default class CBRVWebview {
     width = 0
     /** Actual pixel height of the svg diagram */
     height = 0
+    pathMap: Map<string, d3.HierarchyCircularNode<AnyFile>> = new Map()
     packLayout: d3.HierarchyCircularNode<AnyFile>
     data: d3.HierarchyCircularNode<AnyFile>[]
     transform: d3.ZoomTransform = new d3.ZoomTransform(1, 0, 0);
@@ -159,23 +160,23 @@ export default class CBRVWebview {
                     exit => exit.remove(),
                 );
 
+            // Store a map of paths to nodes for future use in connections
+            this.pathMap = new Map();
+            this.packLayout.each((d) => {
+                // get d or the first ancestor that is visible
+                const firstVisible = d.ancestors().find(p => !p.parent || !this.shouldHideContents(p.parent))!;
+                this.pathMap.set(this.filePath(d), firstVisible);
+            });
+
             this.updateConnections();
         }
     }
 
     updateConnections() {
-        // Store a map of paths to nodes for future use in connections
-        const pathMap = new Map<string, d3.HierarchyCircularNode<AnyFile>>();
-        this.packLayout.each((d) => {
-            // get d or the first ancestor that is visible
-            const firstVisible = d.ancestors().find(p => !p.parent || !this.shouldHideContents(p.parent))!;
-            pathMap.set(this.filePath(d), firstVisible);
-        });
-
         const merged = new Map<string, Connection[]>();
         this.connections.forEach(conn => {
-            const from = pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!;
-            const to = pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!;
+            const from = this.pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!;
+            const to = this.pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!;
             const key = JSON.stringify([this.filePath(from), this.filePath(to)]);
             
             // TODO For now just ignore self loops. Also need to figure out what I should do for self loops caused by merging
@@ -217,8 +218,8 @@ export default class CBRVWebview {
                 )
                 .attr("d", conn => {
                     // TODO normalize conn before this and check for valid from/to
-                    const from = pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!;
-                    const to = pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!;
+                    const from = this.pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!;
+                    const to = this.pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!;
                     const [source, target] = cropLine([[from.x, from.y], [to.x, to.y]], from.r, to.r);
                     return link({ source, target });
                 });
