@@ -263,9 +263,14 @@ export default class CBRVWebview {
         return JSON.stringify([this.filePath(from), this.filePath(to)]);
     }
 
-    shouldHideContents(d: d3.HierarchyCircularNode<AnyFile>) {
+    /** Convert svg viewport units to actual rendered pixel length  */
+    calcPixelLength(viewPortLength: number) {
         const viewToRenderedRatio = Math.min(this.width, this.height) / (this.diagramSize / this.transform.k);
-        return d.data.type == FileType.Directory && !!d.parent && d.r * viewToRenderedRatio <= this.dynamicZoomBreakPoint;
+        return viewPortLength * viewToRenderedRatio;
+    }
+
+    shouldHideContents(d: d3.HierarchyCircularNode<AnyFile>) {
+        return d.data.type == FileType.Directory && !!d.parent && this.calcPixelLength(d.r) <= this.dynamicZoomBreakPoint;
     }
 
     updateSize() {
