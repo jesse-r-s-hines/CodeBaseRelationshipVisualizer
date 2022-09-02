@@ -111,7 +111,10 @@ export default class CBRVWebview {
                         .attr("id", d => this.ids.get(this.filePath(d)))
                         // Use path instead of circle so we can use textPath on it for the folder name. -pi to pi so the
                         // path starts at the bottom and we don't cut off the name
-                        .attr("d", d => arc({innerRadius: 0, outerRadius: d.r, startAngle: -Math.PI, endAngle: Math.PI}))
+                        .attr("d", d => arc({
+                            innerRadius: 0, outerRadius: d.r,
+                            startAngle: -Math.PI, endAngle: Math.PI,
+                        }))
                         .attr("fill", d => colorScale(d.data));
 
                     // Add a tooltip
@@ -129,26 +132,33 @@ export default class CBRVWebview {
 
                     const directories = all.filter(d => d.data.type == FileType.Directory);
 
-                    // TODO The textPath labels are causing performance issues
-                    // // add a folder name at the top
-                    // // Add a "background" copy of the label first with a wider stroke to provide contrast with the circle outline
-                    // // If we weren't using textPath, we could use paint-order to make stroke an outline, but textPath causes the
-                    // // stroke to cover other characters
-                    // const labelBackgrounds = directories.append("text")
-                    //     .classed("label-background", true)
-                    //     .append("textPath")
-                    //         .attr("href", d => `#${this.ids.get(this.filePath(d))}`)
-                    //         .attr("startOffset", "50%")
-                    //         .text(d => d.data.name)
-                    //         .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
-            
-                    // const labelForegrounds = directories.append("text")
-                    //     .classed("label-foreground", true)
-                    //     .append("textPath")
-                    //         .attr("href", d => `#${this.ids.get(this.filePath(d))}`)
-                    //         .attr("startOffset", "50%")
-                    //         .text((d, i) => labelBackgrounds.nodes()[i].textContent); // pull already calculated ellipsis text
-                    // TODO the labels look weird on small folders, and can overlap other folders labels
+                    // Add a folder name at the top. Add a "background" path behind the text to contrast with the circle
+                    // outline. We'll set the background path after we've created the label so we can get the computed
+                    // text length. If we weren't using textPath, we could use paint-order to stroke an outline, but
+                    // textPath causes the stroke to cover other characters
+                    // TODO dynamic font size. Hide small folder label entirely. 
+                    const labelBackgrounds = directories.append("path")
+                        .classed("label-background", true)
+
+                    const labels = directories.append("text")
+                        .classed("label", true)
+                        .append("textPath")
+                            .attr("href", d => `#${this.ids.get(this.filePath(d))}`)
+                            .attr("startOffset", "50%")
+                            .text(d => d.data.name)
+                            .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
+                    
+                    // Set the label background to the length of the labels (do it after so that its behind the text)
+                    labelBackgrounds.each((d, i, nodes) => {
+                        const length = labels.nodes()[i].getComputedTextLength() + 4;
+                        const angle = length / d.r;
+                        const pathData = arc({
+                            innerRadius: d.r, outerRadius: d.r,
+                            startAngle: - angle / 2, endAngle: angle / 2,
+                        })!;
+                        nodes[i].setAttribute('d', pathData);
+                    });
+
 
                     return all;
                 },

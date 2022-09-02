@@ -30,7 +30,7 @@ body {
     stroke-width: 6;
 }
 
-.directory .label-foreground {
+.directory .label {
     fill: var(--vscode-editor-foreground);
 }
 
