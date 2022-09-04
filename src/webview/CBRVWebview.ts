@@ -27,6 +27,8 @@ export default class CBRVWebview {
     maxFileSize = 1024 ** 2
     /** Radius when a directory's contents will be hidden (in px) */
     dynamicZoomBreakPoint = 16
+    /** Size of the labels at the highest level. */
+    labelFontSize = 12
 
     // Parts of the d3 diagram
 
@@ -129,6 +131,7 @@ export default class CBRVWebview {
                         .append("tspan")
                             .attr("x", 0)
                             .attr("y", 0)
+                            .attr("font-size", d => this.labelFontSize - d.depth)
                             .text(d => d.data.name)
                             .each((d, i, nodes) => ellipsisElementText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
 
@@ -144,6 +147,7 @@ export default class CBRVWebview {
                         .append("textPath")
                             .attr("href", d => `#${this.ids.get(this.filePath(d))}`)
                             .attr("startOffset", "50%")
+                            .attr("font-size", d => this.labelFontSize - d.depth)
                             .text(d => d.data.name)
                             .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
                     
