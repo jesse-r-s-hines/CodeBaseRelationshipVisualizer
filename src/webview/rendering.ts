@@ -1,3 +1,5 @@
+import { sha256 } from 'js-sha256';
+
 export type Point = [number, number]
 
 /**
@@ -49,17 +51,9 @@ export function cropLine([a, b]: [Point, Point], cropStart: number, cropEnd: num
 }
 
 /**
- * Converts an arbitrary string key into a unique html id. Using same key again will return the same id. Optionally
- * add a prefix to the generated id.
+ * Converts an arbitrary string key into a unique html id containing only alphanumeric characters, Using
+ * same key again will return the same id. Optionally add a prefix to the generated id.
  */
- export class UniqIdGenerator {
-    #ids: Map<string, number>;
-    constructor() {
-        this.#ids = new Map();
-    }
-
-    get(key: string, prefix = "uniq-") {
-        if (!this.#ids.has(key)) this.#ids.set(key, this.#ids.size);
-        return `${prefix}${this.#ids.get(key)}`;
-    }
+export function uniqId(key: string, prefix = "") {
+    return `${prefix}${sha256(key)}`;
 }

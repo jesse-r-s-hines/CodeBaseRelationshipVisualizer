@@ -1,7 +1,7 @@
 import * as d3 from 'd3';
 import { FileType, Directory, AnyFile, Connection, VisualizationSettings } from '../shared';
 import { getExtension, clamp, filterFileTree, Lazy } from '../util';
-import { cropLine, ellipsisElementText, UniqIdGenerator } from './rendering';
+import { cropLine, ellipsisElementText, uniqId } from './rendering';
 
 /**
  * This is the class that renders the actual diagram.
@@ -47,9 +47,6 @@ export default class CBRVWebview {
     pathMap: Map<string, d3.HierarchyCircularNode<AnyFile>> = new Map()
     packLayout: d3.HierarchyCircularNode<AnyFile>
     transform: d3.ZoomTransform = new d3.ZoomTransform(1, 0, 0);
-    /** Maps keys to uniq ids */
-    ids: UniqIdGenerator = new UniqIdGenerator()
-
 
     /** Pass the selector for the canvas svg */
     constructor(diagram: string, codebase: Directory, settings: VisualizationSettings, connections: Connection[]) {
@@ -110,7 +107,7 @@ export default class CBRVWebview {
 
                     // Draw the circles for each file and directory.
                     all.append("path")
-                        .attr("id", d => this.ids.get(this.filePath(d)))
+                        .attr("id", d => uniqId(this.filePath(d)))
                         // Use path instead of circle so we can use textPath on it for the folder name. -pi to pi so the
                         // path starts at the bottom and we don't cut off the name
                         .attr("d", d => arc({
@@ -145,7 +142,7 @@ export default class CBRVWebview {
                     const directoryLabel = directories.append("text")
                         .classed("label", true)
                         .append("textPath")
-                            .attr("href", d => `#${this.ids.get(this.filePath(d))}`)
+                            .attr("href", d => `#${uniqId(this.filePath(d))}`)
                             .attr("startOffset", "50%")
                             .attr("font-size", d => this.labelFontSize - d.depth)
                             .text(d => d.data.name)
@@ -222,7 +219,7 @@ export default class CBRVWebview {
             .join(
                 enter => enter.append('marker')
                     .classed("arrow", true)
-                    .attr("id", color => this.ids.get(color, 'arrow'))
+                    .attr("id", color => uniqId(color))
                     .attr("viewBox", "0 0 10 10")
                     .attr("refX", 5)
                     .attr("refY", 5)
@@ -246,7 +243,7 @@ export default class CBRVWebview {
                     .attr("stroke-width", conn => conn.strokeWidth ?? this.settings.strokeWidth)
                     .attr("stroke", conn => conn.color ?? this.settings.color)
                     .attr("marker-end",
-                        conn => this.settings.directed ? `url(#${this.ids.get(conn.color ?? this.settings.color, 'arrow')})` : null
+                        conn => this.settings.directed ? `url(#${uniqId(conn.color ?? this.settings.color)})` : null
                     )
                     .attr("d", conn => {
                         // TODO normalize conn before this and check for valid from/to
