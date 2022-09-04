@@ -1,7 +1,7 @@
 import * as d3 from 'd3';
 import { FileType, Directory, AnyFile, Connection, VisualizationSettings } from '../shared';
-import { getExtension, clamp, filterFileTree, Lazy, UniqIdGenerator } from '../util';
-import { cropLine, ellipsisElementText } from './rendering';
+import { getExtension, clamp, filterFileTree, Lazy } from '../util';
+import { cropLine, ellipsisElementText, UniqIdGenerator } from './rendering';
 
 /**
  * This is the class that renders the actual diagram.
