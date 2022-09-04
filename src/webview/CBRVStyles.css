@@ -39,3 +39,7 @@ body {
     fill-opacity: 1.0;
 }
 
+.directory.contents-hidden .label, .directory.contents-hidden .label-background {
+    display: none;
+}
+

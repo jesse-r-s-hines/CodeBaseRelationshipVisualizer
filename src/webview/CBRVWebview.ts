@@ -138,7 +138,7 @@ export default class CBRVWebview {
                     // textPath causes the stroke to cover other characters
                     // TODO dynamic font size. Hide small folder label entirely. 
                     const labelBackgrounds = directories.append("path")
-                        .classed("label-background", true)
+                        .classed("label-background", true);
 
                     const labels = directories.append("text")
                         .classed("label", true)
@@ -162,8 +162,27 @@ export default class CBRVWebview {
 
                     return all;
                 },
-                update => update // TODO when I add a file watcher I'll need to address other things changing
-                    .classed("contents-hidden", d => this.shouldHideContents(d)),
+                update => {
+                    // TODO when I add a file watcher I'll need to address other things changing
+                    update.classed("contents-hidden", d => this.shouldHideContents(d));
+                    update.filter(".directory").each((d, i, nodes) => {
+
+                        const el = nodes[i] as Element;
+                        const label = el.querySelector<SVGTextPathElement>(".label")!;
+                        const background = el.querySelector<SVGPathElement>(".label-background")!;
+                        console.log("Re-render", this.filePath(d), label.textContent);
+
+                        const length = label.getComputedTextLength() + 4;
+                        const angle = length / d.r;
+                        const pathData = arc({
+                            innerRadius: d.r, outerRadius: d.r,
+                            startAngle: - angle / 2, endAngle: angle / 2,
+                        })!;
+                        background.setAttribute('d', pathData);
+                    });
+
+                    return update;
+                },
                 exit => exit.remove(),
             );
 
