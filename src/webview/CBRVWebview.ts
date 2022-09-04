@@ -121,26 +121,25 @@ export default class CBRVWebview {
                     all.append("title")
                         .text(d => this.filePath(d));
 
-                    // Add labels
                     const files = all.filter(d => d.data.type == FileType.File); 
-                    files.append("text")
+                    const directories = all.filter(d => d.data.type == FileType.Directory);
+
+                    // Add labels
+                    const fileLabels = files.append("text")
                         .append("tspan")
                             .attr("x", 0)
                             .attr("y", 0)
                             .text(d => d.data.name)
                             .each((d, i, nodes) => ellipsisElementText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
 
-                    const directories = all.filter(d => d.data.type == FileType.Directory);
-
                     // Add a folder name at the top. Add a "background" path behind the text to contrast with the circle
                     // outline. We'll set the background path after we've created the label so we can get the computed
                     // text length. If we weren't using textPath, we could use paint-order to stroke an outline, but
                     // textPath causes the stroke to cover other characters
-                    // TODO dynamic font size. Hide small folder label entirely. 
-                    const labelBackgrounds = directories.append("path")
+                    const directoryLabelBackgrounds = directories.append("path")
                         .classed("label-background", true);
 
-                    const labels = directories.append("text")
+                    const directoryLabel = directories.append("text")
                         .classed("label", true)
                         .append("textPath")
                             .attr("href", d => `#${this.ids.get(this.filePath(d))}`)
@@ -149,8 +148,8 @@ export default class CBRVWebview {
                             .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
                     
                     // Set the label background to the length of the labels (do it after so that its behind the text)
-                    labelBackgrounds.each((d, i, nodes) => {
-                        const length = labels.nodes()[i].getComputedTextLength() + 4;
+                    directoryLabelBackgrounds.each((d, i, nodes) => {
+                        const length = directoryLabel.nodes()[i].getComputedTextLength() + 4;
                         const angle = length / d.r;
                         const pathData = arc({
                             innerRadius: d.r, outerRadius: d.r,
@@ -170,7 +169,6 @@ export default class CBRVWebview {
                         const el = nodes[i] as Element;
                         const label = el.querySelector<SVGTextPathElement>(".label")!;
                         const background = el.querySelector<SVGPathElement>(".label-background")!;
-                        console.log("Re-render", this.filePath(d), label.textContent);
 
                         const length = label.getComputedTextLength() + 4;
                         const angle = length / d.r;
