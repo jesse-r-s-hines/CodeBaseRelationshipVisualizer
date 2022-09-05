@@ -99,7 +99,7 @@ export default class CBRVWebview {
             .join(
                 enter => {
                     const all = enter.append('g')
-                        // .attr('data-filepath', d => this.filePath(d))
+                        .attr('data-filepath', d => this.filePath(d))
                         .classed("file", d => d.data.type == FileType.File)
                         .classed("directory", d => d.data.type == FileType.Directory)
                         .classed("contents-hidden", d => this.shouldHideContents(d)) // TODO make this show an elipsis or something
