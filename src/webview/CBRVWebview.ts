@@ -45,7 +45,6 @@ export default class CBRVWebview {
     /** Actual pixel height of the svg diagram */
     height = 0
     pathMap: Map<string, d3.HierarchyCircularNode<AnyFile>> = new Map()
-    packLayout: d3.HierarchyCircularNode<AnyFile>
     transform: d3.ZoomTransform = new d3.ZoomTransform(1, 0, 0);
 
     /** Pass the selector for the canvas svg */
@@ -62,14 +61,18 @@ export default class CBRVWebview {
             .attr("viewBox", [ -left, -top, left + this.diagramSize + right, top + this.diagramSize + bottom]);
 
         this.defs = this.diagram.append("defs");
-
         this.zoomWindow = this.diagram.append("g").classed("zoom-window", true);
-
         this.fileGroup = this.zoomWindow.append("g").classed("file-group", true);
         this.connectionGroup = this.zoomWindow.append("g").classed("connection-group", true);
 
         const zoom = d3.zoom().on('zoom', (e) => this.handleZoom(e));
         zoom(this.diagram as any);
+
+        this.updateFiles();
+    }
+
+    updateFiles() {
+        this.updateSize(); // get the actual size of the svg
 
         const root = d3.hierarchy<AnyFile>(this.codebase, f => f.type == FileType.Directory ? f.children : undefined);
         // Compute size of files and folders
@@ -78,20 +81,14 @@ export default class CBRVWebview {
         root.sort((a, b) => d3.descending(a.value, b.value));
 
         // Use d3 to calculate the circle packing layout
-        this.packLayout = d3.pack<AnyFile>()
+        const packLayout = d3.pack<AnyFile>()
             .size([this.diagramSize, this.diagramSize])
             .padding(this.filePadding)(root);
-    
-        this.updateFiles();
-    }
-
-    updateFiles() {
-        this.updateSize(); // get the actual size of the svg
 
         const arc = d3.arc();
-        const colorScale = this.getColorScale(new Lazy(this.packLayout.descendants()).map(x => x.data));
+        const colorScale = this.getColorScale(new Lazy(packLayout.descendants()).map(x => x.data));
 
-        const data = this.packLayout.descendants().filter(d => !d.parent || !this.shouldHideContents(d.parent));
+        const data = packLayout.descendants().filter(d => !d.parent || !this.shouldHideContents(d.parent));
 
         // Calculate unique key for each data. Use `type:path/to/file` so that changing file <-> directory is treated as
         // creating a new node rather than update the existing one, which simplifies the logic.
@@ -184,7 +181,7 @@ export default class CBRVWebview {
 
         // Store a map of paths to nodes for future use in connections
         this.pathMap = new Map();
-        this.packLayout.each((d) => {
+        packLayout.each((d) => {
             // get d or the first ancestor that is visible
             const firstVisible = d.ancestors().find(p => !p.parent || !this.shouldHideContents(p.parent))!;
             this.pathMap.set(this.filePath(d), firstVisible);
