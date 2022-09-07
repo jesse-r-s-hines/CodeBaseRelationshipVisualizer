@@ -86,7 +86,6 @@ export default class CBRVWebview {
     }
 
     updateFiles() {
-        // TODO maybe wipe id map?
         this.updateSize(); // get the actual size of the svg
 
         const arc = d3.arc();
@@ -94,96 +93,94 @@ export default class CBRVWebview {
 
         const data = this.packLayout.descendants().filter(d => !d.parent || !this.shouldHideContents(d.parent));
 
-        this.fileGroup.selectAll(".file, .directory")
-            .data(data, d => this.filePath(d as any))
+        // Calculate unique key for each data. Use `type:path/to/file` so that changing file <-> directory is treated as
+        // creating a new node rather than update the existing one, which simplifies the logic.
+        const key = (d: d3.HierarchyCircularNode<AnyFile>) => `${d.data.type}:${this.filePath(d)}`;
+
+        const all = this.fileGroup.selectAll(".file, .directory")
+            .data(data, key as any) // the typings here seem to be incorrect
             .join(
                 enter => {
                     const all = enter.append('g')
                         .attr('data-filepath', d => this.filePath(d))
                         .classed("file", d => d.data.type == FileType.File)
-                        .classed("directory", d => d.data.type == FileType.Directory)
-                        .classed("contents-hidden", d => this.shouldHideContents(d)) // TODO make this show an elipsis or something
-                        .attr("transform", d => `translate(${d.x},${d.y})`);
+                        .classed("directory", d => d.data.type == FileType.Directory);
 
-                    // Draw the circles for each file and directory.
+                    // Draw the circles for each file and directory. Use path instead of circle so we can use textPath
+                    // on it for the folder name
                     all.append("path")
-                        .attr("id", d => uniqId(this.filePath(d)))
-                        // Use path instead of circle so we can use textPath on it for the folder name. -pi to pi so the
-                        // path starts at the bottom and we don't cut off the name
-                        .attr("d", d => arc({
-                            innerRadius: 0, outerRadius: d.r,
-                            startAngle: -Math.PI, endAngle: Math.PI,
-                        }))
-                        .attr("fill", d => colorScale(d.data));
+                        .classed("circle", true)
+                        .attr("id", d => uniqId(this.filePath(d)));
 
                     // Add a tooltip
                     all.append("title")
                         .text(d => this.filePath(d));
 
-                    const files = all.filter(d => d.data.type == FileType.File); 
+                    const files = all.filter(d => d.data.type == FileType.File);
                     const directories = all.filter(d => d.data.type == FileType.Directory);
 
                     // Add labels
-                    const fileLabels = files.append("text")
+                    files.append("text")
                         .append("tspan")
+                            .classed("label", true)
                             .attr("x", 0)
                             .attr("y", 0)
-                            .attr("font-size", d => this.labelFontSize - d.depth)
-                            .text(d => d.data.name)
-                            .each((d, i, nodes) => ellipsisElementText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
+                            .attr("font-size", d => this.labelFontSize - d.depth);
 
                     // Add a folder name at the top. Add a "background" path behind the text to contrast with the circle
-                    // outline. We'll set the background path after we've created the label so we can get the computed
-                    // text length. If we weren't using textPath, we could use paint-order to stroke an outline, but
-                    // textPath causes the stroke to cover other characters
-                    const directoryLabelBackgrounds = directories.append("path")
+                    // outline. We'll set the path in update after we've created the label so we can get the computed
+                    // text length and so it updates on changes to d.r. If we weren't using textPath, we could use
+                    // paint-order to stroke an outline, but textPath causes the stroke to cover other characters
+                    directories.append("path")
                         .classed("label-background", true);
 
-                    const directoryLabel = directories.append("text")
-                        .classed("label", true)
+                    directories.append("text")
                         .append("textPath")
+                            .classed("label", true)
                             .attr("href", d => `#${uniqId(this.filePath(d))}`)
                             .attr("startOffset", "50%")
-                            .attr("font-size", d => this.labelFontSize - d.depth)
-                            .text(d => d.data.name)
-                            .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
-                    
-                    // Set the label background to the length of the labels (do it after so that its behind the text)
-                    directoryLabelBackgrounds.each((d, i, nodes) => {
-                        const length = directoryLabel.nodes()[i].getComputedTextLength() + 4;
-                        const angle = length / d.r;
-                        const pathData = arc({
-                            innerRadius: d.r, outerRadius: d.r,
-                            startAngle: - angle / 2, endAngle: angle / 2,
-                        })!;
-                        nodes[i].setAttribute('d', pathData);
-                    });
-
-
+                            .attr("font-size", d => this.labelFontSize - d.depth);
+  
                     return all;
                 },
-                update => {
-                    // TODO when I add a file watcher I'll need to address other things changing
-                    update.classed("contents-hidden", d => this.shouldHideContents(d));
-                    update.filter(".directory").each((d, i, nodes) => {
-
-                        const el = nodes[i] as Element;
-                        const label = el.querySelector<SVGTextPathElement>(".label")!;
-                        const background = el.querySelector<SVGPathElement>(".label-background")!;
-
-                        const length = label.getComputedTextLength() + 4;
-                        const angle = length / d.r;
-                        const pathData = arc({
-                            innerRadius: d.r, outerRadius: d.r,
-                            startAngle: - angle / 2, endAngle: angle / 2,
-                        })!;
-                        background.setAttribute('d', pathData);
-                    });
-
-                    return update;
-                },
+                update => update, // TODO transitions
                 exit => exit.remove(),
             );
+
+        all
+            .classed("contents-hidden", d => this.shouldHideContents(d)) // TODO make this show an elipsis or something
+            .attr("transform", d => `translate(${d.x},${d.y})`);
+
+        all.select("path.circle")
+            .attr("d", d => arc({
+                innerRadius: 0, outerRadius: d.r,
+                // -pi to pi so the path starts at the bottom and we don't cut off the directory label
+                startAngle: -Math.PI, endAngle: Math.PI, 
+            }))
+            .attr("fill", d => colorScale(d.data));
+
+        const files = all.filter(".file");
+        const directories = all.filter(".directory");
+
+        files.select<SVGTSpanElement>(".label")
+            .text(d => d.data.name)
+            .each((d, i, nodes) => ellipsisElementText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
+
+        const directoryLabels = directories.select<SVGTextPathElement>(".label")
+            .text(d => d.data.name)
+            .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
+
+        // Set the label background to the length of the labels
+        directories.select<SVGTextElement>(".label-background")
+            .each((d, i, nodes) => {
+                const length = directoryLabels.nodes()[i].getComputedTextLength() + 4;
+                const angle = length / d.r;
+                const pathData = arc({
+                    innerRadius: d.r, outerRadius: d.r,
+                    startAngle: -angle / 2, endAngle: angle / 2,
+                })!;
+                nodes[i].setAttribute('d', pathData);
+            });
 
         // Store a map of paths to nodes for future use in connections
         this.pathMap = new Map();
