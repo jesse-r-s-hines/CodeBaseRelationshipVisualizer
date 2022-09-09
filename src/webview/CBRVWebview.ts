@@ -40,10 +40,9 @@ export default class CBRVWebview {
 
     // Some rendering variables
 
-    /** Actual pixel width of the svg diagram */
-    width = 0
-    /** Actual pixel height of the svg diagram */
-    height = 0
+    /** Actual pixel width and height of the svg diagram */
+    width = 0; height = 0
+
     pathMap: Map<string, d3.HierarchyCircularNode<AnyFile>> = new Map()
     transform: d3.ZoomTransform = new d3.ZoomTransform(1, 0, 0);
 
@@ -65,7 +64,8 @@ export default class CBRVWebview {
         this.fileGroup = this.zoomWindow.append("g").classed("file-group", true);
         this.connectionGroup = this.zoomWindow.append("g").classed("connection-group", true);
 
-        const zoom = d3.zoom().on('zoom', (e) => this.handleZoom(e));
+        // Add event listeners
+        const zoom = d3.zoom().on('zoom', (e) => this.onZoom(e));
         zoom(this.diagram as any);
 
         this.updateFiles();
@@ -291,7 +291,7 @@ export default class CBRVWebview {
         this.height = rect.height;
     }
 
-    handleZoom(e: d3.D3ZoomEvent<SVGSVGElement, Connection>) {
+    onZoom(e: d3.D3ZoomEvent<SVGSVGElement, Connection>) {
         this.zoomWindow.attr('transform', e.transform.toString());
         if (this.transform.k != e.transform.k) {
             this.transform = e.transform;
