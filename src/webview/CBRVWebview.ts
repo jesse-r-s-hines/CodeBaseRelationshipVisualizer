@@ -1,7 +1,7 @@
 import * as d3 from 'd3';
 import { FileType, Directory, AnyFile, Connection, VisualizationSettings } from '../shared';
 import { getExtension, clamp, filterFileTree, Lazy } from '../util';
-import { cropLine, ellipsisElementText, uniqId } from './rendering';
+import { cropLine, ellipsisText, uniqId } from './rendering';
 
 /**
  * This is the class that renders the actual diagram.
@@ -161,11 +161,11 @@ export default class CBRVWebview {
 
         files.select<SVGTSpanElement>(".label")
             .text(d => d.data.name)
-            .each((d, i, nodes) => ellipsisElementText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
+            .each((d, i, nodes) => ellipsisText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
 
         const directoryLabels = directories.select<SVGTextPathElement>(".label")
             .text(d => d.data.name)
-            .each((d, i, nodes) => ellipsisElementText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
+            .each((d, i, nodes) => ellipsisText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
 
         // Set the label background to the length of the labels
         directories.select<SVGTextElement>(".label-background")

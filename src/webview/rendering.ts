@@ -7,7 +7,7 @@ export type Point = [number, number]
  * the text won't fit at all, sets the text to empty. There are pure CSS ways of doing this, but they don't work in
  * SVGs unless we do a foreignObject.
  */
-export function ellipsisElementText(el: SVGTextContentElement, width: number, height = Infinity, padding = 0): string {
+export function ellipsisText(el: SVGTextContentElement, width: number, height = Infinity, padding = 0): string {
     const [availableWidth, availableHeight] = [width - 2 * padding, height - 2 * padding];
     const fontHeight = parseInt(getComputedStyle(el).fontSize, 10);
 
