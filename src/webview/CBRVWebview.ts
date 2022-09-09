@@ -2,6 +2,7 @@ import * as d3 from 'd3';
 import { FileType, Directory, AnyFile, Connection, VisualizationSettings } from '../shared';
 import { getExtension, clamp, filterFileTree, Lazy } from '../util';
 import { cropLine, ellipsisText, uniqId } from './rendering';
+import { throttle } from "lodash";
 
 /**
  * This is the class that renders the actual diagram.
@@ -65,11 +66,15 @@ export default class CBRVWebview {
         this.connectionGroup = this.zoomWindow.append("g").classed("connection-group", true);
 
         // Add event listeners
+        this.throttledUpdate = throttle(() => this.updateFiles(), 250, {trailing: true})
+
         const zoom = d3.zoom().on('zoom', (e) => this.onZoom(e));
         zoom(this.diagram as any);
 
         this.updateFiles();
     }
+
+    throttledUpdate: () => void
 
     updateFiles() {
         this.updateSize(); // get the actual size of the svg
@@ -293,11 +298,10 @@ export default class CBRVWebview {
 
     onZoom(e: d3.D3ZoomEvent<SVGSVGElement, Connection>) {
         this.zoomWindow.attr('transform', e.transform.toString());
-        if (this.transform.k != e.transform.k) {
-            this.transform = e.transform;
-            this.updateFiles();
-        } else {
-            this.transform = e.transform;
+        const oldK = this.transform.k;
+        this.transform = e.transform;
+        if (e.transform.k != oldK) { // zoom also triggers for pan.
+            this.throttledUpdate();
         }
     }
 }
