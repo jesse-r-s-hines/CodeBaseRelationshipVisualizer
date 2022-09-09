@@ -57,3 +57,8 @@ export function cropLine([a, b]: [Point, Point], cropStart: number, cropEnd: num
 export function uniqId(key: string, prefix = "") {
     return `${prefix}${sha256(key)}`;
 }
+
+export function getRect(el: Element): [number, number] {
+    const rect = el.getBoundingClientRect();
+    return [rect.width, rect.height];
+}

@@ -1,7 +1,7 @@
 import * as d3 from 'd3';
 import { FileType, Directory, AnyFile, Connection, VisualizationSettings } from '../shared';
 import { getExtension, clamp, filterFileTree, Lazy } from '../util';
-import { cropLine, ellipsisText, uniqId } from './rendering';
+import { cropLine, ellipsisText, uniqId, getRect } from './rendering';
 import { throttle } from "lodash";
 
 /**
@@ -70,6 +70,9 @@ export default class CBRVWebview {
 
         const zoom = d3.zoom().on('zoom', (e) => this.onZoom(e));
         zoom(this.diagram as any);
+        d3.select(window).on('resize', (e) => this.onResize(e));
+
+        [this.width, this.height] = getRect(this.diagram.node()!);
 
         this.updateFiles();
     }
@@ -77,8 +80,6 @@ export default class CBRVWebview {
     throttledUpdate: () => void
 
     updateFiles() {
-        this.updateSize(); // get the actual size of the svg
-
         const root = d3.hierarchy<AnyFile>(this.codebase, f => f.type == FileType.Directory ? f.children : undefined);
         // Compute size of files and folders
         root.sum(d => d.type == FileType.File ? clamp(d.size, this.minFileSize, this.maxFileSize) : 0);
@@ -290,12 +291,6 @@ export default class CBRVWebview {
         return d.data.type == FileType.Directory && !!d.parent && this.calcPixelLength(d.r) <= this.dynamicZoomBreakPoint;
     }
 
-    updateSize() {
-        const rect = this.diagram.node()!.getBoundingClientRect();
-        this.width = rect.width;
-        this.height = rect.height;
-    }
-
     onZoom(e: d3.D3ZoomEvent<SVGSVGElement, Connection>) {
         this.zoomWindow.attr('transform', e.transform.toString());
         const oldK = this.transform.k;
@@ -303,5 +298,10 @@ export default class CBRVWebview {
         if (e.transform.k != oldK) { // zoom also triggers for pan.
             this.throttledUpdate();
         }
+    }
+
+    onResize(e: Event) {
+        [this.width, this.height] = getRect(this.diagram.node()!);
+        this.throttledUpdate();
     }
 }
