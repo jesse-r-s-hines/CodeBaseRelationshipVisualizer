@@ -27,7 +27,9 @@ export default class CBRVWebview {
     /** Minimum area of file circles (in viewbox units) */
     maxFileSize = 1024 ** 2
     /** Radius when a directory's contents will be hidden (in px) */
-    dynamicZoomBreakPoint = 16
+    hideContentsRadius = 16
+    /** Radius when a directory's or file's labels will be hidden (in px) */
+    hideLabelsRadius = 20
     /** Size of the labels at the highest level. */
     labelFontSize = 12
 
@@ -66,7 +68,7 @@ export default class CBRVWebview {
         this.connectionGroup = this.zoomWindow.append("g").classed("connection-group", true);
 
         // Add event listeners
-        this.throttledUpdate = throttle(() => this.updateFiles(), 250, {trailing: true})
+        this.throttledUpdate = throttle(this.update.bind(this), 250, {trailing: true})
 
         const zoom = d3.zoom().on('zoom', (e) => this.onZoom(e));
         zoom(this.diagram as any);
@@ -74,12 +76,21 @@ export default class CBRVWebview {
 
         [this.width, this.height] = getRect(this.diagram.node()!);
 
-        this.updateFiles();
+        this.update(this.codebase, this.connections);
     }
 
-    throttledUpdate: () => void
+    throttledUpdate: (codebase?: Directory, connections?: Connection[]) => void
 
-    updateFiles() {
+    update(codebase?: Directory, connections?: Connection[]) {
+        this.updateFiles(codebase);
+        this.updateConnections(connections);
+    }
+
+    updateFiles(codebase?: Directory) {
+        if (codebase) {
+            this.codebase = codebase;
+        }
+
         const root = d3.hierarchy<AnyFile>(this.codebase, f => f.type == FileType.Directory ? f.children : undefined);
         // Compute size of files and folders
         root.sum(d => d.type == FileType.File ? clamp(d.size, this.minFileSize, this.maxFileSize) : 0);
@@ -93,12 +104,11 @@ export default class CBRVWebview {
 
         const arc = d3.arc();
         const colorScale = this.getColorScale(new Lazy(packLayout.descendants()).map(x => x.data));
-
-        const data = packLayout.descendants().filter(d => !d.parent || !this.shouldHideContents(d.parent));
-
         // Calculate unique key for each data. Use `type:path/to/file` so that changing file <-> directory is treated as
         // creating a new node rather than update the existing one, which simplifies the logic.
         const key = (d: d3.HierarchyCircularNode<AnyFile>) => `${d.data.type}:${this.filePath(d)}`;
+
+        const data = packLayout.descendants().filter(d => !d.parent || !this.shouldHideContents(d.parent));
 
         const all = this.fileGroup.selectAll(".file, .directory")
             .data(data, key as any) // the typings here seem to be incorrect
@@ -107,7 +117,8 @@ export default class CBRVWebview {
                     const all = enter.append('g')
                         .attr('data-filepath', d => this.filePath(d))
                         .classed("file", d => d.data.type == FileType.File)
-                        .classed("directory", d => d.data.type == FileType.Directory);
+                        .classed("directory", d => d.data.type == FileType.Directory)
+                        .classed("new", true); // We'll use this to reselect newly added nodes later.
 
                     // Draw the circles for each file and directory. Use path instead of circle so we can use textPath
                     // on it for the folder name
@@ -146,15 +157,22 @@ export default class CBRVWebview {
   
                     return all;
                 },
-                update => update, // TODO transitions
+                update => { // TODO transitions
+                    return update.classed("new", false);
+                },
                 exit => exit.remove(),
-            );
+            )
 
         all
             .classed("contents-hidden", d => this.shouldHideContents(d)) // TODO make this show an elipsis or something
-            .attr("transform", d => `translate(${d.x},${d.y})`);
+            .classed("labels-hidden", d => this.shouldHideLabels(d));
 
-        all.select("path.circle")
+        // we only need to recalculate these for new elements unless the file structure changed (not just zoom)
+        const changed = codebase ? all : all.filter(".new");
+        
+        changed.attr("transform", d => `translate(${d.x},${d.y})`);
+
+        changed.select("path.circle")
             .attr("d", d => arc({
                 innerRadius: 0, outerRadius: d.r,
                 // -pi to pi so the path starts at the bottom and we don't cut off the directory label
@@ -162,8 +180,8 @@ export default class CBRVWebview {
             }))
             .attr("fill", d => colorScale(d.data));
 
-        const files = all.filter(".file");
-        const directories = all.filter(".directory");
+        const files = changed.filter(".file");
+        const directories = changed.filter(".directory");
 
         files.select<SVGTSpanElement>(".label")
             .text(d => d.data.name)
@@ -186,17 +204,19 @@ export default class CBRVWebview {
             });
 
         // Store a map of paths to nodes for future use in connections
-        this.pathMap = new Map();
+        this.pathMap = new Map(); // TODO refactor this
         packLayout.each((d) => {
             // get d or the first ancestor that is visible
             const firstVisible = d.ancestors().find(p => !p.parent || !this.shouldHideContents(p.parent))!;
             this.pathMap.set(this.filePath(d), firstVisible);
         });
-
-        this.updateConnections();
     }
 
-    updateConnections() {
+    updateConnections(connections?: Connection[]) {
+        if (connections) {
+            this.connections = connections;
+        }
+
         const merged = new Map<string, Connection[]>();
         this.connections.forEach(conn => {
             const from = this.pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file);
@@ -211,10 +231,11 @@ export default class CBRVWebview {
 
         // TODO do merging logic here
         const mergedConnections = [...merged.values()].map(m => m[0]);
+        console.log(mergedConnections.length)
 
         const arrowColors = [...new Set(new Lazy(mergedConnections).map(c => c.color ?? this.settings.color))];
 
-        const arrows = this.defs.selectAll("marker.arrow")
+        this.defs.selectAll("marker.arrow")
             .data(arrowColors, color => color as string)
             .join(
                 enter => enter.append('marker')
@@ -234,7 +255,7 @@ export default class CBRVWebview {
             );
 
         const link = d3.link(d3.curveCatmullRom); // TODO find a better curve
-        const connections = this.connectionGroup.selectAll(".connection")
+        this.connectionGroup.selectAll(".connection")
             // TODO normalize or convert from/to
             .data(mergedConnections, conn => this.connectionKey(conn as Connection))
             .join(
@@ -288,7 +309,11 @@ export default class CBRVWebview {
     }
 
     shouldHideContents(d: d3.HierarchyCircularNode<AnyFile>) {
-        return d.data.type == FileType.Directory && !!d.parent && this.calcPixelLength(d.r) <= this.dynamicZoomBreakPoint;
+        return d.data.type == FileType.Directory && this.calcPixelLength(d.r) <= this.hideContentsRadius;
+    }
+
+    shouldHideLabels(d: d3.HierarchyCircularNode<AnyFile>) {
+        return this.calcPixelLength(d.r) <= this.hideLabelsRadius;
     }
 
     onZoom(e: d3.D3ZoomEvent<SVGSVGElement, Connection>) {

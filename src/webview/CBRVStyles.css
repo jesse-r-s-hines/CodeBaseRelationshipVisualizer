@@ -32,12 +32,12 @@ body {
     fill: var(--vscode-editor-foreground);
 }
 
-.directory.contents-hidden path {
+.directory.contents-hidden path.circle {
     fill: white;
     fill-opacity: 1.0;
 }
 
-.directory.contents-hidden .label, .directory.contents-hidden .label-background {
-    display: none;
+.directory.labels-hidden .label, .directory.labels-hidden .label-background, .file.labels-hidden .label {
+    visibility: hidden; /* Use visibility so that we can still get the rendered size in JS */
 }
 
