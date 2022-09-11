@@ -91,3 +91,41 @@ export type Endpoint = string | { file: string, line?: number }
     /** Default CSS color string for connections. Can be overridden per connection via `Connection.color` */
     color: string
 }
+
+ /**
+  * Represents a merged group of connections, that will be rendered as one
+  * line in the visualization. The connections are grouped together based
+  * on the merge rules.
+  */
+  export interface MergedConnections {
+    /**
+    * The file/folder the rendered connection will show from. This can be a
+    * folder when there are deeply nested files which are hidden until the
+    * user zooms in. Then connections to those files will show connected to
+    * the visible parent folder.
+    */
+    from: NormalizedEndpoint
+
+    /**
+    * The file or folder the rendered connection will show to. Can be a
+    * folder just like `from`.
+    */
+    to: NormalizedEndpoint
+
+    /**
+    * The original connections that were merged.
+    * Will be sorted using the order function if one is given.
+    */
+    connections: Connection[]
+  }
+
+// Internal types
+
+export interface NormalizedConnection {
+    from: NormalizedEndpoint
+    to: NormalizedEndpoint
+    strokeWidth?: number
+    color?: string
+}
+
+export type NormalizedEndpoint = { file: string, line?: number }

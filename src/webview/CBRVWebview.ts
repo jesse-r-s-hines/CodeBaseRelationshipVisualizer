@@ -1,5 +1,5 @@
 import * as d3 from 'd3';
-import { FileType, Directory, AnyFile, Connection, VisualizationSettings } from '../shared';
+import { FileType, Directory, AnyFile, Connection, VisualizationSettings, NormalizedConnection, MergedConnections, NormalizedEndpoint } from '../shared';
 import { getExtension, clamp, filterFileTree, Lazy } from '../util';
 import { cropLine, ellipsisText, uniqId, getRect } from './rendering';
 import { throttle } from "lodash";
@@ -45,9 +45,9 @@ export default class CBRVWebview {
 
     /** Actual pixel width and height of the svg diagram */
     width = 0; height = 0
-
-    pathMap: Map<string, d3.HierarchyCircularNode<AnyFile>> = new Map()
     transform: d3.ZoomTransform = new d3.ZoomTransform(1, 0, 0);
+    /** Maps file paths to their rendered circle (or first visible circle if they are hidden) */
+    pathMap: Map<string, d3.HierarchyCircularNode<AnyFile>> = new Map()
 
     /** Pass the selector for the canvas svg */
     constructor(diagram: string, codebase: Directory, settings: VisualizationSettings, connections: Connection[]) {
@@ -82,11 +82,11 @@ export default class CBRVWebview {
     throttledUpdate: (codebase?: Directory, connections?: Connection[]) => void
 
     update(codebase?: Directory, connections?: Connection[]) {
-        this.updateFiles(codebase);
+        this.updateCodebase(codebase);
         this.updateConnections(connections);
     }
 
-    updateFiles(codebase?: Directory) {
+    updateCodebase(codebase?: Directory) {
         if (codebase) {
             this.codebase = codebase;
         }
@@ -106,12 +106,12 @@ export default class CBRVWebview {
         const colorScale = this.getColorScale(new Lazy(packLayout.descendants()).map(x => x.data));
         // Calculate unique key for each data. Use `type:path/to/file` so that changing file <-> directory is treated as
         // creating a new node rather than update the existing one, which simplifies the logic.
-        const key = (d: d3.HierarchyCircularNode<AnyFile>) => `${d.data.type}:${this.filePath(d)}`;
+        const keyFunc = (d: d3.HierarchyCircularNode<AnyFile>) => `${d.data.type}:${this.filePath(d)}`;
 
         const data = packLayout.descendants().filter(d => !d.parent || !this.shouldHideContents(d.parent));
 
         const all = this.fileGroup.selectAll(".file, .directory")
-            .data(data, key as any) // the typings here seem to be incorrect
+            .data(data, keyFunc as any) // the typings here seem to be incorrect
             .join(
                 enter => {
                     const all = enter.append('g')
@@ -217,23 +217,37 @@ export default class CBRVWebview {
             this.connections = connections;
         }
 
-        const merged = new Map<string, Connection[]>();
+        /** Return unique string key for a connection */
+        const keyFunc = (conn: NormalizedConnection): string => {
+            return JSON.stringify([`${conn.from.file}:${conn.from.line ?? ''}`, `${conn.to.file}:${conn.to.line ?? ''}`]);
+        };
+
+        const merged = new Map<string, MergedConnections>();
         this.connections.forEach(conn => {
-            const from = this.pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file);
-            const to = this.pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file);
+            const from = this.pathMap.get(this.normalizeConn(conn).from.file)!;
+            const to = this.pathMap.get(this.normalizeConn(conn).to.file)!;
             // TODO For now just ignore self loops. Also need to figure out what I should do for self loops caused by merging
+            // TODO handle missing files
             if (from === to) return;
 
-            const key = this.connectionKey(conn);
-            if (!merged.has(key)) merged.set(key, []);
-            merged.get(key)!.push(conn);
+            // Make a new connection raised to point to the visible ancestors, then merge with any others
+            const raisedConn = this.normalizeConn({from: this.filePath(from), to: this.filePath(to)})
+            const key = keyFunc(raisedConn);
+            if (!merged.has(key)) { 
+                merged.set(key, {
+                    ...raisedConn,
+
+                    // TODO do merging logic
+
+                    connections: [],
+                });
+            }
+            merged.get(key)!.connections.push(conn);
         }, new Map<string, Connection[]>());
 
-        // TODO do merging logic here
-        const mergedConnections = [...merged.values()].map(m => m[0]);
-        console.log(mergedConnections.length)
+        const mergedConnections = [...merged.values()];
 
-        const arrowColors = [...new Set(new Lazy(mergedConnections).map(c => c.color ?? this.settings.color))];
+        const arrowColors = [...new Set(new Lazy(mergedConnections).map(c => c.connections[0].color ?? this.settings.color))];
 
         this.defs.selectAll("marker.arrow")
             .data(arrowColors, color => color as string)
@@ -257,19 +271,18 @@ export default class CBRVWebview {
         const link = d3.link(d3.curveCatmullRom); // TODO find a better curve
         this.connectionGroup.selectAll(".connection")
             // TODO normalize or convert from/to
-            .data(mergedConnections, conn => this.connectionKey(conn as Connection))
+            .data(mergedConnections, keyFunc as any)
             .join(
                 enter => enter.append("path")
                     .classed("connection", true)
-                    .attr("stroke-width", conn => conn.strokeWidth ?? this.settings.strokeWidth)
-                    .attr("stroke", conn => conn.color ?? this.settings.color)
+                    .attr("stroke-width", conns => conns.connections[0].strokeWidth ?? this.settings.strokeWidth)
+                    .attr("stroke", conns => conns.connections[0].color ?? this.settings.color)
                     .attr("marker-end",
-                        conn => this.settings.directed ? `url(#${uniqId(conn.color ?? this.settings.color)})` : null
+                        conns => this.settings.directed ? `url(#${uniqId(conns.connections[0].color ?? this.settings.color)})` : null
                     )
                     .attr("d", conn => {
-                        // TODO normalize conn before this and check for valid from/to
-                        const from = this.pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!;
-                        const to = this.pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!;
+                        const from = this.pathMap.get(conn.from.file)!;
+                        const to = this.pathMap.get(conn.to.file)!;
                         const [source, target] = cropLine([[from.x, from.y], [to.x, to.y]], from.r, to.r);
                         return link({ source, target });
                     }),
@@ -294,12 +307,12 @@ export default class CBRVWebview {
         return d.ancestors().reverse().slice(1).map(d => d.data.name).join("/");
     }
 
-    /** Return unique string key for a connection */
-    connectionKey(conn: Connection): string {
-        // TODO normalize connections
-        const from = this.pathMap.get(typeof conn.from == 'string' ? conn.from : conn.from.file)!;
-        const to = this.pathMap.get(typeof conn.to == 'string' ? conn.to : conn.to.file)!;
-        return JSON.stringify([this.filePath(from), this.filePath(to)]);
+    normalizeConn(conn: Connection): NormalizedConnection {
+        return { // TODO normalize file paths as well
+            ...conn,
+            from: (typeof conn.from == 'string') ? {file: conn.from} : conn.from,
+            to: (typeof conn.to == 'string') ? {file: conn.to} : conn.to,
+        }
     }
 
     /** Convert svg viewport units to actual rendered pixel length  */
