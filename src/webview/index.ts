@@ -7,7 +7,11 @@ function main() {
     addEventListener('message', event => {
         const message = event.data;
         if (message.type == "set") {
-            view = new CBRVWebview("#canvas", message.codebase, message.settings, message.connections);
+            if (!view) {
+                view = new CBRVWebview("#canvas", message.codebase, message.settings, message.connections);
+            } else {
+                view.update(message.codebase, message.settings, message.connections); // TODO allow updating settings
+            }
         }
     });
 

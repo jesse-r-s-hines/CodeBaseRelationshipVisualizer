@@ -68,7 +68,7 @@ export default class CBRVWebview {
         this.connectionGroup = this.zoomWindow.append("g").classed("connection-group", true);
 
         // Add event listeners
-        this.throttledUpdate = throttle(this.update.bind(this), 250, {trailing: true})
+        this.throttledUpdate = throttle(() => this.update(), 250, {trailing: true})
 
         const zoom = d3.zoom().on('zoom', (e) => this.onZoom(e));
         zoom(this.diagram as any);
@@ -76,14 +76,20 @@ export default class CBRVWebview {
 
         [this.width, this.height] = getRect(this.diagram.node()!);
 
-        this.update(this.codebase, this.connections);
+        this.update(this.codebase, this.settings, this.connections);
     }
 
-    throttledUpdate: (codebase?: Directory, connections?: Connection[]) => void
+    throttledUpdate: () => void
 
-    update(codebase?: Directory, connections?: Connection[]) {
-        this.updateCodebase(codebase);
-        this.updateConnections(connections);
+    update(codebase?: Directory, settings?: VisualizationSettings, connections?: Connection[]) {
+        if (settings) {
+            this.settings = settings;
+            this.updateCodebase(this.codebase); // force rerender
+            this.updateConnections(this.connections);
+        } else {
+            this.updateCodebase(codebase);
+            this.updateConnections(connections);
+        }
     }
 
     updateCodebase(codebase?: Directory) {

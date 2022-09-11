@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Uri, ViewColumn, Webview } from 'vscode';
+import { Uri, ViewColumn, Webview, FileSystemWatcher } from 'vscode';
 import { AnyFile, Directory, Connection, VisualizationSettings } from "./shared";
 import * as fileHelper from "./fileHelper";
 
@@ -11,8 +11,8 @@ export class Visualization {
     private settings: VisualizationSettings 
     private connections: Connection[]
 
-    private codebase?: Directory
     private webview?: vscode.Webview
+    private fsWatcher?: FileSystemWatcher
 
     constructor(
         context: vscode.ExtensionContext,
@@ -31,12 +31,28 @@ export class Visualization {
     }
 
     async launch() {
-        this.codebase = await fileHelper.getWorkspaceFileTree();
-        if (this.codebase) {
-            this.webview = this.createWebview();
-        } else {
-            throw new Error("No workspace to visualize");
-        }
+        this.webview = this.createWebview();
+
+        this.webview.onDidReceiveMessage(
+            message => {
+                if (message.type == "ready") {
+                    this.send(true, this.settings, this.connections);
+                    this.fsWatcher = vscode.workspace.createFileSystemWatcher(
+                        new vscode.RelativePattern(vscode.workspace.workspaceFolders![0], '**/*')
+                    );
+        
+                    // TODO might have issues with using default excludes?
+                    // TODO send only changes? Likely use a merge-throttle pattern to clump multiple changes.
+                    this.fsWatcher.onDidChange(uri => this.send(true));
+                    this.fsWatcher.onDidCreate(uri => this.send(true));
+                    this.fsWatcher.onDidDelete(uri => this.send(true));
+                    // this.fsWatcher.dispose(); // TODO dispose after usage
+                    
+                }
+            },  
+            undefined,
+            this.context.subscriptions
+        );
     }
 
     private createWebview(): Webview {
@@ -49,20 +65,6 @@ export class Visualization {
                 enableScripts: true,
                 localResourceRoots: [vscode.Uri.file(this.context.extensionPath)],
             }
-        );
-
-        panel.webview.onDidReceiveMessage(message => {
-                if (message.type == "ready") {
-                    panel.webview.postMessage({
-                        type: "set",
-                        codebase: this.codebase,
-                        settings: this.settings,
-                        connections: this.connections,
-                    });
-                }
-            },  
-            undefined,
-            this.context.subscriptions
         );
 
         panel.webview.html = this.getWebviewContent(panel.webview);
@@ -91,6 +93,21 @@ export class Visualization {
             </body>
             </html>
         `;
+    }
+
+    private async send(getCodebase: boolean, settings?: VisualizationSettings, connections?: Connection[]) {
+        let codebase = undefined;
+        if (getCodebase) {
+            codebase = await fileHelper.getWorkspaceFileTree();
+            if (!codebase) throw new Error("No workspace to visualize");
+        }
+
+        this.webview!.postMessage({
+            type: "set",
+            codebase: codebase,
+            settings: settings,
+            connections: connections,
+        });
     }
 }
 
