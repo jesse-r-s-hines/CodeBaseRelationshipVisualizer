@@ -84,8 +84,8 @@ export default class CBRVWebview {
     update(codebase?: Directory, settings?: VisualizationSettings, connections?: Connection[]) {
         if (settings) {
             this.settings = settings;
-            this.updateCodebase(this.codebase); // force rerender
-            this.updateConnections(this.connections);
+            this.updateCodebase(codebase ?? this.codebase); // force rerender
+            this.updateConnections(connections ?? this.connections);
         } else {
             this.updateCodebase(codebase);
             this.updateConnections(connections);
