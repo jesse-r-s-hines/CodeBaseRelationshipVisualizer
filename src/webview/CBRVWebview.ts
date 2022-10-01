@@ -228,11 +228,6 @@ export default class CBRVWebview {
             this.connections = connections;
         }
 
-        /** Return unique string key for a connection */
-        const keyFunc = (conn: NormalizedConnection): string => {
-            return JSON.stringify([conn.from, conn.to].map(e => (e ? `${e.file}:${e.line ?? ''}` : '')))
-        };
-
         const merged = new Map<string, MergedConnections>();
         this.connections.forEach(conn => {
             const {from: normFrom, to: normTo} = this.normalizeConn(conn);
@@ -244,7 +239,7 @@ export default class CBRVWebview {
 
             // Make a new connection raised to point to the visible ancestors, then merge with any others
             const raisedConn = this.normalizeConn({ from, to })
-            const key = keyFunc(raisedConn);
+            const key = this.connKey(raisedConn);
             if (!merged.has(key)) {
                 merged.set(key, {
                     ...raisedConn,
@@ -289,7 +284,7 @@ export default class CBRVWebview {
         const link = d3.link(d3.curveCatmullRom); // TODO find a better curve
         this.connectionGroup.selectAll(".connection")
             // TODO normalize or convert from/to
-            .data(mergedConnections, keyFunc as any)
+            .data(mergedConnections, conn => this.connKey(conn as MergedConnections))
             .join(
                 enter => enter.append("path")
                     .classed("connection", true)
@@ -340,6 +335,11 @@ export default class CBRVWebview {
             to: (typeof conn.to == 'string') ? {file: conn.to} : conn.to,
         }
     }
+    
+    /** Return unique string key for a connection */
+    connKey(conn: NormalizedConnection): string {
+        return JSON.stringify([conn.from, conn.to].map(e => (e ? `${e.file}:${e.line ?? ''}` : '')))
+    };
 
     /** Convert svg viewport units to actual rendered pixel length  */
     calcPixelLength(viewPortLength: number) {
