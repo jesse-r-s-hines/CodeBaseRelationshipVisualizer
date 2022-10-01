@@ -18,7 +18,7 @@ export function activate(context: vscode.ExtensionContext) {
             const visualization = new Visualization(context, {
                 title: "Hyperlink Visualization",
                 directed: true,
-                color: 'green',
+                connectionColor: 'green',
             }, links);
             await visualization.launch();
         }),
@@ -42,7 +42,7 @@ async function getHyperlinks(codebase: Uri, linkBase: string): Promise<Connectio
                 link = normalizeLink(link, linkBase);
                 if (link !== path) {
                     let to = pathSet.has(link) ? link : undefined
-                    connections.push({ from: path, to: to, color: ['red', 'blue'][Math.floor(Math.random() * 4)] });
+                    connections.push({ from: path, to: to, color: ['red', 'blue'][Math.floor(Math.random() * 3)] });
                 }
             }
         }

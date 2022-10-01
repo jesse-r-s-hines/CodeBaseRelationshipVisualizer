@@ -259,7 +259,7 @@ export default class CBRVWebview {
 
         const mergedConnections = [...merged.values()];
 
-        const arrowColors = [...new Set(new Lazy(mergedConnections).map(c => c.connections[0].color ?? this.settings.color))];
+        const arrowColors = [...new Set(new Lazy(mergedConnections).map(c => c.connections[0].color ?? this.settings.connectionColor))];
 
         this.defs.selectAll("marker.arrow")
             .data(arrowColors, color => color as string)
@@ -287,10 +287,10 @@ export default class CBRVWebview {
             .join(
                 enter => enter.append("path")
                     .classed("connection", true)
-                    .attr("stroke-width", conns => conns.connections[0].strokeWidth ?? this.settings.strokeWidth)
-                    .attr("stroke", conns => conns.connections[0].color ?? this.settings.color)
+                    .attr("stroke-width", conns => conns.connections[0].width ?? this.settings.connectionWidth)
+                    .attr("stroke", conns => conns.connections[0].color ?? this.settings.connectionColor)
                     .attr("marker-end",
-                        conns => this.settings.directed ? `url(#${uniqId(conns.connections[0].color ?? this.settings.color)})` : null
+                        conns => this.settings.directed ? `url(#${uniqId(conns.connections[0].color ?? this.settings.connectionColor)})` : null
                     )
                     .attr("d", conn => {
                         const [from, to] = [conn.from, conn.to].map(e => e ? this.pathMap.get(e.file)! : undefined)
