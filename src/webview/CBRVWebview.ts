@@ -69,7 +69,13 @@ export default class CBRVWebview {
         // Add event listeners
         this.throttledUpdate = throttle(() => this.update(), 250, {trailing: true})
 
-        const zoom = d3.zoom().on('zoom', (e) => this.onZoom(e));
+        const [x, y, width, height] = this.getViewbox();
+        const extent: [Point, Point] = [[x, y], [x + width, y + height]]
+        const zoom = d3.zoom()
+            .on('zoom', (e) => this.onZoom(e))
+            .extent(extent)
+            .scaleExtent([1, Infinity])
+            .translateExtent(extent);
         zoom(this.diagram as any);
         d3.select(window).on('resize', (e) => this.onResize(e));
 
@@ -356,9 +362,9 @@ export default class CBRVWebview {
     }
 
     onZoom(e: d3.D3ZoomEvent<SVGSVGElement, Connection>) {
-        this.zoomWindow.attr('transform', e.transform.toString());
         const oldK = this.transform.k;
         this.transform = e.transform;
+        this.zoomWindow.attr('transform', this.transform.toString());
         if (e.transform.k != oldK) { // zoom also triggers for pan.
             this.throttledUpdate();
         }
