@@ -52,3 +52,8 @@ export class Lazy<T> implements Iterable<T> {
         }(this.#iterable));
     }
 }
+
+/** Creates an instance of Lazy */
+export function lazy<T>(iterable: Iterable<T>) {
+    return new Lazy(iterable)
+}

@@ -1,6 +1,6 @@
 import * as d3 from 'd3';
 import { FileType, Directory, AnyFile, Connection, VisualizationSettings, NormalizedConnection, MergedConnections, NormalizedEndpoint } from '../shared';
-import { getExtension, clamp, filterFileTree, Lazy } from '../util';
+import { getExtension, clamp, filterFileTree, lazy } from '../util';
 import { cropLine, ellipsisText, uniqId, getRect, Point, Box, closestPointOnBorder } from './rendering';
 import { throttle } from "lodash";
 
@@ -114,7 +114,7 @@ export default class CBRVWebview {
             .padding(this.filePadding)(root);
 
         const arc = d3.arc();
-        const colorScale = this.getColorScale(new Lazy(packLayout.descendants()).map(x => x.data));
+        const colorScale = this.getColorScale(lazy(packLayout.descendants()).map(x => x.data));
         // Calculate unique key for each data. Use `type:path/to/file` so that changing file <-> directory is treated as
         // creating a new node rather than update the existing one, which simplifies the logic.
         const keyFunc = (d: d3.HierarchyCircularNode<AnyFile>) => `${d.data.type}:${this.filePath(d)}`;
@@ -256,7 +256,7 @@ export default class CBRVWebview {
 
         let markers: string[] = [];
         if (this.settings.directed) { // If directed = false, we don't need any markers
-            const arrowColors = new Lazy(mergedConnections).map(c =>
+            const arrowColors = lazy(mergedConnections).map(c =>
                 c.connections[0].color ?? this.settings.connectionColor
             )
             markers = [...new Set(arrowColors)];
