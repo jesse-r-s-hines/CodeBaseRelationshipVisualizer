@@ -53,8 +53,8 @@ export interface Directory extends BaseFile {
  * ```
  */
  export interface Connection {
-    from: Endpoint
-    to: Endpoint
+    from?: Endpoint
+    to?: Endpoint
 
     /** Width of the SVG path */
     strokeWidth?: number
@@ -104,13 +104,13 @@ export type Endpoint = string | { file: string, line?: number }
     * user zooms in. Then connections to those files will show connected to
     * the visible parent folder.
     */
-    from: NormalizedEndpoint
+    from?: NormalizedEndpoint
 
     /**
     * The file or folder the rendered connection will show to. Can be a
     * folder just like `from`.
     */
-    to: NormalizedEndpoint
+    to?: NormalizedEndpoint
 
     /**
     * The original connections that were merged.
@@ -122,8 +122,8 @@ export type Endpoint = string | { file: string, line?: number }
 // Internal types
 
 export interface NormalizedConnection {
-    from: NormalizedEndpoint
-    to: NormalizedEndpoint
+    from?: NormalizedEndpoint
+    to?: NormalizedEndpoint
     strokeWidth?: number
     color?: string
 }

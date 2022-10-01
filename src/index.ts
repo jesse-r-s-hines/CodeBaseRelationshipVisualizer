@@ -40,8 +40,9 @@ async function getHyperlinks(codebase: Uri, linkBase: string): Promise<Connectio
             for (const [whole, ...groups] of contents.matchAll(regex)) {
                 let link = groups.filter(u => u !== undefined)[0]; // matchAll returns undefined for the unmatched "|" sections
                 link = normalizeLink(link, linkBase);
-                if (link !== path && pathSet.has(link)) {
-                    connections.push({ from: path, to: link, color: ['red', 'blue'][Math.floor(Math.random() * 4)] });
+                if (link !== path) {
+                    let to = pathSet.has(link) ? link : undefined
+                    connections.push({ from: path, to: to, color: ['red', 'blue'][Math.floor(Math.random() * 4)] });
                 }
             }
         }

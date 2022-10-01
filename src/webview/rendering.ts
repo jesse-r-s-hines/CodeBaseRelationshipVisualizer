@@ -1,6 +1,8 @@
 import { sha256 } from 'js-sha256';
 
 export type Point = [number, number]
+/** [x, y, width, height] */
+export type Box = [number, number, number, number]
 
 /**
  * If el's text is wider than width, cut it and add an ellipsis until if fits. Returns the new text in the node. If
@@ -61,4 +63,25 @@ export function uniqId(key: string, prefix = "") {
 export function getRect(el: Element): [number, number] {
     const rect = el.getBoundingClientRect();
     return [rect.width, rect.height];
+}
+
+/**
+ * Returns the closest point on the rectangle border to `p`.
+ * @param p A point inside the border.
+ * @param border [x, y, width, height]
+ */
+export function closestPointOnBorder([x, y]: Point, border: Box): Point {
+    const [bx, by, width, height] = border
+    const [distLeft, distRight, distTop, distBottom] = [x - bx, (bx + width) - x, y - by, (by + height) - by]
+    const min = Math.min(distLeft, distRight, distTop, distBottom)
+
+    if (min == distLeft) {
+        return [bx, y]
+    } else if (min == distRight) {
+        return [bx + width, y]
+    } else if (min == distTop) {
+        return [x, by]
+    } else { // if (min == distBottom)
+        return [x, by + height]
+    }
 }

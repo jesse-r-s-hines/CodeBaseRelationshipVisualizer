@@ -1,7 +1,7 @@
 import * as d3 from 'd3';
 import { FileType, Directory, AnyFile, Connection, VisualizationSettings, NormalizedConnection, MergedConnections, NormalizedEndpoint } from '../shared';
 import { getExtension, clamp, filterFileTree, Lazy } from '../util';
-import { cropLine, ellipsisText, uniqId, getRect } from './rendering';
+import { cropLine, ellipsisText, uniqId, getRect, Point, Box, closestPointOnBorder } from './rendering';
 import { throttle } from "lodash";
 
 /**
@@ -59,8 +59,7 @@ export default class CBRVWebview {
         // Create the SVG
         const { top, right, bottom, left } = this.margins;
         this.diagram = d3.select(document.querySelector(diagram) as SVGSVGElement)
-            // use negatives to add margin since pack() starts at 0 0. Viewbox is [minX, minY, width, height]
-            .attr("viewBox", [ -left, -top, left + this.diagramSize + right, top + this.diagramSize + bottom]);
+            .attr("viewBox", this.getViewbox());
 
         this.defs = this.diagram.append("defs");
         this.zoomWindow = this.diagram.append("g").classed("zoom-window", true);
@@ -77,6 +76,12 @@ export default class CBRVWebview {
         [this.width, this.height] = getRect(this.diagram.node()!);
 
         this.update(this.codebase, this.settings, this.connections);
+    }
+
+    getViewbox(): Box {
+        const { top, right, bottom, left } = this.margins;
+        // use negatives to add margin since pack() starts at 0 0. Viewbox is [minX, minY, width, height]
+        return [ -left, -top, left + this.diagramSize + right, top + this.diagramSize + bottom]
     }
 
     throttledUpdate: () => void
@@ -225,21 +230,22 @@ export default class CBRVWebview {
 
         /** Return unique string key for a connection */
         const keyFunc = (conn: NormalizedConnection): string => {
-            return JSON.stringify([`${conn.from.file}:${conn.from.line ?? ''}`, `${conn.to.file}:${conn.to.line ?? ''}`]);
+            return JSON.stringify([conn.from, conn.to].map(e => (e ? `${e.file}:${e.line ?? ''}` : '')))
         };
 
         const merged = new Map<string, MergedConnections>();
         this.connections.forEach(conn => {
-            const from = this.pathMap.get(this.normalizeConn(conn).from.file)!;
-            const to = this.pathMap.get(this.normalizeConn(conn).to.file)!;
+            const {from: normFrom, to: normTo} = this.normalizeConn(conn);
+            const [from, to] = [normFrom, normTo].map(f => f ? this.filePath(this.pathMap.get(f.file)!) : undefined)
+
             // TODO For now just ignore self loops. Also need to figure out what I should do for self loops caused by merging
             // TODO handle missing files
             if (from === to) return;
 
             // Make a new connection raised to point to the visible ancestors, then merge with any others
-            const raisedConn = this.normalizeConn({from: this.filePath(from), to: this.filePath(to)})
+            const raisedConn = this.normalizeConn({ from, to })
             const key = keyFunc(raisedConn);
-            if (!merged.has(key)) { 
+            if (!merged.has(key)) {
                 merged.set(key, {
                     ...raisedConn,
 
@@ -287,9 +293,16 @@ export default class CBRVWebview {
                         conns => this.settings.directed ? `url(#${uniqId(conns.connections[0].color ?? this.settings.color)})` : null
                     )
                     .attr("d", conn => {
-                        const from = this.pathMap.get(conn.from.file)!;
-                        const to = this.pathMap.get(conn.to.file)!;
-                        const [source, target] = cropLine([[from.x, from.y], [to.x, to.y]], from.r, to.r);
+                        const [from, to] = [conn.from, conn.to].map(e => e ? this.pathMap.get(e.file)! : undefined)
+                        if (!from && !to) {
+                            throw Error("Connections must have at least one of from or to defined")
+                        }
+
+                        let viewbox = this.getViewbox()
+                        let source: Point = from ? [from.x, from.y] : closestPointOnBorder([to!.x, to!.y],     viewbox);
+                        let target: Point = to   ? [to.x,   to.y  ] : closestPointOnBorder([from!.x, from!.y], viewbox);
+                        [source, target] = cropLine([source, target], (from ? from.r : 0), (to ? to.r : 0));
+
                         return link({ source, target });
                     }),
                 update => update,
