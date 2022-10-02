@@ -1,14 +1,16 @@
 import * as vscode from 'vscode';
 import { Uri, ViewColumn, Webview, FileSystemWatcher } from 'vscode';
 import { AnyFile, Directory, Connection, VisualizationSettings } from "./shared";
+import { DeepRequired } from "ts-essentials"
 import * as fileHelper from "./fileHelper";
+import { merge } from 'lodash'
 
 /**
  * Handles the visualization, allowing you to update the visualization.
  */
 export class Visualization {
     private context: vscode.ExtensionContext;
-    private settings: VisualizationSettings 
+    private settings: DeepRequired<VisualizationSettings>
     private connections: Connection[]
 
     private webview?: vscode.Webview
@@ -16,17 +18,19 @@ export class Visualization {
 
     constructor(
         context: vscode.ExtensionContext,
-        settings: Partial<VisualizationSettings> = {},
+        settings: VisualizationSettings = {},
         connections: Iterable<Connection> = []
     ) {
         this.context = context;
         const defaultSettings = {
             title: 'CodeBase Relationship Visualizer',
             directed: false,
-            connectionWidth: 2,
-            connectionColor: "yellow",
+            connectionDefaults: {
+                width: 2,
+                color: 'yellow',
+            }
         };
-        this.settings = { ...defaultSettings, ...settings };
+        this.settings = merge(defaultSettings, settings);
         this.connections = [...connections];
     }
 

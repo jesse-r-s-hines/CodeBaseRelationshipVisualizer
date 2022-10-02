@@ -73,31 +73,33 @@ export type Endpoint = string | { file: string, line?: number }
 /**
  * Settings and configuration for a Visualization.
  */
- export interface VisualizationSettings {
+export interface VisualizationSettings {
     /**
      * Title for the internal webview. See https://code.visualstudio.com/api/references/vscode-api#WebviewPanel
      */
-    title: string
+    title?: string
 
     /**
      * Whether each connection is directed (an arrow) or not (a line).
      * Default false.
      */
-    directed: boolean
+    directed?: boolean
 
-    /** Default width of the SVG path for connections. Can be overridden per connection via `Connection.width` */
-    connectionWidth: number
+    connectionDefaults?: {
+        /** Default width of the SVG path for connections. Can be overridden per connection via `Connection.width` */
+        width?: number
 
-    /** Default CSS color string for connections. Can be overridden per connection via `Connection.color` */
-    connectionColor: string
+        /** Default CSS color string for connections. Can be overridden per connection via `Connection.color` */
+        color?: string
+    }
 }
 
- /**
-  * Represents a merged group of connections, that will be rendered as one
-  * line in the visualization. The connections are grouped together based
-  * on the merge rules.
-  */
-  export interface MergedConnections {
+/**
+ * Represents a merged group of connections, that will be rendered as one
+ * line in the visualization. The connections are grouped together based
+ * on the merge rules.
+ */
+export interface MergedConnections {
     /**
     * The file/folder the rendered connection will show from. This can be a
     * folder when there are deeply nested files which are hidden until the

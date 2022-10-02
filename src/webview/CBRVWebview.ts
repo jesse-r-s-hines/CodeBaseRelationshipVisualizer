@@ -2,13 +2,14 @@ import * as d3 from 'd3';
 import { FileType, Directory, AnyFile, Connection, VisualizationSettings, NormalizedConnection, MergedConnections, NormalizedEndpoint } from '../shared';
 import { getExtension, clamp, filterFileTree, lazy } from '../util';
 import { cropLine, ellipsisText, uniqId, getRect, Point, Box, closestPointOnBorder } from './rendering';
+import { DeepRequired } from "ts-essentials"
 import { throttle } from "lodash";
 
 /**
  * This is the class that renders the actual diagram.
  */
 export default class CBRVWebview {
-    settings: VisualizationSettings
+    settings: DeepRequired<VisualizationSettings>
     codebase: Directory
     connections: Connection[]
 
@@ -50,7 +51,7 @@ export default class CBRVWebview {
     pathMap: Map<string, d3.HierarchyCircularNode<AnyFile>> = new Map()
 
     /** Pass the selector for the canvas svg */
-    constructor(diagram: string, codebase: Directory, settings: VisualizationSettings, connections: Connection[]) {
+    constructor(diagram: string, codebase: Directory, settings: DeepRequired<VisualizationSettings>, connections: Connection[]) {
         // filter empty directories
         this.codebase = filterFileTree(codebase, f => !(f.type == FileType.Directory && f.children.length == 0));
         this.settings = settings;
@@ -92,7 +93,7 @@ export default class CBRVWebview {
 
     throttledUpdate: () => void
 
-    update(codebase?: Directory, settings?: VisualizationSettings, connections?: Connection[]) {
+    update(codebase?: Directory, settings?: DeepRequired<VisualizationSettings>, connections?: Connection[]) {
         if (settings) {
             this.settings = settings;
             this.updateCodebase(codebase ?? this.codebase); // force rerender
@@ -263,7 +264,7 @@ export default class CBRVWebview {
         let markers: string[] = [];
         if (this.settings.directed) { // If directed = false, we don't need any markers
             const arrowColors = lazy(mergedConnections).map(c =>
-                c.connections[0].color ?? this.settings.connectionColor
+                c.connections[0].color ?? this.settings.connectionDefaults.color
             )
             markers = [...new Set(arrowColors)];
         }
@@ -294,10 +295,10 @@ export default class CBRVWebview {
             .join(
                 enter => enter.append("path")
                     .classed("connection", true)
-                    .attr("stroke-width", conns => conns.connections[0].width ?? this.settings.connectionWidth)
-                    .attr("stroke", conns => conns.connections[0].color ?? this.settings.connectionColor)
+                    .attr("stroke-width", conns => conns.connections[0].width ?? this.settings.connectionDefaults.width)
+                    .attr("stroke", conns => conns.connections[0].color ?? this.settings.connectionDefaults.color)
                     .attr("marker-end", conns => this.settings.directed ?
-                        `url(#${uniqId(conns.connections[0].color ?? this.settings.connectionColor)})` :
+                        `url(#${uniqId(conns.connections[0].color ?? this.settings.connectionDefaults.color)})` :
                         null
                     )
                     .attr("d", conn => {

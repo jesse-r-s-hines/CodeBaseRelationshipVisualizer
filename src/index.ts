@@ -18,7 +18,9 @@ export function activate(context: vscode.ExtensionContext) {
             const visualization = new Visualization(context, {
                 title: "Hyperlink Visualization",
                 directed: true,
-                connectionColor: 'green',
+                connectionDefaults: {
+                    color: 'green',
+                }
             }, links);
             await visualization.launch();
         }),
