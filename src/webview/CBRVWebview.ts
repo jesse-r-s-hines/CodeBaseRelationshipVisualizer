@@ -58,7 +58,6 @@ export default class CBRVWebview {
         this.connections = connections;
 
         // Create the SVG
-        const { top, right, bottom, left } = this.margins;
         this.diagram = d3.select(document.querySelector(diagram) as SVGSVGElement)
             .attr("viewBox", this.getViewbox());
 
