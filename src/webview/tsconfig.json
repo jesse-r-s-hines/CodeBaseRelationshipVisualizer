@@ -2,7 +2,7 @@
     "extends": "../../tsconfig.json",
     "compilerOptions": {
         "module": "CommonJS",
-        "lib": ["dom", "dom.iterable", "ES2019"],
+        "lib": ["dom", "dom.iterable", "es2022"],
     },
     "include": [
         "**/*.ts"
