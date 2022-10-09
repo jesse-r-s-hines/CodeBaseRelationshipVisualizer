@@ -20,7 +20,8 @@ export function activate(context: vscode.ExtensionContext) {
                 directed: true,
                 connectionDefaults: {
                     color: 'green',
-                }
+                },
+                mergeRules: true,
             }, links);
             await visualization.launch();
         }),

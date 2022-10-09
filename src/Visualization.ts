@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { Uri, ViewColumn, Webview, FileSystemWatcher } from 'vscode';
-import { AnyFile, Directory, Connection, VisualizationSettings } from "./shared";
-import { DeepRequired } from "ts-essentials"
+import { AnyFile, Directory, Connection, VisualizationSettings, NormalizedVisualizationSettings, MergeRules } from "./shared";
 import * as fileHelper from "./fileHelper";
 import { merge } from 'lodash'
 
@@ -10,11 +9,29 @@ import { merge } from 'lodash'
  */
 export class Visualization {
     private context: vscode.ExtensionContext;
-    private settings: DeepRequired<VisualizationSettings>
+    private settings: NormalizedVisualizationSettings
     private connections: Connection[]
 
     private webview?: vscode.Webview
     private fsWatcher?: FileSystemWatcher
+
+    private static readonly defaultSettings: NormalizedVisualizationSettings = {
+        title: 'CodeBase Relationship Visualizer',
+        directed: false,
+        connectionDefaults: {
+            width: 2,
+            color: 'yellow',
+        },
+        mergeRules: false,
+    };
+
+    private static readonly defaultMergeRules: MergeRules = {
+        file: "ignore",
+        line: "ignore",
+        direction: "ignore",
+        width: {rule: "add", max: 10},
+        color: "mostCommon",
+    }
 
     constructor(
         context: vscode.ExtensionContext,
@@ -22,15 +39,13 @@ export class Visualization {
         connections: Iterable<Connection> = []
     ) {
         this.context = context;
-        const defaultSettings = {
-            title: 'CodeBase Relationship Visualizer',
-            directed: false,
-            connectionDefaults: {
-                width: 2,
-                color: 'yellow',
-            }
-        };
-        this.settings = merge(defaultSettings, settings);
+
+        this.settings = merge({}, Visualization.defaultSettings, settings)
+        if (this.settings.mergeRules) {
+            let mergeRules = this.settings.mergeRules === true ? {} : false
+            this.settings.mergeRules = merge({}, Visualization.defaultMergeRules, mergeRules)
+        }
+
         this.connections = [...connections];
     }
 

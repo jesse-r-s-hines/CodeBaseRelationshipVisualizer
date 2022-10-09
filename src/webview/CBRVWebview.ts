@@ -1,15 +1,14 @@
 import * as d3 from 'd3';
-import { FileType, Directory, AnyFile, Connection, VisualizationSettings, NormalizedConnection, MergedConnections, NormalizedEndpoint } from '../shared';
+import { FileType, Directory, AnyFile, Connection, VisualizationSettings, NormalizedConnection, MergedConnections, NormalizedEndpoint, NormalizedVisualizationSettings, MergeRules } from '../shared';
 import { getExtension, clamp, filterFileTree, lazy } from '../util';
 import { cropLine, ellipsisText, uniqId, getRect, Point, Box, closestPointOnBorder } from './rendering';
-import { DeepRequired } from "ts-essentials"
-import { throttle } from "lodash";
+import { chain, throttle, mapValues, min, max, sum, isEqual } from "lodash";
 
 /**
  * This is the class that renders the actual diagram.
  */
 export default class CBRVWebview {
-    settings: DeepRequired<VisualizationSettings>
+    settings: NormalizedVisualizationSettings
     codebase: Directory
     connections: Connection[]
 
@@ -51,7 +50,7 @@ export default class CBRVWebview {
     pathMap: Map<string, d3.HierarchyCircularNode<AnyFile>> = new Map()
 
     /** Pass the selector for the canvas svg */
-    constructor(diagram: string, codebase: Directory, settings: DeepRequired<VisualizationSettings>, connections: Connection[]) {
+    constructor(diagram: string, codebase: Directory, settings: NormalizedVisualizationSettings, connections: Connection[]) {
         // filter empty directories
         this.codebase = filterFileTree(codebase, f => !(f.type == FileType.Directory && f.children.length == 0));
         this.settings = settings;
@@ -92,7 +91,7 @@ export default class CBRVWebview {
 
     throttledUpdate: () => void
 
-    update(codebase?: Directory, settings?: DeepRequired<VisualizationSettings>, connections?: Connection[]) {
+    update(codebase?: Directory, settings?: NormalizedVisualizationSettings, connections?: Connection[]) {
         if (settings) {
             this.settings = settings;
             this.updateCodebase(codebase ?? this.codebase); // force rerender
@@ -234,37 +233,13 @@ export default class CBRVWebview {
             this.connections = connections;
         }
 
-        const merged = new Map<string, MergedConnections>();
-        this.connections.forEach(conn => {
-            const {from: normFrom, to: normTo} = this.normalizeConn(conn);
-            const [from, to] = [normFrom, normTo].map(f => f ? this.filePath(this.pathMap.get(f.file)!) : undefined)
-
-            // TODO For now just ignore self loops. Also need to figure out what I should do for self loops caused by merging
-            // TODO handle missing files
-            if (from === to) return;
-
-            // Make a new connection raised to point to the visible ancestors, then merge with any others
-            const raisedConn = this.normalizeConn({ from, to })
-            const key = this.connKey(raisedConn);
-            if (!merged.has(key)) {
-                merged.set(key, {
-                    ...raisedConn,
-
-                    // TODO do merging logic
-
-                    connections: [],
-                });
-            }
-            merged.get(key)!.connections.push(conn);
-        }, new Map<string, Connection[]>());
-
-        const mergedConnections = [...merged.values()];
+        console.log(connections)
+        const merged = this.mergeConnections();
+        console.log(merged)
 
         let markers: string[] = [];
         if (this.settings.directed) { // If directed = false, we don't need any markers
-            const arrowColors = lazy(mergedConnections).map(c =>
-                c.connections[0].color ?? this.settings.connectionDefaults.color
-            )
+            const arrowColors = lazy(merged).map(c => c.color)
             markers = [...new Set(arrowColors)];
         }
 
@@ -290,15 +265,15 @@ export default class CBRVWebview {
         const link = d3.link(d3.curveCatmullRom); // TODO find a better curve
         this.connectionGroup.selectAll(".connection")
             // TODO normalize or convert from/to
-            .data(mergedConnections, conn => this.connKey(conn as MergedConnections))
+            .data(merged, conn => (conn as MergedConnections).id)
             .join(
                 enter => enter.append("path")
                     .classed("connection", true)
-                    .attr("stroke-width", conns => conns.connections[0].width ?? this.settings.connectionDefaults.width)
-                    .attr("stroke", conns => conns.connections[0].color ?? this.settings.connectionDefaults.color)
-                    .attr("marker-end", conns => this.settings.directed ?
-                        `url(#${uniqId(conns.connections[0].color ?? this.settings.connectionDefaults.color)})` :
-                        null
+                    .attr("stroke-width", conns => conns.width)
+                    .attr("stroke", conns => conns.color)
+                    .attr("marker-end", conns => this.settings.directed ? `url(#${uniqId(conns.color)})` : null)
+                    .attr("marker-start", conns =>
+                        this.settings.directed && conns.bidirectional ? `url(#${uniqId(conns.color)})` : null
                     )
                     .attr("d", conn => {
                         const [from, to] = [conn.from, conn.to].map(e => e ? this.pathMap.get(e.file)! : undefined)
@@ -316,6 +291,131 @@ export default class CBRVWebview {
                 update => update,
                 exit => exit.remove(),
             );
+    }
+
+    mergeConnections(): MergedConnections[] {
+        let merged: MergedConnections[] = []
+        
+        // Each keyFunc will split up connections in to smaller groups
+        let groupKeyFuncs: ((c: NormalizedConnection, raised: NormalizedConnection) => any)[]
+        const rules = this.normalizeMergeRules()
+        const mergeDirections = !this.settings.directed || (rules && rules?.direction?.rule == "ignore")
+
+        if (rules) {
+            const fileKey = (c: NormalizedConnection) =>
+                JSON.stringify([c?.from, c?.to].map(e => e?.file ?? '').sort())
+            const lineKey = (c: NormalizedConnection) =>
+                JSON.stringify([c?.from, c?.to].map(e => e ? `${e.file}:${e.line ?? ''}` : '').sort())
+
+            groupKeyFuncs = [
+                (c, raised) => {
+                    let key = [raised.from, raised.to].map(e => e?.file ?? '')
+                    if (mergeDirections) { // order doesn't matter TODO unless directed
+                        key = key.sort()
+                    }
+                    return JSON.stringify(key)
+                },
+                ...(rules.file?.rule == "same" ? [rules.line?.rule == "same" ? lineKey : fileKey] : []),
+                ...chain(rules)
+                    .omit(['file', 'line', 'direction'])
+                    .pickBy(rule => rule?.rule == "same") // these were handled already
+                    .map((rule, prop) => (c: Connection) => c[prop])
+                    .value()
+            ]
+        } else {
+            groupKeyFuncs = [
+                c => c, // don't group any connections
+            ]
+        }
+
+        // Create a tree to split out all the groups
+        type Tree = Map<any, Tree|MergedConnections>
+        let groupMap: Tree = new Map()
+        // We can't use [from, to] as a d3 id since there can be duplicates, so we'll tack on an index to the key to
+        // differentiate connections between the same files, but still keep the key consistent most the time so d3 will
+        // reuse DOM. Keep a map of [from, to] => number of merged connections between those files
+        let countMap = new Map<string, number>() 
+        for (let conn of this.connections) {
+            const normConn = this.normalizeConn(conn)
+            const [from, to] = [normConn.from, normConn.to]
+                .map(f => f ? {file: this.filePath(this.pathMap.get(f.file)!)} : undefined)
+            const raised = this.normalizeConn({ from, to })
+            const groupKeys = groupKeyFuncs.map(func => func(normConn, raised))
+
+            // TODO For now just ignore self loops.
+            // TODO handle missing files
+            if (from === to) continue;
+
+            let node = groupMap;
+            for (const key of groupKeys.slice(0, -1)) {
+                if (!node.has(key))
+                    node.set(key, new Map())
+                node = node.get(key) as Tree
+            }
+
+            // last level has the MergedConnection
+            const key = groupKeys.at(-1)! // groupByFuncs will never be empty
+            if (!node.has(key)) {
+                let id = JSON.stringify([...[raised?.from, raised?.to].map(e => e?.file ?? ''), ]) // only need file
+                let count = countMap.get(id) ?? 0
+                countMap.set(id, count + 1)
+
+                let mergedConn: MergedConnections = {
+                    from: raised.from, to: raised.to,
+                    id: `${id}:${count}`,
+                    width: 0, color: '', // We'll set these in the next step
+                    bidirectional: false,
+                    connections: [],
+                }
+                node.set(key, mergedConn)
+                merged.push(mergedConn) // so we don't have to flatten the tree after
+
+            }
+            let mergedConn = node.get(key) as MergedConnections
+            mergedConn.connections.push(conn)
+            if (isEqual([raised.from, raised.to], [mergedConn.from, mergedConn.to])) {
+                mergedConn.bidirectional = true // Connections going both directions
+            }
+        }
+
+        // Calculate rendered functions for the merged connections
+        if (rules) {
+            const rulesImpl: Record<string, (items: any[], rule: any) => any> = { // TODO move this
+                least: items => min(items),
+                greatest: items => max(items),
+                // find the most/least common item. items is gauranteed to be non-empty
+                leastCommon: items => chain(items).countBy().toPairs().minBy(([item, count]) => count).value()[0],
+                mostCommon: items => chain(items).countBy().toPairs().maxBy(([item, count]) => count).value()[0],
+                add: (items, rule) => Math.min(sum(items), rule.max),
+                value: (items, rule) => items.length <= 1 ? items[0] : rule.value,
+            }
+
+            for (let mergedConn of merged) {
+                mergedConn.width = rulesImpl[rules.width!.rule](
+                    mergedConn.connections.map(conn => conn.width ?? this.settings.connectionDefaults.width),
+                    rules.width,
+                )
+                mergedConn.color = rulesImpl[rules.color!.rule](
+                    mergedConn.connections.map(conn => conn.color ?? this.settings.connectionDefaults.color),
+                    rules.color,
+                )
+            }
+        } else {
+            for (let mergedConn of merged) { // TODO do this when we create the connection?
+                mergedConn.width = mergedConn.connections[0].width ?? this.settings.connectionDefaults.width
+                mergedConn.color = mergedConn.connections[0].color ?? this.settings.connectionDefaults.color
+            }
+        }
+
+        return merged;
+    }
+
+    normalizeMergeRules() {
+        if (this.settings.mergeRules) {
+            return mapValues(this.settings.mergeRules, r => (typeof r == "string" ? {rule: r} : r))
+        } else {
+            return false
+        }
     }
 
     /** Returns a function used to compute color from file extension */
@@ -342,10 +442,6 @@ export default class CBRVWebview {
         }
     }
     
-    /** Return unique string key for a connection */
-    connKey(conn: NormalizedConnection): string {
-        return JSON.stringify([conn.from, conn.to].map(e => (e ? `${e.file}:${e.line ?? ''}` : '')))
-    };
 
     /** Convert svg viewport units to actual rendered pixel length  */
     calcPixelLength(viewPortLength: number) {
