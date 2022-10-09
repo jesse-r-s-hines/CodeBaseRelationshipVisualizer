@@ -71,7 +71,7 @@ export interface Directory extends BaseFile {
 /**
  * Represents one endpoint of a `Connection`. Can be a path to the file or an object containing a path and an optional
  * line number.
- * TODO: maybe use Uri instead
+ * TODO: maybe use Uri instead, or update Docs
  */
 export type Endpoint = string | { file: string, line?: number }
 

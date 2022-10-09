@@ -1,8 +1,9 @@
 import * as d3 from 'd3';
-import { FileType, Directory, AnyFile, Connection, VisualizationSettings, NormalizedConnection, MergedConnections, NormalizedEndpoint, NormalizedVisualizationSettings, MergeRules } from '../shared';
+import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedConnections, NormalizedVisualizationSettings } from '../shared';
 import { getExtension, clamp, filterFileTree, lazy } from '../util';
 import { cropLine, ellipsisText, uniqId, getRect, Point, Box, closestPointOnBorder } from './rendering';
-import { chain, throttle, mapValues, min, max, sum, isEqual } from "lodash";
+import _, { throttle, mapValues, min, max, sum, isEqual, Collection } from "lodash";
+import { HierarchyNode } from 'd3';
 
 /**
  * This is the class that renders the actual diagram.
@@ -119,7 +120,7 @@ export default class CBRVWebview {
             .padding(this.filePadding)(root);
 
         const arc = d3.arc();
-        const colorScale = this.getColorScale(lazy(packLayout.descendants()).map(x => x.data));
+        const colorScale = this.getColorScale(packLayout);
         // Calculate unique key for each data. Use `type:path/to/file` so that changing file <-> directory is treated as
         // creating a new node rather than update the existing one, which simplifies the logic.
         const keyFunc = (d: d3.HierarchyCircularNode<AnyFile>) => `${d.data.type}:${this.filePath(d)}`;
@@ -316,7 +317,7 @@ export default class CBRVWebview {
                     return JSON.stringify(key)
                 },
                 ...(rules.file?.rule == "same" ? [rules.line?.rule == "same" ? lineKey : fileKey] : []),
-                ...chain(rules)
+                ..._(rules)
                     .omit(['file', 'line', 'direction'])
                     .pickBy(rule => rule?.rule == "same") // these were handled already
                     .map((rule, prop) => (c: Connection) => c[prop])
@@ -384,8 +385,8 @@ export default class CBRVWebview {
                 least: items => min(items),
                 greatest: items => max(items),
                 // find the most/least common item. items is gauranteed to be non-empty
-                leastCommon: items => chain(items).countBy().toPairs().minBy(([item, count]) => count).value()[0],
-                mostCommon: items => chain(items).countBy().toPairs().maxBy(([item, count]) => count).value()[0],
+                leastCommon: items => _(items).countBy().toPairs().minBy(([item, count]) => count)![0],
+                mostCommon: items => _(items).countBy().toPairs().maxBy(([item, count]) => count)![0],
                 add: (items, rule) => Math.min(sum(items), rule.max),
                 value: (items, rule) => items.length <= 1 ? items[0] : rule.value,
             }
@@ -419,15 +420,15 @@ export default class CBRVWebview {
     }
 
     /** Returns a function used to compute color from file extension */
-    getColorScale(files: Iterable<AnyFile>): (d: AnyFile) => string | null {
-        const extensions = new Set<string>();
-        for (const file of files) {
-            extensions.add(getExtension(file.name));
-        }
-        const colorScale = d3.scaleOrdinal(extensions, d3.quantize(d3.interpolateRainbow, extensions.size));
-        return (d: AnyFile) => {
-            return d.type == FileType.Directory ? null : colorScale(getExtension(d.name));
-        };
+    getColorScale(nodes: HierarchyNode<AnyFile>): (d: AnyFile) => string | null {
+        const exts = _(nodes.descendants())
+            .filter(n => n.data.type != FileType.Directory)
+            .map(n => getExtension(n.data.name))
+            .uniq()
+            .value();
+        // quantize requires > 1, so just set it to 2 if needed. It doesn't matter if there's extra "buckets"
+        const colorScale = d3.scaleOrdinal(exts, d3.quantize(d3.interpolateRainbow, Math.max(exts.length, 2)));
+        return (d: AnyFile) => d.type == FileType.Directory ? null : colorScale(getExtension(d.name));
     }
 
     filePath(d: d3.HierarchyNode<AnyFile>): string {
