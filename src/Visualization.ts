@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { Uri, ViewColumn, Webview, FileSystemWatcher } from 'vscode';
-import { AnyFile, Directory, Connection, VisualizationSettings, NormalizedVisualizationSettings, MergeRules } from "./shared";
+import { Uri, Webview, FileSystemWatcher } from 'vscode';
+import { Connection, VisualizationSettings, NormalizedVisualizationSettings } from "./shared";
 import * as fileHelper from "./fileHelper";
-import { merge } from 'lodash'
+import _ from 'lodash'
 
 /**
  * Handles the visualization, allowing you to update the visualization.
@@ -22,16 +22,14 @@ export class Visualization {
             width: 2,
             color: 'yellow',
         },
-        mergeRules: false,
+        mergeRules: {
+            file: "ignore",
+            line: "ignore",
+            direction: "ignore",
+            width: {rule: "add", max: 10},
+            color: "mostCommon",
+        },
     };
-
-    private static readonly defaultMergeRules: MergeRules = {
-        file: "ignore",
-        line: "ignore",
-        direction: "ignore",
-        width: {rule: "add", max: 10},
-        color: "mostCommon",
-    }
 
     constructor(
         context: vscode.ExtensionContext,
@@ -40,12 +38,10 @@ export class Visualization {
     ) {
         this.context = context;
 
-        this.settings = merge({}, Visualization.defaultSettings, settings)
-        if (this.settings.mergeRules) {
-            let mergeRules = this.settings.mergeRules === true ? {} : false
-            this.settings.mergeRules = merge({}, Visualization.defaultMergeRules, mergeRules)
-        }
-
+        this.settings = _.merge({},
+            Visualization.defaultSettings,
+            _.omit(settings, settings.mergeRules === true ? ['mergeRules'] : []), // true is same as default.
+        )
         this.connections = [...connections];
     }
 

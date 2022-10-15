@@ -128,7 +128,7 @@ export interface VisualizationSettings {
      *      - `"mostCommon"`: Use the most common color among the merge connections. This is the default
      *      - `{rule: "value", value: string}`: Show merged connections with a different color than single ones.
      */
-    mergeRules?: boolean|MergeRules
+    mergeRules?: MergeRules|boolean
 }
 
 // TODO Maybe make this with DeepRequired, thought that causes some issues with MergeRules
@@ -139,7 +139,7 @@ export interface NormalizedVisualizationSettings {
         width: number
         color: string
     }
-    mergeRules: false|MergeRules // TODO maybe normalize the merge rules here
+    mergeRules: MergeRules|false // TODO maybe normalize the merge rules here
 }
 
 /**
