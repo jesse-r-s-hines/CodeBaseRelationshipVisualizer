@@ -190,24 +190,24 @@ export interface NormalizedConnection {
 export type NormalizedEndpoint = { file: string, line?: number }
 
 export type MergeRules = {
-    file?: Same | Ignore
-    line?: Same | Ignore
-    direction?: Same | Ignore
+    file?: SameRule | IgnoreRule
+    line?: SameRule | IgnoreRule
+    direction?: SameRule | IgnoreRule
 
-    width?: Same | Ignore | Least | Greatest | LeastCommon | MostCommon | Add | Value
-    color?: Same | Ignore | Least | Greatest | LeastCommon | MostCommon | Value
+    width?: SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule | AddRule | ValueRule
+    color?: SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule | ValueRule
 } | {
-    [key: string]: Same | Ignore
+    [key: string]: SameRule | IgnoreRule
 }
 
 interface MergeRule<Name extends string> {rule: Name}
 type SimpleMergeRule<Name extends string> = Name | MergeRule<Name>
 
-export type Same = SimpleMergeRule<'same'>;
-export type Ignore = SimpleMergeRule<'ignore'>;
-export type Least = SimpleMergeRule<'least'>;
-export type Greatest = SimpleMergeRule<'greatest'>;
-export type LeastCommon = SimpleMergeRule<'leastCommon'>;
-export type MostCommon = SimpleMergeRule<'mostCommon'>;
-export interface Add extends MergeRule<"add"> {max: number}
-export interface Value extends MergeRule<"value"> {value: any}
+export type SameRule = SimpleMergeRule<'same'>;
+export type IgnoreRule = SimpleMergeRule<'ignore'>;
+export type LeastRule = SimpleMergeRule<'least'>;
+export type GreatestRule = SimpleMergeRule<'greatest'>;
+export type LeastCommonRule = SimpleMergeRule<'leastCommon'>;
+export type MostCommonRule = SimpleMergeRule<'mostCommon'>;
+export interface AddRule extends MergeRule<"add"> {max: number}
+export interface ValueRule extends MergeRule<"value"> {value: any}
