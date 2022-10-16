@@ -148,9 +148,6 @@ export interface NormalizedVisualizationSettings {
  * on the merge rules.
  */
 export interface MergedConnections {
-    /** Unique id for the merged connection */
-    id: string
-
     /**
     * The file/folder the rendered connection will show from. This can be a
     * folder when there are deeply nested files which are hidden until the

@@ -248,7 +248,7 @@ export default class CBRVWebview {
 
         const merged = this.mergeConnections();
         // If directed == false, we don't need any markers
-        let markers = this.settings.directed ? _(merged).map(c => c.color).uniq().value() : []
+        let markers = this.settings.directed ? _(merged).values().flatten().map(c => c.color).uniq().value() : []
 
         this.defs.selectAll("marker.arrow")
             .data(markers, color => color as string)
@@ -269,50 +269,61 @@ export default class CBRVWebview {
                 exit => exit.remove(),
             );
 
-        const link = d3.link(d3.curveCatmullRom); // TODO find a better curve
-        this.connectionLayer.selectAll(".connection")
-            // TODO normalize or convert from/to
-            .data(merged, conn => (conn as MergedConnections).id)
-            .join(
-                enter => enter.append("path")
-                    .classed("connection", true)
-                    .attr("stroke-width", conns => conns.width)
-                    .attr("stroke", conns => conns.color)
-                    .attr("marker-end", conns => this.settings.directed ? `url(#${uniqId(conns.color)})` : null)
-                    .attr("marker-start", conns =>
-                        this.settings.directed && conns.bidirectional ? `url(#${uniqId(conns.color)})` : null
-                    )
-                    .attr("d", conn => {
-                        const [from, to] = [conn.from, conn.to].map(e => e ? this.pathMap.get(e.file)! : undefined)
+        const pathBetween = (from?: Node, to?: Node) => {
+            let viewbox = this.getViewbox();
+            let source: Point = from ? [from.x, from.y] : closestPointOnBorder([to!.x, to!.y],     viewbox);
+            let target: Point = to   ? [to.x,   to.y  ] : closestPointOnBorder([from!.x, from!.y], viewbox);
+            [source, target] = cropLine([source, target], (from ? from.r : 0), (to ? to.r : 0));
 
-                        let viewbox = this.getViewbox()
-                        let source: Point = from ? [from.x, from.y] : closestPointOnBorder([to!.x, to!.y],     viewbox);
-                        let target: Point = to   ? [to.x,   to.y  ] : closestPointOnBorder([from!.x, from!.y], viewbox);
-                        [source, target] = cropLine([source, target], (from ? from.r : 0), (to ? to.r : 0));
+            const path = d3.path();
+            path.moveTo(source[0], source[1]);
+            path.lineTo(target[0], target[1]);
+            return path
+        }
 
-                        return link({ source, target });
-                    }),
-                update => update,
-                exit => exit.remove(),
-            );
+        this.connectionLayer.selectAll(".connection-group")
+            .data(_(merged).toPairs().value(), ([id, conns]: any) => id)
+            .join("g")
+                .classed("connection-group", true)
+                .selectAll(".connection")
+                .data(([id, mergedConns]) => mergedConns)
+                .join(
+                    enter => enter.append("path")
+                        .classed("connection", true)
+                        .attr("stroke-width", conns => conns.width)
+                        .attr("stroke", conns => conns.color)
+                        .attr("marker-end", conns => this.settings.directed ? `url(#${uniqId(conns.color)})` : null)
+                        .attr("marker-start", conns =>
+                            this.settings.directed && conns.bidirectional ? `url(#${uniqId(conns.color)})` : null
+                        )
+                        .attr("d", conn => {
+                            const [from, to] = [conn.from, conn.to].map(e => e ? this.pathMap.get(e.file)! : undefined)
+                            return pathBetween(from, to).toString();
+                        }),
+                    update => update,
+                    exit => exit.remove(),
+                );
     }
 
-    mergeConnections(): MergedConnections[] {
-        let merged: MergedConnections[] = []
-        
+    /**
+     * Merge all the connections to combine connections going between the same files after being raised to the first
+     * visible file/folder. Follows mergeRules, and returns a map of a uniq id to list of merged connections between
+     * the same two visible files.
+     */
+    mergeConnections(): Record<string, MergedConnections[]> {
         // Each keyFunc will split up connections in to smaller groups
         const rules = this.normalizedMergeRules()
-        const mergeDirections = rules && (!this.settings.directed || rules.direction?.rule == "ignore")
-        let groupKeyFuncs: ((c: NormalizedConnection, raised: NormalizedConnection) => any)[] = []
+        let groupKeyFuncs: ((c: NormalizedConnection, raised: NormalizedConnection) => any)[] = [
+            // top level group is the from/to after being raised to the first visible files/folders
+            (c, raised) => this.connKey(raised, {lines: false, ordered: false})
+        ]
 
         if (rules) {
-            groupKeyFuncs.push(
-                (c, raised) => this.connKey(raised, {lines: false, ordered: !mergeDirections})
-            )
+            if (this.settings.directed && rules.direction?.rule == "same") { // split different directions
+                groupKeyFuncs.push((c, raised) => this.connKey(raised, {lines: false, ordered: true}))
+            }
             if (rules.file?.rule == "same") {
-                groupKeyFuncs.push(
-                    c => this.connKey(c, {lines: rules.line?.rule == "same", ordered: !mergeDirections})
-                )
+                groupKeyFuncs.push(c => this.connKey(c, {lines: rules.line?.rule == "same", ordered: false}))
             }
             groupKeyFuncs.push(
                 ..._(rules)
@@ -328,10 +339,6 @@ export default class CBRVWebview {
         // Create a tree to split out all the groups
         type Tree = Map<any, Tree|MergedConnections>
         let groupMap: Tree = new Map()
-        // We can't use [from, to] as a d3 id since there can be duplicates, so we'll add an index to the key to 
-        // differentiate connections between the same files, but still keep the key consistent most the time so d3 will
-        // reuse the DOM. Keep a map of [from, to] => number of merged connections between those files
-        let countMap = new Map<string, number>()
         for (let conn of this.connections) {
             const normConn = this.normalizeConn(conn)
             const [from, to] = [normConn.from, normConn.to].map(
@@ -354,10 +361,7 @@ export default class CBRVWebview {
             // last level has the MergedConnection
             const key = groupKeys.at(-1)! // groupKeys will never be empty
             if (!group.has(key)) {
-                let idPrefix = this.connKey(raised)
-                let count = countMap.get(idPrefix) ?? 0
                 let mergedConn: MergedConnections = {
-                    id: `${idPrefix}:${count}`,
                     from: raised.from, to: raised.to,
                     width: 0, color: '', // We'll set these in the next step
                     bidirectional: false, // this may be overridden later
@@ -365,8 +369,6 @@ export default class CBRVWebview {
                 }
 
                 group.set(key, mergedConn)
-                countMap.set(idPrefix, count + 1)
-                merged.push(mergedConn) // so we don't have to flatten the tree after
             }
             let mergedConn = group.get(key) as MergedConnections
             mergedConn.connections.push(conn)
@@ -375,8 +377,11 @@ export default class CBRVWebview {
             }
         }
 
-        for (let mergedConn of merged) {
-            // use greatest to just the the only entry if merging if off
+        const flattenTree = (tree: Tree|MergedConnections): MergedConnections[] =>
+            (tree instanceof Map) ? [...tree.values()].flatMap(t => flattenTree(t)) : [tree]
+
+        for (let mergedConn of flattenTree(groupMap)) {
+            // use greatest to just get the only entry if merging if off
             mergedConn.width = CBRVWebview.mergers[rules ? rules.width!.rule : "greatest"]( 
                 mergedConn.connections.map(conn => conn.width ?? this.settings.connectionDefaults.width),
                 rules ? rules.width! : null,
@@ -388,7 +393,8 @@ export default class CBRVWebview {
             )
         }
 
-        return merged;
+        // Flatten except for the top level of our tree
+        return _([...groupMap.entries()]).fromPairs().mapValues(flattenTree).value()
     }
 
     // TODO should probably do this in Visualization
