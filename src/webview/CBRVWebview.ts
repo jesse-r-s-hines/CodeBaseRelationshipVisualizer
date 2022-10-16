@@ -370,7 +370,7 @@ export default class CBRVWebview {
             }
             let mergedConn = group.get(key) as MergedConnections
             mergedConn.connections.push(conn)
-            if (isEqual([raised.from, raised.to], [mergedConn.from, mergedConn.to])) {
+            if (isEqual([raised.from, raised.to], [mergedConn.to, mergedConn.from])) {
                 mergedConn.bidirectional = true // Connections going both directions
             }
         }
