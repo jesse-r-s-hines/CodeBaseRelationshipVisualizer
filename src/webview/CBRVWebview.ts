@@ -41,8 +41,8 @@ export default class CBRVWebview {
     diagram: d3.Selection<SVGSVGElement, unknown, null, undefined>
     defs: d3.Selection<SVGDefsElement, unknown, null, undefined>
     zoomWindow: d3.Selection<SVGGElement, unknown, null, undefined>
-    fileGroup: d3.Selection<SVGGElement, unknown, null, undefined>
-    connectionGroup: d3.Selection<SVGGElement, unknown, null, undefined>
+    fileLayer: d3.Selection<SVGGElement, unknown, null, undefined>
+    connectionLayer: d3.Selection<SVGGElement, unknown, null, undefined>
 
     // Some rendering variables
 
@@ -75,8 +75,8 @@ export default class CBRVWebview {
 
         this.defs = this.diagram.append("defs");
         this.zoomWindow = this.diagram.append("g").classed("zoom-window", true);
-        this.fileGroup = this.zoomWindow.append("g").classed("file-group", true);
-        this.connectionGroup = this.zoomWindow.append("g").classed("connection-group", true);
+        this.fileLayer = this.zoomWindow.append("g").classed("file-layer", true);
+        this.connectionLayer = this.zoomWindow.append("g").classed("connection-layer", true);
 
         // Add event listeners
         this.throttledUpdate = _.throttle(() => this.update(), 250, {trailing: true})
@@ -139,7 +139,7 @@ export default class CBRVWebview {
 
         const data = packLayout.descendants().filter(d => !d.parent || !this.shouldHideContents(d.parent));
 
-        const all = this.fileGroup.selectAll(".file, .directory")
+        const all = this.fileLayer.selectAll(".file, .directory")
             .data(data, keyFunc as any) // the typings here seem to be incorrect
             .join(
                 enter => {
@@ -270,7 +270,7 @@ export default class CBRVWebview {
             );
 
         const link = d3.link(d3.curveCatmullRom); // TODO find a better curve
-        this.connectionGroup.selectAll(".connection")
+        this.connectionLayer.selectAll(".connection")
             // TODO normalize or convert from/to
             .data(merged, conn => (conn as MergedConnections).id)
             .join(
