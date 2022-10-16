@@ -4,7 +4,8 @@ import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedC
 import { getExtension, filterFileTree } from '../util';
 import { cropLine, ellipsisText, uniqId, getRect, Point, Box, closestPointOnBorder } from './rendering';
 import _, { isEqual } from "lodash";
-import { HierarchyNode } from 'd3';
+
+type Node = d3.HierarchyCircularNode<AnyFile>;
 
 /**
  * This is the class that renders the actual diagram.
@@ -49,7 +50,7 @@ export default class CBRVWebview {
     width = 0; height = 0
     transform: d3.ZoomTransform = new d3.ZoomTransform(1, 0, 0);
     /** Maps file paths to their rendered circle (or first visible circle if they are hidden) */
-    pathMap: Map<string, d3.HierarchyCircularNode<AnyFile>> = new Map()
+    pathMap: Map<string, Node> = new Map()
 
     static mergers: Record<string, (items: any[], rule: any) => any> = {
         least: items => _(items).min(),
@@ -134,7 +135,7 @@ export default class CBRVWebview {
         const colorScale = this.getColorScale(packLayout);
         // Calculate unique key for each data. Use `type:path/to/file` so that changing file <-> directory is treated as
         // creating a new node rather than update the existing one, which simplifies the logic.
-        const keyFunc = (d: d3.HierarchyCircularNode<AnyFile>) => `${d.data.type}:${this.filePath(d)}`;
+        const keyFunc = (d: Node) => `${d.data.type}:${this.filePath(d)}`;
 
         const data = packLayout.descendants().filter(d => !d.parent || !this.shouldHideContents(d.parent));
 
@@ -343,16 +344,16 @@ export default class CBRVWebview {
             // TODO handle missing files
             if (from === to) continue;
 
-            let node = groupMap;
+            let group = groupMap;
             for (const key of groupKeys.slice(0, -1)) {
-                if (!node.has(key))
-                    node.set(key, new Map())
-                node = node.get(key) as Tree
+                if (!group.has(key))
+                    group.set(key, new Map())
+                group = group.get(key) as Tree
             }
 
             // last level has the MergedConnection
             const key = groupKeys.at(-1)! // groupKeys will never be empty
-            if (!node.has(key)) {
+            if (!group.has(key)) {
                 let idPrefix = this.connKey(raised)
                 let count = countMap.get(idPrefix) ?? 0
                 let mergedConn: MergedConnections = {
@@ -363,11 +364,11 @@ export default class CBRVWebview {
                     connections: [],
                 }
 
-                node.set(key, mergedConn)
+                group.set(key, mergedConn)
                 countMap.set(idPrefix, count + 1)
                 merged.push(mergedConn) // so we don't have to flatten the tree after
             }
-            let mergedConn = node.get(key) as MergedConnections
+            let mergedConn = group.get(key) as MergedConnections
             mergedConn.connections.push(conn)
             if (isEqual([raised.from, raised.to], [mergedConn.from, mergedConn.to])) {
                 mergedConn.bidirectional = true // Connections going both directions
@@ -400,7 +401,7 @@ export default class CBRVWebview {
     }
 
     /** Returns a function used to compute color from file extension */
-    getColorScale(nodes: HierarchyNode<AnyFile>): (d: AnyFile) => string | null {
+    getColorScale(nodes: Node): (d: AnyFile) => string | null {
         const exts = _(nodes.descendants()) // lodash is lazy
             .filter(n => n.data.type != FileType.Directory)
             .map(n => getExtension(n.data.name))
@@ -411,7 +412,7 @@ export default class CBRVWebview {
         return (d: AnyFile) => d.type == FileType.Directory ? null : colorScale(getExtension(d.name));
     }
 
-    filePath(d: d3.HierarchyNode<AnyFile>): string {
+    filePath(d: Node): string {
         return d.ancestors().reverse().slice(1).map(d => d.data.name).join("/");
     }
 
