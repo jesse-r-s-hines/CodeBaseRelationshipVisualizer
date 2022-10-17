@@ -18,3 +18,17 @@ export function filterFileTree<T extends AnyFile>(root: T, condition: (node: Any
     }
 }
 
+/**
+ * Converts a value to a normalized JSON string, sorting object keys.
+ */
+export function normalizedJSONStringify(val: any) {
+    const replacer = (key: string, val: any) => {
+        if (typeof val == 'object' && !Array.isArray(val)) {
+            return Object.keys(val).sort().reduce<Record<string, any>>((o, k) => { o[k] = val[k]; return o }, {});
+        } else {
+            return val;
+        }
+    }
+
+    return JSON.stringify(val, replacer)
+}

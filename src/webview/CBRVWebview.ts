@@ -1,7 +1,7 @@
 import * as d3 from 'd3';
 import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedConnections,
          NormalizedVisualizationSettings, AddRule, ValueRule } from '../shared';
-import { getExtension, filterFileTree } from '../util';
+import { getExtension, filterFileTree, normalizedJSONStringify } from '../util';
 import { cropLine, ellipsisText, uniqId, getRect, Point, Box, closestPointOnBorder } from './rendering';
 import _, { isEqual } from "lodash";
 
@@ -248,7 +248,7 @@ export default class CBRVWebview {
 
         const merged = this.mergeConnections();
         // If directed == false, we don't need any markers
-        let markers = this.settings.directed ? _(merged).values().flatten().map(c => c.color).uniq().value() : []
+        let markers = this.settings.directed ? _(merged).map(c => c.color).uniq().value() : []
 
         this.defs.selectAll("marker.arrow")
             .data(markers, color => color as string)
@@ -281,47 +281,40 @@ export default class CBRVWebview {
             return path
         }
 
-        this.connectionLayer.selectAll(".connection-group")
-            .data(_(merged).toPairs().value(), ([id, conns]: any) => id)
-            .join("g")
-                .classed("connection-group", true)
-                .selectAll(".connection")
-                .data(([id, mergedConns]) => mergedConns)
-                .join(
-                    enter => enter.append("path")
-                        .classed("connection", true)
-                        .attr("stroke-width", conns => conns.width)
-                        .attr("stroke", conns => conns.color)
-                        .attr("marker-end", conns => this.settings.directed ? `url(#${uniqId(conns.color)})` : null)
-                        .attr("marker-start", conns =>
-                            this.settings.directed && conns.bidirectional ? `url(#${uniqId(conns.color)})` : null
-                        )
-                        .attr("d", conn => {
-                            const [from, to] = [conn.from, conn.to].map(e => e ? this.pathMap.get(e.file)! : undefined)
-                            return pathBetween(from, to).toString();
-                        }),
-                    update => update,
-                    exit => exit.remove(),
-                );
+        this.connectionLayer.selectAll(".connection")
+            .data(merged) // TODO id
+            .join(
+                enter => enter.append("path")
+                    .classed("connection", true)
+                    .attr("stroke-width", conns => conns.width)
+                    .attr("stroke", conns => conns.color)
+                    .attr("marker-end", conns => this.settings.directed ? `url(#${uniqId(conns.color)})` : null)
+                    .attr("marker-start", conns =>
+                        this.settings.directed && conns.bidirectional ? `url(#${uniqId(conns.color)})` : null
+                    )
+                    .attr("d", conn => {
+                        const [from, to] = [conn.from, conn.to].map(e => e ? this.pathMap.get(e.file)! : undefined)
+                        return pathBetween(from, to).toString();
+                    }),
+                update => update,
+                exit => exit.remove(),
+            );
     }
 
     /**
      * Merge all the connections to combine connections going between the same files after being raised to the first
-     * visible file/folder. Follows mergeRules, and returns a map of a uniq id to list of merged connections between
-     * the same two visible files.
+     * visible file/folder, using mergeRules,
      */
-    mergeConnections(): Record<string, MergedConnections[]> {
+    mergeConnections(): MergedConnections[] {
         // Each keyFunc will split up connections in to smaller groups
         const rules = this.normalizedMergeRules()
+        const mergeDirections = rules && (!this.settings.directed || rules.direction?.rule == "ignore")
         let groupKeyFuncs: ((c: NormalizedConnection, raised: NormalizedConnection) => any)[] = [
             // top level group is the from/to after being raised to the first visible files/folders
-            (c, raised) => this.connKey(raised, {lines: false, ordered: false})
+            (c, raised) => this.connKey(raised, {lines: false, ordered: !mergeDirections})
         ]
 
         if (rules) {
-            if (this.settings.directed && rules.direction?.rule == "same") { // split different directions
-                groupKeyFuncs.push((c, raised) => this.connKey(raised, {lines: false, ordered: true}))
-            }
             if (rules.file?.rule == "same") {
                 groupKeyFuncs.push(c => this.connKey(c, {lines: rules.line?.rule == "same", ordered: false}))
             }
@@ -336,65 +329,44 @@ export default class CBRVWebview {
             groupKeyFuncs.push(c => c) // don't group any connections
         }
 
-        // Create a tree to split out all the groups
-        type Tree = Map<any, Tree|MergedConnections>
-        let groupMap: Tree = new Map()
-        for (let conn of this.connections) {
-            const normConn = this.normalizeConn(conn)
-            const [from, to] = [normConn.from, normConn.to].map(
-                f => f ? this.filePath(this.pathMap.get(f.file)!) : undefined
-            )
-            const raised = this.normalizeConn({ from, to })
-            const groupKeys = groupKeyFuncs.map(func => func(normConn, raised))
+        let x = _(this.connections)
+            .map(conn => {
+                const normConn = this.normalizeConn(conn)
+                // TODO handle missing files
+                const [from, to] = [normConn.from, normConn.to].map(
+                    f => f ? this.filePath(this.pathMap.get(f.file)!) : undefined
+                )
+                const raised = this.normalizeConn({ from, to })
+                return {conn: normConn, raised}
+            })
+            .filter(({conn, raised}) => raised.from?.file != raised.to?.file)  // TODO For now just ignore self loops.
+            .groupBy(({conn, raised}) => normalizedJSONStringify(groupKeyFuncs.map(func => func(conn, raised))))
+            .value()
+        
+        return _(x).map<MergedConnections>((pairs, key) => {
+                const raised = pairs[0].raised;
+                const reversed = {to: raised.from, from: raised.to}
+                const bidirectional = _(pairs).some(pair => isEqual(pair.raised, reversed))
+                const connections = pairs.map(pair => pair.conn)
 
-            // TODO For now just ignore self loops.
-            // TODO handle missing files
-            if (from === to) continue;
+                // use greatest to just get the only entry if merging if off
+                const width = CBRVWebview.mergers[rules ? rules.width!.rule : "greatest"](
+                    connections.map(conn => conn.width ?? this.settings.connectionDefaults.width),
+                    rules ? rules.width! : null,
+                )
 
-            let group = groupMap;
-            for (const key of groupKeys.slice(0, -1)) {
-                if (!group.has(key))
-                    group.set(key, new Map())
-                group = group.get(key) as Tree
-            }
+                const color = CBRVWebview.mergers[rules ? rules.color!.rule : "greatest"](
+                    connections.map(conn => conn.color ?? this.settings.connectionDefaults.color),
+                    rules ? rules.color! : null,
+                )
 
-            // last level has the MergedConnection
-            const key = groupKeys.at(-1)! // groupKeys will never be empty
-            if (!group.has(key)) {
-                let mergedConn: MergedConnections = {
-                    from: raised.from, to: raised.to,
-                    width: 0, color: '', // We'll set these in the next step
-                    bidirectional: false, // this may be overridden later
-                    connections: [],
+                return {
+                    ...raised,
+                    width, color, bidirectional,
+                    connections,
                 }
-
-                group.set(key, mergedConn)
-            }
-            let mergedConn = group.get(key) as MergedConnections
-            mergedConn.connections.push(conn)
-            if (isEqual([raised.from, raised.to], [mergedConn.to, mergedConn.from])) {
-                mergedConn.bidirectional = true // Connections going both directions
-            }
-        }
-
-        const flattenTree = (tree: Tree|MergedConnections): MergedConnections[] =>
-            (tree instanceof Map) ? [...tree.values()].flatMap(t => flattenTree(t)) : [tree]
-
-        for (let mergedConn of flattenTree(groupMap)) {
-            // use greatest to just get the only entry if merging if off
-            mergedConn.width = CBRVWebview.mergers[rules ? rules.width!.rule : "greatest"]( 
-                mergedConn.connections.map(conn => conn.width ?? this.settings.connectionDefaults.width),
-                rules ? rules.width! : null,
-            )
-
-            mergedConn.color = CBRVWebview.mergers[rules ? rules.color!.rule : "greatest"](
-                mergedConn.connections.map(conn => conn.color ?? this.settings.connectionDefaults.color),
-                rules ? rules.color! : null,
-            )
-        }
-
-        // Flatten except for the top level of our tree
-        return _([...groupMap.entries()]).fromPairs().mapValues(flattenTree).value()
+            })
+            .value()
     }
 
     // TODO should probably do this in Visualization
@@ -433,13 +405,13 @@ export default class CBRVWebview {
         }
     }
 
-    connKey(conn: NormalizedConnection, options: {lines?: boolean, ordered?: boolean} = {}): string {
+    connKey(conn: NormalizedConnection, options: {lines?: boolean, ordered?: boolean} = {}): [string, string] {
         options = {lines: true, ordered: true, ...options}
         let key = [conn?.from, conn?.to].map(e => e ? `${e.file}:${options.lines && e.line ? e.line : ''}` : '')
         if (!options.ordered) {
             key = key.sort()
         }
-        return JSON.stringify(key)
+        return key as [string, string]
     }
 
     /** Convert svg viewport units to actual rendered pixel length  */
