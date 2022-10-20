@@ -303,21 +303,24 @@ export default class CBRVWebview {
 
     /**
      * Merge all the connections to combine connections going between the same files after being raised to the first
-     * visible file/folder, using mergeRules,
+     * visible file/folder, using mergeRules.
      */
     mergeConnections(): MergedConnections[] {
         // Each keyFunc will split up connections in to smaller groups
         const rules = this.normalizedMergeRules()
-        const mergeDirections = rules && (!this.settings.directed || rules.direction?.rule == "ignore")
-        let groupKeyFuncs: ((c: NormalizedConnection, raised: NormalizedConnection) => any)[] = [
-            // top level group is the from/to after being raised to the first visible files/folders
-            (c, raised) => this.connKey(raised, {lines: false, ordered: !mergeDirections})
-        ]
 
+        let groupKeyFuncs: ((c: NormalizedConnection, raised: NormalizedConnection, index: number) => any)[] = []
         if (rules) {
+            // top level group is the from/to after being raised to the first visible files/folders
+            groupKeyFuncs.push((c, raised) => this.connKey(raised, {lines: false, ordered: false}))
+
+            if (this.settings.directed && rules.direction?.rule == "same") {
+                groupKeyFuncs.push(c => (c.from?.file ?? '') <= (c.to?.file ?? '')) // split by order
+            }
             if (rules.file?.rule == "same") {
                 groupKeyFuncs.push(c => this.connKey(c, {lines: rules.line?.rule == "same", ordered: false}))
             }
+
             groupKeyFuncs.push(
                 ..._(rules)
                     .omit(['file', 'line', 'direction']) // these were handled already
@@ -326,24 +329,25 @@ export default class CBRVWebview {
                     .value()
             )
         } else {
-            groupKeyFuncs.push(c => c) // don't group any connections
+            groupKeyFuncs.push((c, r, index) => index) // hack to not group anything
         }
 
-        let x = _(this.connections)
-            .map(conn => {
+        return _(this.connections)
+            .map((conn, index) => {
                 const normConn = this.normalizeConn(conn)
                 // TODO handle missing files
                 const [from, to] = [normConn.from, normConn.to].map(
                     f => f ? this.filePath(this.pathMap.get(f.file)!) : undefined
                 )
                 const raised = this.normalizeConn({ from, to })
-                return {conn: normConn, raised}
+                return {conn: normConn, raised, index}
             })
             .filter(({conn, raised}) => raised.from?.file != raised.to?.file)  // TODO For now just ignore self loops.
-            .groupBy(({conn, raised}) => normalizedJSONStringify(groupKeyFuncs.map(func => func(conn, raised))))
-            .value()
-        
-        return _(x).map<MergedConnections>((pairs, key) => {
+            .groupBy(({conn, raised, index}) =>
+                normalizedJSONStringify(groupKeyFuncs.map(func => func(conn, raised, index)))
+            )
+            .values()
+            .map<MergedConnections>((pairs, key) => {
                 const raised = pairs[0].raised;
                 const reversed = {to: raised.from, from: raised.to}
                 const bidirectional = _(pairs).some(pair => isEqual(pair.raised, reversed))
