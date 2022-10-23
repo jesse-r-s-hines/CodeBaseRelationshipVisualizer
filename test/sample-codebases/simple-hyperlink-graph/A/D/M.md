@@ -1,4 +1,4 @@
-A markdown document with an external [link](www.example.com).
+A markdown document with a [few](www.example.com) [external](www.example.com) [links](www.example.com).
 And a link to [this file](/A/G/R.md)
 
 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Rhoncus dolor purus non enim praesent. Nulla facilisi etiam dignissim diam quis enim. In mollis nunc sed id semper. Id venenatis a condimentum vitae sapien pellentesque habitant morbi tristique. Ut pharetra sit amet aliquam id diam maecenas ultricies. Sed enim ut sem viverra aliquet eget sit amet. Eget dolor morbi non arcu risus quis varius quam. Dictumst quisque sagittis purus sit amet volutpat. Sit amet nisl purus in mollis nunc. Dictum varius duis at consectetur lorem donec massa sapien faucibus. Et odio pellentesque diam volutpat commodo. Sed faucibus turpis in eu mi bibendum neque.

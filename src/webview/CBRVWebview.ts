@@ -2,7 +2,7 @@ import * as d3 from 'd3';
 import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedConnections,
          NormalizedVisualizationSettings, AddRule, ValueRule } from '../shared';
 import { getExtension, filterFileTree, normalizedJSONStringify } from '../util';
-import { cropLine, ellipsisText, uniqId, getRect, Point, Box, closestPointOnBorder } from './rendering';
+import { cropLine, ellipsisText, uniqId, getRect, Point, Box, closestPointOnBorder, moveAlongBorder } from './rendering';
 import _, { isEqual } from "lodash";
 
 type Node = d3.HierarchyCircularNode<AnyFile>;
@@ -35,6 +35,8 @@ export default class CBRVWebview {
     hideLabelsRadius = 20
     /** Size of the labels at the highest level. */
     labelFontSize = 12
+    /** Space between connections to the same files */
+    spaceBetweenConns = 12
 
     // Parts of the d3 diagram
 
@@ -269,32 +271,74 @@ export default class CBRVWebview {
                 exit => exit.remove(),
             );
 
-        const pathBetween = (from?: Node, to?: Node) => {
-            let viewbox = this.getViewbox();
-            let source: Point = from ? [from.x, from.y] : closestPointOnBorder([to!.x, to!.y],     viewbox);
-            let target: Point = to   ? [to.x,   to.y  ] : closestPointOnBorder([from!.x, from!.y], viewbox);
-            [source, target] = cropLine([source, target], (from ? from.r : 0), (to ? to.r : 0));
+        let viewbox = this.getViewbox();
+        const anchoredConns = _(merged)
+            // group by connections that go between the same two files
+            .groupBy(conn => this.connKey(conn, {lines: false, ordered: false}))
+            .flatMap((conns, key) => {
+                // get the two nodes these connections are going between
+                let [a, b] = [conns[0].from, conns[0].to]
+                    .map(e => e ? this.pathMap.get(e.file)! : undefined)
+                    .map((node, i, arr) => {
+                        if (node) {
+                            return {x: node.x, y: node.y, r: node.r, theta: 0, file: this.filePath(node)}
+                        } else {
+                            const other = arr[+!i]! // hack to get other node in the array
+                            const [x, y] = closestPointOnBorder([other.x, other.y], viewbox)
+                            return {x, y, r: 0, theta: 0, file: undefined}
+                        }
+                    })
 
-            const path = d3.path();
-            path.moveTo(source[0], source[1]);
-            path.lineTo(target[0], target[1]);
-            return path
-        }
+                // Get the angle on node a that makes a straight line towards b
+                a.theta = Math.atan2(b.y - a.y, b.x - a.x)
+                // The other angle is just 180 deg around (this may be > 2*PI but that's fine)
+                b.theta = a.theta <= 0 ? a.theta + Math.PI : a.theta - Math.PI
+
+                const anchors = [a, b].map(node => {
+                    if (node.file) { // space connections around circle
+                        const deltaTheta = this.spaceBetweenConns / node.r
+                        const start = node.theta - deltaTheta * (conns.length - 1) / 2
+                        return conns.map<Point>((c, i) => {
+                            let theta = start + i * deltaTheta // distribute around midpoint
+                            // polar to rect
+                            return [node.r * Math.cos(theta) + node.x, node.r * Math.sin(theta) + node.y]
+                        })
+                    } else { // space connections on border
+                        const startOffset = -this.spaceBetweenConns * (conns.length - 1) / 2
+                        const start = moveAlongBorder([node.x, node.y], startOffset, viewbox)
+                        return conns.map((c, i) => moveAlongBorder(start, i * this.spaceBetweenConns, viewbox))
+                    }
+                });
+
+                return _.zip(conns, anchors[0], anchors[1].reverse()) // reverse so that points correspond between circles
+                    .map(([conn, anchorA, anchorB], i) => ({
+                        // uniq id for conn, add index since there can be multiple between the same files
+                        id: `${key}:${i}`,
+                        conn: conn!,
+                        fromPoint: a.file == conn!.from?.file ? anchorA! : anchorB!,
+                        toPoint: a.file == conn!.to?.file ? anchorA! : anchorB!,
+                    }))
+            })
+            .value()
 
         this.connectionLayer.selectAll(".connection")
-            .data(merged) // TODO id
+            .data(anchoredConns, conn => (conn as any).id)
             .join(
                 enter => enter.append("path")
                     .classed("connection", true)
-                    .attr("stroke-width", conns => conns.width)
-                    .attr("stroke", conns => conns.color)
-                    .attr("marker-end", conns => this.settings.directed ? `url(#${uniqId(conns.color)})` : null)
-                    .attr("marker-start", conns =>
-                        this.settings.directed && conns.bidirectional ? `url(#${uniqId(conns.color)})` : null
+                    .attr("stroke-width", ({conn}) => conn.width)
+                    .attr("stroke", ({conn}) => conn.color)
+                    .attr("marker-end", ({conn}) => this.settings.directed ? `url(#${uniqId(conn.color)})` : null)
+                    .attr("marker-start", ({conn}) =>
+                        this.settings.directed && conn.bidirectional ? `url(#${uniqId(conn.color)})` : null
                     )
-                    .attr("d", conn => {
-                        const [from, to] = [conn.from, conn.to].map(e => e ? this.pathMap.get(e.file)! : undefined)
-                        return pathBetween(from, to).toString();
+                    .attr("d", ({conn, fromPoint, toPoint}) => {
+                        const path = d3.path();
+                        path.moveTo(...fromPoint);
+                        path.lineTo(...toPoint);
+                        // TODO Draw bezier curve of the box with those two points as corners
+                        // TODO Account for arrow width if needed
+                        return path.toString();
                     }),
                 update => update,
                 exit => exit.remove(),
