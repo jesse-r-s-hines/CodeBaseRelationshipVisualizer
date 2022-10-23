@@ -1,4 +1,5 @@
 import { sha256 } from 'js-sha256';
+import _ from "lodash"
 
 export type Point = [number, number]
 /** [x, y, width, height] */
@@ -41,6 +42,7 @@ export function ellipsisText(el: SVGTextContentElement, width: number, height = 
     return el.textContent ?? "";
 }
 
+// TODO remove
 /** Crops both ends of the line from a to b .*/
 export function cropLine([a, b]: [Point, Point], cropStart: number, cropEnd: number): [Point, Point] {
     const dx = b[0] - a[0];
@@ -84,4 +86,37 @@ export function closestPointOnBorder([x, y]: Point, border: Box): Point {
     } else { // if (min == distBottom)
         return [x, by + height]
     }
+}
+
+/**
+ * Returns the point d distance away from [x, y] clockwise around the border. [x, y] must be on border.
+ */
+export function moveAlongBorder([x, y]: Point, dist: number, border: Box): Point {
+    const [left, bottom, width, height] = border
+    const [right, top] = [left + width, bottom + height]
+
+    if (x < left || right < x || y < bottom || top < y) {
+        throw Error(`${[x, y]} is outside border ${border}`)
+    }
+
+    while (dist != 0) {
+        let [newX, newY] = [x, y]
+        if (x == left) {
+            newY = _.clamp(y + dist, bottom, left)
+        } else if (y == top) {
+            newX = _.clamp(x + dist, left, right)
+        } else if (x == right) {
+            newY = _.clamp(y - dist, bottom, left)
+        } else if (y == bottom) {
+            newX = _.clamp(x - dist, left, right)
+        } else {
+            throw Error(`${[x, y]} is inside border`) // we 
+        }
+
+        dist -= Math.sign(dist) * (Math.abs(newX - x) + Math.abs(newY - y));
+
+        [x, y] = [newX, newY];
+    }
+
+    return [x, y]
 }
