@@ -147,7 +147,7 @@ export interface NormalizedVisualizationSettings {
  * line in the visualization. The connections are grouped together based
  * on the merge rules.
  */
-export interface MergedConnections {
+export interface MergedConnection {
     /**
     * The file/folder the rendered connection will show from. This can be a
     * folder when there are deeply nested files which are hidden until the

@@ -1,5 +1,5 @@
 import * as d3 from 'd3';
-import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedConnections,
+import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedConnection,
          NormalizedVisualizationSettings, AddRule, ValueRule } from '../shared';
 import { getExtension, filterFileTree, normalizedJSONStringify } from '../util';
 import { cropLine, ellipsisText, uniqId, getRect, Point, Box, closestPointOnBorder, moveAlongBorder } from './rendering';
@@ -349,7 +349,7 @@ export default class CBRVWebview {
      * Merge all the connections to combine connections going between the same files after being raised to the first
      * visible file/folder, using mergeRules.
      */
-    mergeConnections(): MergedConnections[] {
+    mergeConnections(): MergedConnection[] {
         // Each keyFunc will split up connections in to smaller groups
         const rules = this.normalizedMergeRules()
 
@@ -391,7 +391,7 @@ export default class CBRVWebview {
                 normalizedJSONStringify(groupKeyFuncs.map(func => func(conn, raised, index)))
             )
             .values()
-            .map<MergedConnections>((pairs, key) => {
+            .map<MergedConnection>((pairs, key) => {
                 const raised = pairs[0].raised;
                 const reversed = {to: raised.from, from: raised.to}
                 const bidirectional = _(pairs).some(pair => isEqual(pair.raised, reversed))
