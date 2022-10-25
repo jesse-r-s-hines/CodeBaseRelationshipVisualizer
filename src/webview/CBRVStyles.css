@@ -41,3 +41,6 @@ body {
     visibility: hidden; /* Use visibility so that we can still get the rendered size in JS */
 }
 
+.connection {
+    fill: none;
+}
