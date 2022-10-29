@@ -453,13 +453,13 @@ export default class CBRVWebview {
         }
     }
 
-    connKey(conn: NormalizedConnection, options: {lines?: boolean, ordered?: boolean} = {}): [string, string] {
+    connKey(conn: NormalizedConnection, options: {lines?: boolean, ordered?: boolean} = {}): string {
         options = {lines: true, ordered: true, ...options}
         let key = [conn?.from, conn?.to].map(e => e ? `${e.file}:${options.lines && e.line ? e.line : ''}` : '')
         if (!options.ordered) {
             key = key.sort()
         }
-        return key as [string, string]
+        return JSON.stringify(key);
     }
 
     /** Convert svg viewport units to actual rendered pixel length  */
