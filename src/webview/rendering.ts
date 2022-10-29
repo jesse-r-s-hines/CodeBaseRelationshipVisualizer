@@ -120,3 +120,36 @@ export function moveAlongBorder([x, y]: Point, dist: number, border: Box): Point
 
     return [x, y]
 }
+
+/**
+ * Snaps a number to be divisible by delta
+ */
+export function snap(x: number, delta: number) {
+    return delta * Math.round(x / delta);
+}
+
+/**
+ * Normalize radians around a center value (default will be range [-PI, PI])
+ * Use center PI to get [0, 2PI)
+ */
+export function normalizeAngle(angle: number, center: number = 0) {
+    // See https://stackoverflow.com/questions/24234609
+    return angle - (2*Math.PI) * Math.floor((angle + Math.PI - center) / (2*Math.PI));
+}
+
+/** Converts polar coordinates to rectangular */
+export function polarToRect(theta: number, r: number, center: Point = [0, 0]): Point {
+    return [r * Math.cos(theta) + center[0], r * Math.sin(theta) + center[1]]
+}
+
+/*
+ * Snaps angle to the nearest angle that is in the series created by offset + delta * i for each integer i.
+ * Delta should be a positive angle that divides a circle evenly.
+ * Returns an angle in the range [0, 2*PI]
+ */
+export function snapAngle(angle: number, delta: number, offset: number = 0) {
+    angle = normalizeAngle(angle - offset, Math.PI); // [0, 2PI]
+    const snapped = delta * Math.round(angle / delta)
+    return normalizeAngle(snapped + offset, Math.PI);
+}
+
