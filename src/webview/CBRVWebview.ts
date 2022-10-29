@@ -2,7 +2,7 @@ import * as d3 from 'd3';
 import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedConnection,
          NormalizedVisualizationSettings, AddRule, ValueRule } from '../shared';
 import { getExtension, filterFileTree, normalizedJSONStringify } from '../util';
-import { cropLine, ellipsisText, uniqId, getRect, Point, Box, closestPointOnBorder, moveAlongBorder } from './rendering';
+import { ellipsisText, uniqId, getRect, Point, Box, closestPointOnBorder, snapAngle, snap, polarToRect } from './rendering';
 import _, { isEqual } from "lodash";
 
 type Node = d3.HierarchyCircularNode<AnyFile>;
@@ -36,7 +36,7 @@ export default class CBRVWebview {
     /** Size of the labels at the highest level. */
     labelFontSize = 12
     /** Space between connections to the same files */
-    spaceBetweenConns = 12
+    spaceBetweenConns = 25
 
     // Parts of the d3 diagram
 
@@ -249,6 +249,7 @@ export default class CBRVWebview {
         }
 
         const merged = this.mergeConnections();
+
         // If directed == false, we don't need any markers
         let markers = this.settings.directed ? _(merged).map(c => c.color).uniq().value() : []
 
@@ -271,58 +272,115 @@ export default class CBRVWebview {
                 exit => exit.remove(),
             );
 
+        /** Create a list of "anchored" connections. We'll fill it out with the actual coords in the next step. */
+        const anchored = merged.map(conn => ({
+            conn: conn,
+            fromPoint: undefined as Point|undefined, // assign these in the loop below
+            toPoint: undefined as Point|undefined,
+            control: undefined as Number|undefined,
+        }))
+        type AnchoredConn = typeof anchored[number]
+
         let viewbox = this.getViewbox();
-        const anchoredConns = _(merged)
-            // group by connections that go between the same two files
-            .groupBy(conn => this.connKey(conn, {lines: false, ordered: false}))
-            .flatMap((conns, key) => {
-                // get the two nodes these connections are going between
-                let [a, b] = [conns[0].from, conns[0].to]
-                    .map(e => e ? this.pathMap.get(e.file)! : undefined)
-                    .map((node, i, arr) => {
-                        if (node) {
-                            return {x: node.x, y: node.y, r: node.r, theta: 0, file: this.filePath(node)}
+        _(anchored)
+            // split out each "end" of the connections
+            .flatMap((conn) => [{file: conn.conn.from?.file, conn}, {file: conn.conn.to?.file, conn}])
+            .groupBy(end => end.file ?? '') // group all connections that connect to each file
+            .forEach((endsToFile, file) => {
+                const connsToFile = endsToFile.map(({file, conn}) => conn) // remove redundant grouping data
+                const node = file ? this.pathMap.get(file)! : undefined;
+
+                let assignPoint: (conn: AnchoredConn) => void;
+                if (node) {
+                    // Calculate number of anchor points by using the spaceBetweenConns arc length, but snapping to a
+                    // number that is divisible by 4 so we get nice angles.
+                    const numAnchors = Math.max(snap((2 * Math.PI * node.r) / this.spaceBetweenConns, 4), 4);
+                    const deltaTheta = (2*Math.PI) / numAnchors;
+                    let anchorPoints: AnchoredConn[][] = _.range(numAnchors).map(i => []);
+
+                    const hasArrow = (conn: AnchoredConn) =>
+                        this.settings.directed && ((conn.conn.to?.file ?? '') == file || conn.conn.bidirectional)
+            
+                    // assign to an anchor point and update the actual rendered point. Makes sure that connections going
+                    // opposite directions don't go to the same anchor point.
+                    assignPoint = (conn) => {
+                        const direction = (conn.conn.to?.file ?? '') == file ? "to" : "from";
+                        const otherFile = (direction == "from") ? conn.conn.to?.file : conn.conn.from?.file;
+                        let otherNode: {x: number, y: number};
+                        if (otherFile) {
+                            otherNode = this.pathMap.get(otherFile)!;
                         } else {
-                            const other = arr[+!i]! // hack to get other node in the array
-                            const [x, y] = closestPointOnBorder([other.x, other.y], viewbox)
-                            return {x, y, r: 0, theta: 0, file: undefined}
+                            const [x, y] = closestPointOnBorder([node.x, node.y], viewbox);
+                            otherNode = {x, y};
                         }
-                    })
+                        // calculate the angle a straight line from node to otherNode would take
+                        const rawTheta = Math.atan2(otherNode.y - node.y, otherNode.x - node.x);
 
-                // Get the angle on node a that makes a straight line towards b
-                a.theta = Math.atan2(b.y - a.y, b.x - a.x)
-                // The other angle is just 180 deg around (this may be > 2*PI but that's fine)
-                b.theta = a.theta <= 0 ? a.theta + Math.PI : a.theta - Math.PI
+                        // Check if connection has an arrow to this file
+                        const connHasArrow = hasArrow(conn);
+                        
+                        // Snap to angle, round to index to account for any floating point error
+                        const theta1 = snapAngle(rawTheta, deltaTheta);
+                        const index1 = Math.round(theta1 / deltaTheta);
+                        const hasArrow1 = anchorPoints[index1].length ? hasArrow(anchorPoints[index1][0]) : undefined;
 
-                const anchors = [a, b].map(node => {
-                    if (node.file) { // space connections around circle
-                        const deltaTheta = this.spaceBetweenConns / node.r
-                        const start = node.theta - deltaTheta * (conns.length - 1) / 2
-                        return conns.map<Point>((c, i) => {
-                            let theta = start + i * deltaTheta // distribute around midpoint
-                            // polar to rect
-                            return [node.r * Math.cos(theta) + node.x, node.r * Math.sin(theta) + node.y]
-                        })
-                    } else { // space connections on border
-                        const startOffset = -this.spaceBetweenConns * (conns.length - 1) / 2
-                        const start = moveAlongBorder([node.x, node.y], startOffset, viewbox)
-                        return conns.map((c, i) => moveAlongBorder(start, i * this.spaceBetweenConns, viewbox))
+                        // no conflict on first choice
+                        if (hasArrow1 == undefined || hasArrow1 == connHasArrow) {
+                            // NOTE: Mutating conn, which is also in the anchored array
+                            conn[`${direction}Point`] = polarToRect(theta1, node.r, [node.x, node.y]);
+                            anchorPoints[index1].push(conn);
+                        } else {
+                            // fallback index if conflict. Assign in to even, and out to odd anchors.
+                            // May be same as index1
+                            const theta2 = snapAngle(rawTheta, 2 * deltaTheta, connHasArrow ? 0 : deltaTheta);
+                            const index2 = Math.round(theta2 / deltaTheta);
+                            const existing = anchorPoints[index2];
+                            const hasArrow2 = existing.length ? hasArrow(existing[0]) : undefined;
+
+                            // NOTE: Mutating conn, which is also in the anchored array
+                            conn[`${direction}Point`] = polarToRect(theta2, node.r, [node.x, node.y]);
+
+                            // no conflict on second choice
+                            if (hasArrow2 == undefined || hasArrow2 == connHasArrow) {
+                                anchorPoints[index2].push(conn);
+                            } else { // conflict on second choice
+                                anchorPoints[index2] = [conn];
+
+                                for (let conn of existing) {
+                                    assignPoint(conn); // may need to resolve conflicts recursively
+                                }
+                            }
+                        }
                     }
-                });
+                } else {
+                    assignPoint = (conn) => {
+                        const direction = (conn.conn.from?.file ?? '') == file ? "from" : "to";
+                        const otherFile = (direction == "from") ? conn.conn.to?.file : conn.conn.from?.file;
+                        // Other has to be defined if this is a border conn
+                        let otherNode = this.pathMap.get(otherFile!)!;
 
-                return _.zip(conns, anchors[0], anchors[1].reverse()) // reverse so that points correspond between circles
-                    .map(([conn, anchorA, anchorB], i) => ({
-                        // uniq id for conn, add index since there can be multiple between the same files
-                        id: `${key}:${i}`,
-                        conn: conn!,
-                        fromPoint: a.file == conn!.from?.file ? anchorA! : anchorB!,
-                        toPoint: a.file == conn!.to?.file ? anchorA! : anchorB!,
-                    }))
+                        conn[`${direction}Point`] = closestPointOnBorder([otherNode.x, otherNode.y], viewbox);
+                    }
+                }
+
+
+                _(connsToFile)
+                    // group by pairs and direction (if directed).
+                    .groupBy(conn => this.connKey(conn.conn, {lines: false, ordered: this.settings.directed}))
+                    .forEach(connsBetweenFiles => {
+                        const startControl = -Math.floor(connsBetweenFiles.length / 2)
+                        connsBetweenFiles.forEach((conn, i) => {
+                            // Add unique control so that conns between the same two files don't overlap completely
+                            // NOTE: were mutating the conn object, which is also in the anchored array.
+                            conn.control = startControl + i;
+                            assignPoint(conn);
+                        })
+                    });
+                
             })
-            .value()
 
         this.connectionLayer.selectAll(".connection")
-            .data(anchoredConns, conn => (conn as any).id)
+            .data(anchored, conn => (conn as any).id)
             .join(
                 enter => enter.append("path")
                     .classed("connection", true)
@@ -332,12 +390,28 @@ export default class CBRVWebview {
                     .attr("marker-start", ({conn}) =>
                         this.settings.directed && conn.bidirectional ? `url(#${uniqId(conn.color)})` : null
                     )
-                    .attr("d", ({conn, fromPoint, toPoint}) => {
+                    .attr("d", ({conn, fromPoint, toPoint, control}) => {
                         const path = d3.path();
-                        path.moveTo(...fromPoint);
-                        path.lineTo(...toPoint);
-                        // TODO Draw bezier curve of the box with those two points as corners
+                        path.moveTo(...fromPoint!);
+                        
+                        // make control points fill out the corners a rect with fromPoint and toPoint as other corners,
+                        // with the closest control point to fromPoint being first, and points being spread out by the
+                        // further than that by the control param
+                        const [[fromX, fromY], [toX, toY]] = [fromPoint!, toPoint!];
+                        let [control1, control2] = _<Point>([[fromX, toY], [toX, fromY]])
+                            .sortBy(([x, y]) => Math.abs(fromX - x) + Math.abs(fromY - y)).value()
+
+                        path.bezierCurveTo(...control1, ...control2, ...toPoint!)
+
                         // TODO Account for arrow width if needed
+                        // TODO self loops. How to handle them and spacing?
+                        // TODO I still don't like how the controls look here. They need to come out tangental to the circle
+                        // So, calculate in previous step. add control1 and control2 to anchored point.
+                        // controls should be -1, 1 with no 0 if even
+                        // so each control is constrained on the line tangental to the circle at the point.
+                        // then we move it along either a constant value, increased if needed to tell between duplicates
+                        // or maybe a value based on the distance between.
+
                         return path.toString();
                     }),
                 update => update,
