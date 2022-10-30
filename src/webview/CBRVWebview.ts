@@ -9,9 +9,24 @@ type Node = d3.HierarchyCircularNode<AnyFile>;
 /** A connection along with placement and rendering data. */
 type AnchoredConnection = { 
     conn: MergedConnection,
-    fromPoint?: Point,
-    toPoint?: Point,
-    control?: number,
+    from: {
+        /** The center of the node or position on the border of the screen this connection logically connects to. */
+        target: Point,
+        /** Radius of the from node. */
+        r?: number,
+        /** The point on the circumference (or the border of the screen) where the rendered connection will end. */
+        anchor: Point,
+    },
+    to: {
+        target: Point,
+        r?: number,
+        anchor: Point,
+    }
+    /**
+     * A number indicating an the offset ratio for bezier curve controls, so duplicate connections won't render
+     * completely on top of each other.
+     */
+    control: number,
 }
 
 /**
@@ -291,18 +306,18 @@ export default class CBRVWebview {
                     .attr("marker-start", ({conn}) =>
                         this.settings.directed && conn.bidirectional ? `url(#${uniqId(conn.color)})` : null
                     )
-                    .attr("d", ({conn, fromPoint, toPoint, control}) => {
+                    .attr("d", ({conn, from, to, control}) => {
                         const path = d3.path();
-                        path.moveTo(...fromPoint!);
+                        path.moveTo(...from.anchor);
                         
-                        // make control points fill out the corners a rect with fromPoint and toPoint as other corners,
-                        // with the closest control point to fromPoint being first, and points being spread out by the
-                        // further than that by the control param
-                        const [[fromX, fromY], [toX, toY]] = [fromPoint!, toPoint!];
+                        // make control points fill out the corners a rect with from.anchor and to.anchor as the other
+                        // corners, with the closest control point to from.anchor being first, and points being spread
+                        // out further than that by the control param
+                        const [[fromX, fromY], [toX, toY]] = [from.anchor, to.anchor];
                         let [control1, control2] = _<Point>([[fromX, toY], [toX, fromY]])
                             .sortBy(([x, y]) => Math.abs(fromX - x) + Math.abs(fromY - y)).value()
 
-                        path.bezierCurveTo(...control1, ...control2, ...toPoint!)
+                        path.bezierCurveTo(...control1, ...control2, ...to.anchor)
 
                         // TODO Account for arrow width if needed
                         // TODO self loops. How to handle them and spacing?
@@ -394,13 +409,38 @@ export default class CBRVWebview {
 
     /** Create a list of "anchored" with positioning data. */
     anchorConnections(merged: MergedConnection[]): AnchoredConnection[] {
-        const anchored = merged.map<AnchoredConnection>(conn => ({
-            conn: conn,
-            fromPoint: undefined, toPoint: undefined,
-            control: undefined,
-        }))
+        const viewbox = this.getViewbox()
 
-        let viewbox = this.getViewbox();
+        const anchored = merged.map(conn => {
+            let [from, to] = [conn.from, conn.to]
+                .map(e => e ? this.pathMap.get(e.file)! : undefined)
+                .map((node, i, arr) => {
+                    if (node) {
+                        return {
+                            target: [node.x, node.y] as Point,
+                            r: node.r,
+                            anchor: undefined as Point|undefined, // will fill this below
+                        }
+                    } else {
+                        const other = arr[+!i]! // hack to get other node in the array
+                        return {
+                            target: closestPointOnBorder([other.x, other.y], viewbox),
+                            r: undefined,
+                            anchor: undefined as Point|undefined,
+                        }
+                    }
+                })
+
+            /** Return a partially completed AnchoredConnection  */
+            return {
+                conn,
+                from,
+                to,
+                control: undefined as number|undefined,
+            }
+        })
+        type PartialAnchoredConnection = typeof anchored[number];
+
         _(anchored)
             // split out each "end" of the connections
             .flatMap((conn) => [{file: conn.conn.from?.file, conn}, {file: conn.conn.to?.file, conn}])
@@ -409,31 +449,24 @@ export default class CBRVWebview {
                 const connsToFile = endsToFile.map(({file, conn}) => conn) // remove redundant grouping data
                 const node = file ? this.pathMap.get(file)! : undefined;
 
-                let assignPoint: (conn: AnchoredConnection) => void;
+                let assignPoint: (conn: PartialAnchoredConnection) => void;
                 if (node) {
                     // Calculate number of anchor points by using the spaceBetweenConns arc length, but snapping to a
                     // number that is divisible by 4 so we get nice angles.
                     const numAnchors = Math.max(snap((2 * Math.PI * node.r) / this.spaceBetweenConns, 4), 4);
                     const deltaTheta = (2*Math.PI) / numAnchors;
-                    let anchorPoints: AnchoredConnection[][] = _.range(numAnchors).map(i => []);
+                    let anchorPoints: PartialAnchoredConnection[][] = _.range(numAnchors).map(i => []);
 
-                    const hasArrow = (conn: AnchoredConnection) =>
+                    const hasArrow = (conn: PartialAnchoredConnection) =>
                         this.settings.directed && ((conn.conn.to?.file ?? '') == file || conn.conn.bidirectional)
             
                     // assign to an anchor point and update the actual rendered point. Makes sure that connections going
                     // opposite directions don't go to the same anchor point.
                     assignPoint = (conn) => {
                         const direction = (conn.conn.to?.file ?? '') == file ? "to" : "from";
-                        const otherFile = (direction == "from") ? conn.conn.to?.file : conn.conn.from?.file;
-                        let otherNode: {x: number, y: number};
-                        if (otherFile) {
-                            otherNode = this.pathMap.get(otherFile)!;
-                        } else {
-                            const [x, y] = closestPointOnBorder([node.x, node.y], viewbox);
-                            otherNode = {x, y};
-                        }
-                        // calculate the angle a straight line from node to otherNode would take
-                        const rawTheta = Math.atan2(otherNode.y - node.y, otherNode.x - node.x);
+                        const otherTarget = conn[(direction == "from") ? "to" : "from"].target;
+
+                        const rawTheta = Math.atan2(otherTarget[1] - node.y, otherTarget[0] - node.x);
 
                         // Check if connection has an arrow to this file
                         const connHasArrow = hasArrow(conn);
@@ -446,7 +479,7 @@ export default class CBRVWebview {
                         // no conflict on first choice
                         if (hasArrow1 == undefined || hasArrow1 == connHasArrow) {
                             // NOTE: Mutating conn, which is also in the anchored array
-                            conn[`${direction}Point`] = polarToRect(theta1, node.r, [node.x, node.y]);
+                            conn[direction].anchor = polarToRect(theta1, node.r, [node.x, node.y]);
                             anchorPoints[index1].push(conn);
                         } else {
                             // fallback index if conflict. Assign in to even, and out to odd anchors.
@@ -457,7 +490,7 @@ export default class CBRVWebview {
                             const hasArrow2 = existing.length ? hasArrow(existing[0]) : undefined;
 
                             // NOTE: Mutating conn, which is also in the anchored array
-                            conn[`${direction}Point`] = polarToRect(theta2, node.r, [node.x, node.y]);
+                            conn[direction].anchor = polarToRect(theta2, node.r, [node.x, node.y]);
 
                             // no conflict on second choice
                             if (hasArrow2 == undefined || hasArrow2 == connHasArrow) {
@@ -474,11 +507,9 @@ export default class CBRVWebview {
                 } else {
                     assignPoint = (conn) => {
                         const direction = (conn.conn.from?.file ?? '') == file ? "from" : "to";
-                        const otherFile = (direction == "from") ? conn.conn.to?.file : conn.conn.from?.file;
-                        // Other has to be defined if this is a border conn
-                        let otherNode = this.pathMap.get(otherFile!)!;
-
-                        conn[`${direction}Point`] = closestPointOnBorder([otherNode.x, otherNode.y], viewbox);
+                        const otherTarget = conn[(direction == "from") ? "to" : "from"].target;
+                        // NOTE: Mutating conn, which is also in the anchored array
+                        conn[direction].anchor = closestPointOnBorder(otherTarget, viewbox);
                     }
                 }
 
@@ -497,7 +528,7 @@ export default class CBRVWebview {
                     });
             })
 
-        return anchored;
+        return anchored as AnchoredConnection[]; // we've filled everything out.
     }
 
     // TODO should probably do this in Visualization
