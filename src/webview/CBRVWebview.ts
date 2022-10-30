@@ -300,7 +300,7 @@ export default class CBRVWebview {
             );
 
         this.connectionLayer.selectAll(".connection")
-            .data(anchored, conn => (conn as any).id)
+            .data(anchored) // TODO id , conn => (conn as AnchoredConnection).id
             .join(
                 enter => enter.append("path")
                     .classed("connection", true)
