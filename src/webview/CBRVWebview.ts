@@ -3,9 +3,16 @@ import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedC
          NormalizedVisualizationSettings, AddRule, ValueRule } from '../shared';
 import { getExtension, filterFileTree, normalizedJSONStringify } from '../util';
 import { ellipsisText, uniqId, getRect, Point, Box, closestPointOnBorder, snapAngle, snap, polarToRect } from './rendering';
-import _, { isEqual } from "lodash";
+import _, { isEqual, isUndefined } from "lodash";
 
 type Node = d3.HierarchyCircularNode<AnyFile>;
+/** A connection along with placement and rendering data. */
+type AnchoredConnection = { 
+    conn: MergedConnection,
+    fromPoint?: Point,
+    toPoint?: Point,
+    control?: number,
+}
 
 /**
  * This is the class that renders the actual diagram.
@@ -248,7 +255,8 @@ export default class CBRVWebview {
             this.connections = connections;
         }
 
-        const merged = this.mergeConnections();
+        const merged = this.mergeConnections(this.connections);
+        const anchored = this.anchorConnections(merged);
 
         // If directed == false, we don't need any markers
         let markers = this.settings.directed ? _(merged).map(c => c.color).uniq().value() : []
@@ -272,14 +280,125 @@ export default class CBRVWebview {
                 exit => exit.remove(),
             );
 
-        /** Create a list of "anchored" connections. We'll fill it out with the actual coords in the next step. */
-        const anchored = merged.map(conn => ({
+        this.connectionLayer.selectAll(".connection")
+            .data(anchored, conn => (conn as any).id)
+            .join(
+                enter => enter.append("path")
+                    .classed("connection", true)
+                    .attr("stroke-width", ({conn}) => conn.width)
+                    .attr("stroke", ({conn}) => conn.color)
+                    .attr("marker-end", ({conn}) => this.settings.directed ? `url(#${uniqId(conn.color)})` : null)
+                    .attr("marker-start", ({conn}) =>
+                        this.settings.directed && conn.bidirectional ? `url(#${uniqId(conn.color)})` : null
+                    )
+                    .attr("d", ({conn, fromPoint, toPoint, control}) => {
+                        const path = d3.path();
+                        path.moveTo(...fromPoint!);
+                        
+                        // make control points fill out the corners a rect with fromPoint and toPoint as other corners,
+                        // with the closest control point to fromPoint being first, and points being spread out by the
+                        // further than that by the control param
+                        const [[fromX, fromY], [toX, toY]] = [fromPoint!, toPoint!];
+                        let [control1, control2] = _<Point>([[fromX, toY], [toX, fromY]])
+                            .sortBy(([x, y]) => Math.abs(fromX - x) + Math.abs(fromY - y)).value()
+
+                        path.bezierCurveTo(...control1, ...control2, ...toPoint!)
+
+                        // TODO Account for arrow width if needed
+                        // TODO self loops. How to handle them and spacing?
+                        // TODO I still don't like how the controls look here. They need to come out tangental to the circle
+                        // So, calculate in previous step. add control1 and control2 to anchored point.
+                        // controls should be -1, 1 with no 0 if even
+                        // so each control is constrained on the line tangental to the circle at the point.
+                        // then we move it along either a constant value, increased if needed to tell between duplicates
+                        // or maybe a value based on the distance between.
+
+                        return path.toString();
+                    }),
+                update => update,
+                exit => exit.remove(),
+            );
+    }
+
+    /**
+     * Merge all the connections to combine connections going between the same files after being raised to the first
+     * visible file/folder, using mergeRules.
+     */
+    mergeConnections(connections: Connection[]): MergedConnection[] {
+        // Each keyFunc will split up connections in to smaller groups
+        const rules = this.normalizedMergeRules()
+
+        let groupKeyFuncs: ((c: NormalizedConnection, raised: NormalizedConnection, index: number) => any)[] = []
+        if (rules) {
+            // top level group is the from/to after being raised to the first visible files/folders
+            groupKeyFuncs.push((c, raised) => this.connKey(raised, {lines: false, ordered: false}))
+
+            if (this.settings.directed && rules.direction?.rule == "same") {
+                groupKeyFuncs.push(c => (c.from?.file ?? '') <= (c.to?.file ?? '')) // split by order
+            }
+            if (rules.file?.rule == "same") {
+                groupKeyFuncs.push(c => this.connKey(c, {lines: rules.line?.rule == "same", ordered: false}))
+            }
+
+            groupKeyFuncs.push(
+                ..._(rules)
+                    .omit(['file', 'line', 'direction']) // these were handled already
+                    .pickBy(rule => rule?.rule == "same")
+                    .map((rule, prop) => ((c: Connection) => c[prop]))
+                    .value()
+            )
+        } else {
+            groupKeyFuncs.push((c, r, index) => index) // hack to not group anything
+        }
+
+        return _(connections)
+            .map((conn, index) => {
+                const normConn = this.normalizeConn(conn)
+                // TODO handle missing files
+                const [from, to] = [normConn.from, normConn.to].map(
+                    f => f ? this.filePath(this.pathMap.get(f.file)!) : undefined
+                )
+                const raised = this.normalizeConn({ from, to })
+                return {conn: normConn, raised, index}
+            })
+            .filter(({conn, raised}) => raised.from?.file != raised.to?.file)  // TODO For now just ignore self loops.
+            .groupBy(({conn, raised, index}) =>
+                normalizedJSONStringify(groupKeyFuncs.map(func => func(conn, raised, index)))
+            )
+            .values()
+            .map<MergedConnection>((pairs, key) => {
+                const raised = pairs[0].raised;
+                const reversed = {to: raised.from, from: raised.to}
+                const bidirectional = _(pairs).some(pair => isEqual(pair.raised, reversed))
+                const connections = pairs.map(pair => pair.conn)
+
+                // use greatest to just get the only entry if merging if off
+                const width = CBRVWebview.mergers[rules ? rules.width!.rule : "greatest"](
+                    connections.map(conn => conn.width ?? this.settings.connectionDefaults.width),
+                    rules ? rules.width! : null,
+                )
+
+                const color = CBRVWebview.mergers[rules ? rules.color!.rule : "greatest"](
+                    connections.map(conn => conn.color ?? this.settings.connectionDefaults.color),
+                    rules ? rules.color! : null,
+                )
+
+                return {
+                    ...raised,
+                    width, color, bidirectional,
+                    connections,
+                }
+            })
+            .value()
+    }
+
+    /** Create a list of "anchored" with positioning data. */
+    anchorConnections(merged: MergedConnection[]): AnchoredConnection[] {
+        const anchored = merged.map<AnchoredConnection>(conn => ({
             conn: conn,
-            fromPoint: undefined as Point|undefined, // assign these in the loop below
-            toPoint: undefined as Point|undefined,
-            control: undefined as Number|undefined,
+            fromPoint: undefined, toPoint: undefined,
+            control: undefined,
         }))
-        type AnchoredConn = typeof anchored[number]
 
         let viewbox = this.getViewbox();
         _(anchored)
@@ -290,15 +409,15 @@ export default class CBRVWebview {
                 const connsToFile = endsToFile.map(({file, conn}) => conn) // remove redundant grouping data
                 const node = file ? this.pathMap.get(file)! : undefined;
 
-                let assignPoint: (conn: AnchoredConn) => void;
+                let assignPoint: (conn: AnchoredConnection) => void;
                 if (node) {
                     // Calculate number of anchor points by using the spaceBetweenConns arc length, but snapping to a
                     // number that is divisible by 4 so we get nice angles.
                     const numAnchors = Math.max(snap((2 * Math.PI * node.r) / this.spaceBetweenConns, 4), 4);
                     const deltaTheta = (2*Math.PI) / numAnchors;
-                    let anchorPoints: AnchoredConn[][] = _.range(numAnchors).map(i => []);
+                    let anchorPoints: AnchoredConnection[][] = _.range(numAnchors).map(i => []);
 
-                    const hasArrow = (conn: AnchoredConn) =>
+                    const hasArrow = (conn: AnchoredConnection) =>
                         this.settings.directed && ((conn.conn.to?.file ?? '') == file || conn.conn.bidirectional)
             
                     // assign to an anchor point and update the actual rendered point. Makes sure that connections going
@@ -376,119 +495,9 @@ export default class CBRVWebview {
                             assignPoint(conn);
                         })
                     });
-                
             })
 
-        this.connectionLayer.selectAll(".connection")
-            .data(anchored, conn => (conn as any).id)
-            .join(
-                enter => enter.append("path")
-                    .classed("connection", true)
-                    .attr("stroke-width", ({conn}) => conn.width)
-                    .attr("stroke", ({conn}) => conn.color)
-                    .attr("marker-end", ({conn}) => this.settings.directed ? `url(#${uniqId(conn.color)})` : null)
-                    .attr("marker-start", ({conn}) =>
-                        this.settings.directed && conn.bidirectional ? `url(#${uniqId(conn.color)})` : null
-                    )
-                    .attr("d", ({conn, fromPoint, toPoint, control}) => {
-                        const path = d3.path();
-                        path.moveTo(...fromPoint!);
-                        
-                        // make control points fill out the corners a rect with fromPoint and toPoint as other corners,
-                        // with the closest control point to fromPoint being first, and points being spread out by the
-                        // further than that by the control param
-                        const [[fromX, fromY], [toX, toY]] = [fromPoint!, toPoint!];
-                        let [control1, control2] = _<Point>([[fromX, toY], [toX, fromY]])
-                            .sortBy(([x, y]) => Math.abs(fromX - x) + Math.abs(fromY - y)).value()
-
-                        path.bezierCurveTo(...control1, ...control2, ...toPoint!)
-
-                        // TODO Account for arrow width if needed
-                        // TODO self loops. How to handle them and spacing?
-                        // TODO I still don't like how the controls look here. They need to come out tangental to the circle
-                        // So, calculate in previous step. add control1 and control2 to anchored point.
-                        // controls should be -1, 1 with no 0 if even
-                        // so each control is constrained on the line tangental to the circle at the point.
-                        // then we move it along either a constant value, increased if needed to tell between duplicates
-                        // or maybe a value based on the distance between.
-
-                        return path.toString();
-                    }),
-                update => update,
-                exit => exit.remove(),
-            );
-    }
-
-    /**
-     * Merge all the connections to combine connections going between the same files after being raised to the first
-     * visible file/folder, using mergeRules.
-     */
-    mergeConnections(): MergedConnection[] {
-        // Each keyFunc will split up connections in to smaller groups
-        const rules = this.normalizedMergeRules()
-
-        let groupKeyFuncs: ((c: NormalizedConnection, raised: NormalizedConnection, index: number) => any)[] = []
-        if (rules) {
-            // top level group is the from/to after being raised to the first visible files/folders
-            groupKeyFuncs.push((c, raised) => this.connKey(raised, {lines: false, ordered: false}))
-
-            if (this.settings.directed && rules.direction?.rule == "same") {
-                groupKeyFuncs.push(c => (c.from?.file ?? '') <= (c.to?.file ?? '')) // split by order
-            }
-            if (rules.file?.rule == "same") {
-                groupKeyFuncs.push(c => this.connKey(c, {lines: rules.line?.rule == "same", ordered: false}))
-            }
-
-            groupKeyFuncs.push(
-                ..._(rules)
-                    .omit(['file', 'line', 'direction']) // these were handled already
-                    .pickBy(rule => rule?.rule == "same")
-                    .map((rule, prop) => ((c: Connection) => c[prop]))
-                    .value()
-            )
-        } else {
-            groupKeyFuncs.push((c, r, index) => index) // hack to not group anything
-        }
-
-        return _(this.connections)
-            .map((conn, index) => {
-                const normConn = this.normalizeConn(conn)
-                // TODO handle missing files
-                const [from, to] = [normConn.from, normConn.to].map(
-                    f => f ? this.filePath(this.pathMap.get(f.file)!) : undefined
-                )
-                const raised = this.normalizeConn({ from, to })
-                return {conn: normConn, raised, index}
-            })
-            .filter(({conn, raised}) => raised.from?.file != raised.to?.file)  // TODO For now just ignore self loops.
-            .groupBy(({conn, raised, index}) =>
-                normalizedJSONStringify(groupKeyFuncs.map(func => func(conn, raised, index)))
-            )
-            .values()
-            .map<MergedConnection>((pairs, key) => {
-                const raised = pairs[0].raised;
-                const reversed = {to: raised.from, from: raised.to}
-                const bidirectional = _(pairs).some(pair => isEqual(pair.raised, reversed))
-                const connections = pairs.map(pair => pair.conn)
-
-                // use greatest to just get the only entry if merging if off
-                const width = CBRVWebview.mergers[rules ? rules.width!.rule : "greatest"](
-                    connections.map(conn => conn.width ?? this.settings.connectionDefaults.width),
-                    rules ? rules.width! : null,
-                )
-
-                const color = CBRVWebview.mergers[rules ? rules.color!.rule : "greatest"](
-                    connections.map(conn => conn.color ?? this.settings.connectionDefaults.color),
-                    rules ? rules.color! : null,
-                )
-
-                return {
-                    ...raised,
-                    width, color, bidirectional,
-                    connections,
-                }
-            })
-            .value()
+        return anchored;
     }
 
     // TODO should probably do this in Visualization
