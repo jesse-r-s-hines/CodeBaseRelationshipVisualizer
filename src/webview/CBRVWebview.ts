@@ -412,21 +412,25 @@ export default class CBRVWebview {
         const viewbox = this.getViewbox()
 
         const anchored = merged.map(conn => {
-            let [from, to] = [conn.from, conn.to]
+            const incomplete = {
+                r: undefined as number|undefined, // will fill these below
+                anchor: undefined as Point|undefined,
+            }
+
+            const [from, to] = [conn.from, conn.to]
                 .map(e => e ? this.pathMap.get(e.file)! : undefined)
                 .map((node, i, arr) => {
                     if (node) {
                         return {
+                            ...incomplete,
                             target: [node.x, node.y] as Point,
                             r: node.r,
-                            anchor: undefined as Point|undefined, // will fill this below
                         }
                     } else {
                         const other = arr[+!i]! // hack to get other node in the array
                         return {
+                            ...incomplete,
                             target: closestPointOnBorder([other.x, other.y], viewbox),
-                            r: undefined,
-                            anchor: undefined as Point|undefined,
                         }
                     }
                 })
@@ -434,8 +438,7 @@ export default class CBRVWebview {
             /** Return a partially completed AnchoredConnection  */
             return {
                 conn,
-                from,
-                to,
+                from, to,
                 control: undefined as number|undefined,
             }
         })
