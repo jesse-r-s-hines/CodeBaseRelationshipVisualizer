@@ -25,12 +25,14 @@ type AnchoredConnection = {
         r?: number,
         theta: number,
         anchor: Point,
-    }
+    },
     /**
-     * A number indicating an the offset ratio for bezier curve controls, so duplicate connections won't render
-     * completely on top of each other.
+     * An number that distinguishes connections that go between the same two files.
+     * Is used to modify control points, and to make unique ids. Can be negative.
      */
-    control: number,
+    index: number,
+    /** Control points for the bezier curve. */
+    controls: [Point, Point],
 }
 
 /**
@@ -276,7 +278,6 @@ export default class CBRVWebview {
 
         const merged = this.mergeConnections(this.connections);
         const anchored = this.anchorConnections(merged);
-
         // If directed == false, we don't need any markers
         let markers = this.settings.directed ? _(merged).map(c => c.color).uniq().value() : []
 
@@ -300,7 +301,7 @@ export default class CBRVWebview {
             );
 
         this.connectionLayer.selectAll(".connection")
-            .data(anchored) // TODO id , conn => (conn as AnchoredConnection).id
+            .data(anchored, ((conn: AnchoredConnection) => `${this.connKey(conn.conn)}:${conn.index}`) as any)
             .join(
                 enter => enter.append("path")
                     .classed("connection", true)
@@ -310,28 +311,12 @@ export default class CBRVWebview {
                     .attr("marker-start", ({conn}) =>
                         this.settings.directed && conn.bidirectional ? `url(#${uniqId(conn.color)})` : null
                     )
-                    .attr("d", ({conn, from, to, control}) => {
+                    .attr("d", ({conn, from, to, controls}) => {
                         const path = d3.path();
                         path.moveTo(...from.anchor);
-                        
-                        // make control points fill out the corners a rect with from.anchor and to.anchor as the other
-                        // corners, with the closest control point to from.anchor being first, and points being spread
-                        // out further than that by the control param
-                        const [[fromX, fromY], [toX, toY]] = [from.anchor, to.anchor];
-                        let [control1, control2] = _<Point>([[fromX, toY], [toX, fromY]])
-                            .sortBy(([x, y]) => Math.abs(fromX - x) + Math.abs(fromY - y)).value()
-
-                        path.bezierCurveTo(...control1, ...control2, ...to.anchor)
-
+                        path.bezierCurveTo(...controls[0], ...controls[1], ...to.anchor)
                         // TODO Account for arrow width if needed
                         // TODO self loops. How to handle them and spacing?
-                        // TODO I still don't like how the controls look here. They need to come out tangental to the circle
-                        // So, calculate in previous step. add control1 and control2 to anchored point.
-                        // controls should be -1, 1 with no 0 if even
-                        // so each control is constrained on the line tangental to the circle at the point.
-                        // then we move it along either a constant value, increased if needed to tell between duplicates
-                        // or maybe a value based on the distance between.
-
                         return path.toString();
                     }),
                 update => update,
@@ -412,10 +397,10 @@ export default class CBRVWebview {
     }
 
     /** Create a list of "anchored" with positioning data. */
-    anchorConnections(merged: MergedConnection[]): AnchoredConnection[] {
+    anchorConnections(connections: MergedConnection[]): AnchoredConnection[] {
         const viewbox = this.getViewbox()
 
-        const anchored = merged.map(conn => {
+        const anchored = connections.map(conn => {
             const incomplete = {
                 r: undefined as number|undefined, // will fill these below
                 anchor: undefined as Point|undefined,
@@ -449,11 +434,14 @@ export default class CBRVWebview {
             return {
                 conn,
                 from, to,
-                control: undefined as number|undefined,
+                index: 0,
+                controls: undefined as [Point, Point]|undefined,
             }
         })
         type IncompleteAnchoredConnection = typeof anchored[number];
 
+        // Group connections by each node they connect to. Each connection will show up twice, once for from and to.
+        // Then we will do rendering calculations for each connection to the file and mutate anchored with the results.
         _(anchored)
             // split out each "end" of the connections
             .flatMap((conn) => [{file: conn.conn.from?.file, conn}, {file: conn.conn.to?.file, conn}])
@@ -462,7 +450,7 @@ export default class CBRVWebview {
                 const connsToFile = endsToFile.map(({file, conn}) => conn) // remove redundant grouping data
                 const node = file ? this.pathMap.get(file)! : undefined;
 
-                let assignPoint: (conn: IncompleteAnchoredConnection) => void;
+                let anchorConn: (conn: IncompleteAnchoredConnection) => void;
                 if (node) {
                     // Calculate number of anchor points by using the spaceBetweenConns arc length, but snapping to a
                     // number that is divisible by 4 so we get nice angles.
@@ -475,7 +463,7 @@ export default class CBRVWebview {
             
                     // assign to an anchor point and update the actual rendered point. Makes sure that connections going
                     // opposite directions don't go to the same anchor point.
-                    assignPoint = (conn) => {
+                    anchorConn = (conn) => {
                         const direction = (conn.conn.to?.file ?? '') == file ? "to" : "from";
                         const rawTheta = conn[direction].theta;
 
@@ -510,32 +498,66 @@ export default class CBRVWebview {
                                 anchorPoints[index2] = [conn];
 
                                 for (let conn of existing) {
-                                    assignPoint(conn); // may need to resolve conflicts recursively
+                                    anchorConn(conn); // may need to resolve conflicts recursively
                                 }
                             }
                         }
                     }
                 } else {
-                    assignPoint = (conn) => {
+                    anchorConn = (conn) => {
                         const direction = (conn.conn.from?.file ?? '') == file ? "from" : "to";
                         // anchor is just the same as target, which is the closestPointOnBorder
                         // NOTE: Mutating conn, which is also in the anchored array
                         conn[direction].anchor = [...conn[direction].target];
-                    }
+                    };
                 }
 
                 _(connsToFile)
                     // group by pairs and direction (if directed).
                     .groupBy(conn => this.connKey(conn.conn, {lines: false, ordered: this.settings.directed}))
                     .forEach(connsBetweenFiles => {
+                        const even = (connsBetweenFiles.length % 2 == 0);
                         const startControl = -Math.floor(connsBetweenFiles.length / 2)
+                        // Set a index offset. We'll use this to make sure connections between the same files don't
+                        // overlap completely, and to make uniq id for the connection.
+                        // We'll make index symmetrically distributed around 0 to make control points symmetrical, e.g.
+                        // 3 conns -> -1, 0, 1
+                        // 4 conns -> -2, -1, 1, 2 (skipping 0 to make it symmetrical)
                         connsBetweenFiles.forEach((conn, i) => {
-                            // Add unique control so that conns between the same two files don't overlap completely
                             // NOTE: were mutating the conn object, which is also in the anchored array.
-                            conn.control = startControl + i;
-                            assignPoint(conn);
-                        })
+                            conn.index = startControl + i;
+                            if (even && conn.index >= 0) {
+                                conn.index += 1; // offset by 1 to skip 0 to make symmetrical
+                            }
+
+                            // Set the anchor points
+                            anchorConn(conn);
+                        });
                     });
+            })
+
+        // Set up control points
+        // do this in a second loop since we need all of the anchors defined to calculate these
+        _(anchored)
+            .forEach(conn => {
+                const dist = rendering.distance(conn.from.anchor!, conn.to.anchor!);
+            
+                let control1: Point, control2: Point;
+                if (conn.conn.from && conn.conn.to) { // connection from file to file
+                    // calculate a control point such that the bezier curve will be perpendicular to the
+                    // circle.
+                    control1 = rendering.extendLine([conn.from.target, conn.from.anchor!], dist * 0.30);
+                    control2 = rendering.extendLine([conn.to.target, conn.to.anchor!], dist * 0.30);
+                } else {
+                    // with a border connection, target and anchor are the same, so we'll just add a control
+                    // point on the line to make a straight bezier curve.
+                    const line: [Point, Point] = [conn.from.target, conn.to.anchor!];
+                    control1 = rendering.extendLine(line, dist * -0.80);
+                    control2 = rendering.extendLine(line, dist * -0.20);
+                }
+        
+                // NOTE: were mutating the conn object, which is also in the anchored array.
+                conn.controls = [control1, control2];
             })
 
         return anchored as AnchoredConnection[]; // we've filled everything out.

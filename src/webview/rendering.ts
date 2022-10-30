@@ -42,15 +42,19 @@ export function ellipsisText(el: SVGTextContentElement, width: number, height = 
     return el.textContent ?? "";
 }
 
-// TODO remove
-/** Crops both ends of the line from a to b .*/
-export function cropLine([a, b]: [Point, Point], cropStart: number, cropEnd: number): [Point, Point] {
-    const dx = b[0] - a[0];
-    const dy = b[1] - a[1];
-    const origDist = Math.hypot(dx, dy);
+/** Returns the distance between two points */
+export function distance(a: Point, b: Point): number {
+    return Math.abs(Math.hypot(a[0] - b[0], a[1] - b[1]));
+}
+
+/** Returns a point that is `dist` past end on the line going through start and end. Dist can be negative. */
+export function extendLine([start, end]: [Point, Point], dist: number): Point {
+    const origLen = distance(start, end);
+    const newLen = origLen + dist;
+
     return [
-        [a[0] + cropStart * dx / origDist, a[1] + cropStart * dy / origDist],
-        [b[0] - cropEnd * dx / origDist, b[1] - cropEnd * dy / origDist],
+        start[0] + (end[0] - start[0]) / origLen * newLen,
+        start[1] + (end[1] - start[1]) / origLen * newLen,
     ];
 }
 
