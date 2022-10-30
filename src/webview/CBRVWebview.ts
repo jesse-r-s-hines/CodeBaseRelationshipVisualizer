@@ -2,8 +2,9 @@ import * as d3 from 'd3';
 import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedConnection,
          NormalizedVisualizationSettings, AddRule, ValueRule } from '../shared';
 import { getExtension, filterFileTree, normalizedJSONStringify } from '../util';
-import { ellipsisText, uniqId, getRect, Point, Box, closestPointOnBorder, snapAngle, snap, polarToRect, normalizeAngle } from './rendering';
-import _, { isEqual, isUndefined } from "lodash";
+import * as rendering from './rendering';
+import { Point, Box, uniqId } from './rendering';
+import _, { isEqual } from "lodash";
 
 type Node = d3.HierarchyCircularNode<AnyFile>;
 /** A connection along with placement and rendering data. */
@@ -118,7 +119,7 @@ export default class CBRVWebview {
         zoom(this.diagram as any);
         d3.select(window).on('resize', (e) => this.onResize(e));
 
-        [this.width, this.height] = getRect(this.diagram.node()!);
+        [this.width, this.height] = rendering.getRect(this.diagram.node()!);
 
         this.update(this.codebase, this.settings, this.connections);
     }
@@ -241,11 +242,11 @@ export default class CBRVWebview {
 
         files.select<SVGTSpanElement>(".label")
             .text(d => d.data.name)
-            .each((d, i, nodes) => ellipsisText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
+            .each((d, i, nodes) => rendering.ellipsisText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
 
         const directoryLabels = directories.select<SVGTextPathElement>(".label")
             .text(d => d.data.name)
-            .each((d, i, nodes) => ellipsisText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
+            .each((d, i, nodes) => rendering.ellipsisText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
 
         // Set the label background to the length of the labels
         directories.select<SVGTextElement>(".label-background")
@@ -434,7 +435,7 @@ export default class CBRVWebview {
                         const other = arr[+!i]! // hack to get other node in the array
                         return {
                             ...incomplete,
-                            target: closestPointOnBorder([other.x, other.y], viewbox),
+                            target: rendering.closestPointOnBorder([other.x, other.y], viewbox),
                             theta: 0, // set below,
                         }
                     }
@@ -442,7 +443,7 @@ export default class CBRVWebview {
             
             from.theta = Math.atan2(to.target[1] - from.target[1], to.target[0] - from.target[0]);
             // The other angle is just 180 deg around (saves us calculating atan2 again)
-            to.theta = normalizeAngle(from.theta + Math.PI);
+            to.theta = rendering.normalizeAngle(from.theta + Math.PI);
 
             /** Return a partially completed AnchoredConnection  */
             return {
@@ -465,7 +466,7 @@ export default class CBRVWebview {
                 if (node) {
                     // Calculate number of anchor points by using the spaceBetweenConns arc length, but snapping to a
                     // number that is divisible by 4 so we get nice angles.
-                    const numAnchors = Math.max(snap((2 * Math.PI * node.r) / this.spaceBetweenConns, 4), 4);
+                    const numAnchors = Math.max(rendering.snap((2*Math.PI * node.r) / this.spaceBetweenConns, 4), 4);
                     const deltaTheta = (2*Math.PI) / numAnchors;
                     let anchorPoints: IncompleteAnchoredConnection[][] = _.range(numAnchors).map(i => []);
 
@@ -482,25 +483,25 @@ export default class CBRVWebview {
                         const connHasArrow = hasArrow(conn);
                         
                         // Snap to angle, round to index to account for any floating point error
-                        const theta1 = snapAngle(rawTheta, deltaTheta);
+                        const theta1 = rendering.snapAngle(rawTheta, deltaTheta);
                         const index1 = Math.round(theta1 / deltaTheta);
                         const hasArrow1 = anchorPoints[index1].length ? hasArrow(anchorPoints[index1][0]) : undefined;
 
                         // no conflict on first choice
                         if (hasArrow1 == undefined || hasArrow1 == connHasArrow) {
                             // NOTE: Mutating conn, which is also in the anchored array
-                            conn[direction].anchor = polarToRect(theta1, node.r, [node.x, node.y]);
+                            conn[direction].anchor = rendering.polarToRect(theta1, node.r, [node.x, node.y]);
                             anchorPoints[index1].push(conn);
                         } else {
                             // fallback index if conflict. Assign in to even, and out to odd anchors.
                             // May be same as index1
-                            const theta2 = snapAngle(rawTheta, 2 * deltaTheta, connHasArrow ? 0 : deltaTheta);
+                            const theta2 = rendering.snapAngle(rawTheta, 2 * deltaTheta, connHasArrow ? 0 : deltaTheta);
                             const index2 = Math.round(theta2 / deltaTheta);
                             const existing = anchorPoints[index2];
                             const hasArrow2 = existing.length ? hasArrow(existing[0]) : undefined;
 
                             // NOTE: Mutating conn, which is also in the anchored array
-                            conn[direction].anchor = polarToRect(theta2, node.r, [node.x, node.y]);
+                            conn[direction].anchor = rendering.polarToRect(theta2, node.r, [node.x, node.y]);
 
                             // no conflict on second choice
                             if (hasArrow2 == undefined || hasArrow2 == connHasArrow) {
@@ -609,7 +610,7 @@ export default class CBRVWebview {
     }
 
     onResize(e: Event) {
-        [this.width, this.height] = getRect(this.diagram.node()!);
+        [this.width, this.height] = rendering.getRect(this.diagram.node()!);
         this.throttledUpdate();
     }
 }
