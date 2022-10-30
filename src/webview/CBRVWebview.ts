@@ -2,7 +2,7 @@ import * as d3 from 'd3';
 import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedConnection,
          NormalizedVisualizationSettings, AddRule, ValueRule } from '../shared';
 import { getExtension, filterFileTree, normalizedJSONStringify } from '../util';
-import { ellipsisText, uniqId, getRect, Point, Box, closestPointOnBorder, snapAngle, snap, polarToRect } from './rendering';
+import { ellipsisText, uniqId, getRect, Point, Box, closestPointOnBorder, snapAngle, snap, polarToRect, normalizeAngle } from './rendering';
 import _, { isEqual, isUndefined } from "lodash";
 
 type Node = d3.HierarchyCircularNode<AnyFile>;
@@ -14,12 +14,15 @@ type AnchoredConnection = {
         target: Point,
         /** Radius of the from node. */
         r?: number,
+        /* Angle from from.target to to.target */
+        theta: number,
         /** The point on the circumference (or the border of the screen) where the rendered connection will end. */
         anchor: Point,
     },
     to: {
         target: Point,
         r?: number,
+        theta: number,
         anchor: Point,
     }
     /**
@@ -425,15 +428,21 @@ export default class CBRVWebview {
                             ...incomplete,
                             target: [node.x, node.y] as Point,
                             r: node.r,
+                            theta: 0, // set below
                         }
                     } else {
                         const other = arr[+!i]! // hack to get other node in the array
                         return {
                             ...incomplete,
                             target: closestPointOnBorder([other.x, other.y], viewbox),
+                            theta: 0, // set below,
                         }
                     }
                 })
+            
+            from.theta = Math.atan2(to.target[1] - from.target[1], to.target[0] - from.target[0]);
+            // The other angle is just 180 deg around (saves us calculating atan2 again)
+            to.theta = normalizeAngle(from.theta + Math.PI);
 
             /** Return a partially completed AnchoredConnection  */
             return {
@@ -442,7 +451,7 @@ export default class CBRVWebview {
                 control: undefined as number|undefined,
             }
         })
-        type PartialAnchoredConnection = typeof anchored[number];
+        type IncompleteAnchoredConnection = typeof anchored[number];
 
         _(anchored)
             // split out each "end" of the connections
@@ -452,24 +461,22 @@ export default class CBRVWebview {
                 const connsToFile = endsToFile.map(({file, conn}) => conn) // remove redundant grouping data
                 const node = file ? this.pathMap.get(file)! : undefined;
 
-                let assignPoint: (conn: PartialAnchoredConnection) => void;
+                let assignPoint: (conn: IncompleteAnchoredConnection) => void;
                 if (node) {
                     // Calculate number of anchor points by using the spaceBetweenConns arc length, but snapping to a
                     // number that is divisible by 4 so we get nice angles.
                     const numAnchors = Math.max(snap((2 * Math.PI * node.r) / this.spaceBetweenConns, 4), 4);
                     const deltaTheta = (2*Math.PI) / numAnchors;
-                    let anchorPoints: PartialAnchoredConnection[][] = _.range(numAnchors).map(i => []);
+                    let anchorPoints: IncompleteAnchoredConnection[][] = _.range(numAnchors).map(i => []);
 
-                    const hasArrow = (conn: PartialAnchoredConnection) =>
+                    const hasArrow = (conn: IncompleteAnchoredConnection) =>
                         this.settings.directed && ((conn.conn.to?.file ?? '') == file || conn.conn.bidirectional)
             
                     // assign to an anchor point and update the actual rendered point. Makes sure that connections going
                     // opposite directions don't go to the same anchor point.
                     assignPoint = (conn) => {
                         const direction = (conn.conn.to?.file ?? '') == file ? "to" : "from";
-                        const otherTarget = conn[(direction == "from") ? "to" : "from"].target;
-
-                        const rawTheta = Math.atan2(otherTarget[1] - node.y, otherTarget[0] - node.x);
+                        const rawTheta = conn[direction].theta;
 
                         // Check if connection has an arrow to this file
                         const connHasArrow = hasArrow(conn);
@@ -510,12 +517,11 @@ export default class CBRVWebview {
                 } else {
                     assignPoint = (conn) => {
                         const direction = (conn.conn.from?.file ?? '') == file ? "from" : "to";
-                        const otherTarget = conn[(direction == "from") ? "to" : "from"].target;
+                        // anchor is just the same as target, which is the closestPointOnBorder
                         // NOTE: Mutating conn, which is also in the anchored array
-                        conn[direction].anchor = closestPointOnBorder(otherTarget, viewbox);
+                        conn[direction].anchor = [...conn[direction].target];
                     }
                 }
-
 
                 _(connsToFile)
                     // group by pairs and direction (if directed).
