@@ -377,8 +377,7 @@ export default class CBRVWebview {
             .values()
             .map<MergedConnection>((pairs, key) => {
                 const raised = pairs[0].raised;
-                const reversed = {to: raised.from, from: raised.to}
-                const bidirectional = _(pairs).some(pair => isEqual(pair.raised, reversed))
+                const bidirectional = _(pairs).some(pair => !isEqual(pair.raised, raised)) // any a different direction
                 const connections = pairs.map(pair => pair.conn)
 
                 // use greatest to just get the only entry if merging if off
