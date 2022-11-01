@@ -157,3 +157,10 @@ export function snapAngle(angle: number, delta: number, offset: number = 0) {
     return normalizeAngle(snapped + offset, Math.PI);
 }
 
+/**
+ * Calculates a unit vector
+ */
+export function unitVector(vector: number[]): number[] {
+    const len = Math.hypot(...vector);
+    return vector.map(n => n / len);
+}
