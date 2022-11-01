@@ -65,6 +65,12 @@ export default class CBRVWebview {
     labelFontSize = 12
     /** Space between connections to the same files */
     spaceBetweenConns = 25
+    /** Offset of control points in curves, as a percentage. */
+    controlOffset = 0.20;
+    /** Offset of control points for out-of-screen connections, as a percentage */
+    outOfScreenControlOffset = 0.10;
+    /** Duplicate connection offset, in pixels */
+    duplicateConnectionOffset = 12;
 
     // Parts of the d3 diagram
 
@@ -540,19 +546,24 @@ export default class CBRVWebview {
         _(anchored)
             .forEach(conn => {
                 const [fromAnchor, toAnchor] = [conn.from.anchor!, conn.to.anchor!];
+                const dist = rendering.distance(fromAnchor, toAnchor);
 
                 let controls: Point[] = [];
 
                 if (conn.conn.from && conn.conn.to) { // connection from file to file
-                    const dist = rendering.distance(fromAnchor, toAnchor);
                     // calculate control points such that the bezier curve will be perpendicular to the circle by
                     // extending the line from the center of the circle to the anchor point.
-                    const control1 = rendering.extendLine([conn.from.target, fromAnchor], dist * 0.30);
-                    const control2 = rendering.extendLine([conn.to.target, toAnchor], dist * 0.30);
+                    const control1 = rendering.extendLine([conn.from.target, fromAnchor], dist * this.controlOffset);
+                    const control2 = rendering.extendLine([conn.to.target, toAnchor], dist * this.controlOffset);
+                    controls.push(control1, control2);
+                } else {
+                    // with an out-of-screen connection add controls on a straight line. We could leave these out, but
+                    // this makes the arrows line up if we have an offset for duplicate connections down below.
+                    const offset = dist * this.outOfScreenControlOffset;
+                    const control1 = rendering.extendLine([fromAnchor, toAnchor], -(dist - offset));
+                    const control2 = rendering.extendLine([fromAnchor, toAnchor], -offset);
                     controls.push(control1, control2);
                 }
-                // with an out-of-screen connection, we'll have no controls to just leave the line straight
-                // (unless we need to add an offset to differentiate between duplicate connections)
 
                 if (conn.index != 0) {
                     // If we have connections between the same two files, calculate another control point based on the
@@ -563,8 +574,8 @@ export default class CBRVWebview {
                     const vec = [toAnchor[0] - fromAnchor[0], toAnchor[1] - fromAnchor[1]];
                     // calculate the perpendicular unit vector (perp vectors have dot product of 0)
                     let perpVec = rendering.unitVector([1, -vec[0] / vec[1]]);
-                    
-                    const dist = 15 * conn.index;
+
+                    const dist = this.duplicateConnectionOffset * conn.index;
                     const control: Point = [midpoint[0] + perpVec[0] * dist, midpoint[1] + perpVec[1] * dist]
 
                     controls.splice(controls.length > 0 ? 1 : 0, 0, control); // insert in middle.
