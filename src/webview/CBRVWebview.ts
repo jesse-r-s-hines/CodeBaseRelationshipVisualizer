@@ -443,36 +443,36 @@ export default class CBRVWebview {
             }
         })
         type IncompleteAnchoredConnection = typeof anchored[number];
+        type ConnEnd = {conn: IncompleteAnchoredConnection, end: "from"|"to"}
 
         // Group connections by each node they connect to. Each connection will show up twice, once for from and to.
         // Then we will do rendering calculations for each connection to the file and mutate anchored with the results.
         _(anchored)
             // split out each "end" of the connections
-            .flatMap((conn) => [{file: conn.conn.from?.file, conn}, {file: conn.conn.to?.file, conn}])
-            .groupBy(end => end.file ?? '') // group all connections that connect to each file
-            .forEach((endsToFile, file) => {
-                const connsToFile = endsToFile.map(({file, conn}) => conn) // remove redundant grouping data
+            .flatMap<ConnEnd>((conn) => [{conn, end: "from"}, {conn, end: "to"}])
+            .groupBy(({conn, end}) => conn.conn[end]?.file ?? '') // group all ends that connect to each file
+            .forEach((connsToFile, file) => {
                 const node = file ? this.pathMap.get(file)! : undefined;
 
-                let anchorConn: (conn: IncompleteAnchoredConnection) => void;
+                let anchorConn: (connEnd: ConnEnd) => void;
                 if (node) {
                     // Calculate number of anchor points by using the spaceBetweenConns arc length, but snapping to a
                     // number that is divisible by 4 so we get nice angles.
                     const numAnchors = Math.max(rendering.snap((2*Math.PI * node.r) / this.spaceBetweenConns, 4), 4);
                     const deltaTheta = (2*Math.PI) / numAnchors;
-                    let anchorPoints: IncompleteAnchoredConnection[][] = _.range(numAnchors).map(i => []);
+                    let anchorPoints: ConnEnd[][] = _.range(numAnchors).map(i => []);
 
-                    const hasArrow = (conn: IncompleteAnchoredConnection) =>
-                        this.settings.directed && ((conn.conn.to?.file ?? '') == file || conn.conn.bidirectional)
+                    const hasArrow = ({conn, end}: ConnEnd) =>
+                        this.settings.directed && (end == "to" || conn.conn.bidirectional)
             
                     // assign to an anchor point and update the actual rendered point. Makes sure that connections going
                     // opposite directions don't go to the same anchor point.
-                    anchorConn = (conn) => {
-                        const direction = (conn.conn.to?.file ?? '') == file ? "to" : "from";
-                        const rawTheta = conn[direction].theta;
+                    anchorConn = (connEnd) => {
+                        const {conn, end} = connEnd;
+                        const rawTheta = conn[end].theta;
 
                         // Check if connection has an arrow to this file
-                        const connHasArrow = hasArrow(conn);
+                        const connHasArrow = hasArrow(connEnd);
                         
                         // Snap to angle, round to index to account for any floating point error
                         const theta1 = rendering.snapAngle(rawTheta, deltaTheta);
@@ -482,43 +482,42 @@ export default class CBRVWebview {
                         // no conflict on first choice
                         if (hasArrow1 == undefined || hasArrow1 == connHasArrow) {
                             // NOTE: Mutating conn, which is also in the anchored array
-                            conn[direction].anchor = rendering.polarToRect(theta1, node.r, [node.x, node.y]);
-                            anchorPoints[index1].push(conn);
+                            conn[end].anchor = rendering.polarToRect(theta1, node.r, [node.x, node.y]);
+                            anchorPoints[index1].push(connEnd);
                         } else {
                             // fallback index if conflict. Assign in to even, and out to odd anchors.
                             // May be same as index1
                             const theta2 = rendering.snapAngle(rawTheta, 2 * deltaTheta, connHasArrow ? 0 : deltaTheta);
                             const index2 = Math.round(theta2 / deltaTheta);
-                            const existing = anchorPoints[index2];
-                            const hasArrow2 = existing.length ? hasArrow(existing[0]) : undefined;
+                            const connEnds2 = anchorPoints[index2];
+                            const hasArrow2 = connEnds2.length ? hasArrow(connEnds2[0]) : undefined;
 
                             // NOTE: Mutating conn, which is also in the anchored array
-                            conn[direction].anchor = rendering.polarToRect(theta2, node.r, [node.x, node.y]);
+                            conn[end].anchor = rendering.polarToRect(theta2, node.r, [node.x, node.y]);
 
                             // no conflict on second choice
                             if (hasArrow2 == undefined || hasArrow2 == connHasArrow) {
-                                anchorPoints[index2].push(conn);
+                                anchorPoints[index2].push(connEnd);
                             } else { // conflict on second choice
-                                anchorPoints[index2] = [conn];
+                                anchorPoints[index2] = [connEnd];
 
-                                for (let conn of existing) {
-                                    anchorConn(conn); // may need to resolve conflicts recursively
+                                for (let connEnd of connEnds2) {
+                                    anchorConn(connEnd); // may need to resolve conflicts recursively
                                 }
                             }
                         }
                     }
                 } else {
-                    anchorConn = (conn) => {
-                        const direction = (conn.conn.from?.file ?? '') == file ? "from" : "to";
+                    anchorConn = ({conn, end}) => {
                         // anchor is just the same as target, which is the closestPointOnBorder
                         // NOTE: Mutating conn, which is also in the anchored array
-                        conn[direction].anchor = [...conn[direction].target];
+                        conn[end].anchor = [...conn[end].target];
                     };
                 }
 
                 _(connsToFile)
                     // group by pairs and direction (if directed).
-                    .groupBy(conn => this.connKey(conn.conn, {lines: false, ordered: this.settings.directed}))
+                    .groupBy(({conn, end}) => this.connKey(conn.conn, {lines: false, ordered: this.settings.directed}))
                     .forEach(connsBetweenFiles => {
                         const even = (connsBetweenFiles.length % 2 == 0);
                         const startControl = -Math.floor(connsBetweenFiles.length / 2)
@@ -527,7 +526,9 @@ export default class CBRVWebview {
                         // We'll make index symmetrically distributed around 0 to make control points symmetrical, e.g.
                         // 3 conns -> -1, 0, 1
                         // 4 conns -> -2, -1, 1, 2 (skipping 0 to make it symmetrical)
-                        connsBetweenFiles.forEach((conn, i) => {
+                        connsBetweenFiles.forEach((connEnd, i) => {
+                            const {conn, end} = connEnd;
+
                             // NOTE: were mutating the conn object, which is also in the anchored array.
                             conn.index = startControl + i;
                             if (even && conn.index >= 0) {
@@ -535,7 +536,7 @@ export default class CBRVWebview {
                             }
 
                             // Set the anchor points
-                            anchorConn(conn);
+                            anchorConn(connEnd);
                         });
                     });
             })
