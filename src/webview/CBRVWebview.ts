@@ -438,7 +438,7 @@ export default class CBRVWebview {
             return {
                 conn,
                 from, to,
-                index: 0,
+                index: undefined as number|undefined,
                 controls: undefined as Point[]|undefined,
             }
         })
@@ -515,7 +515,12 @@ export default class CBRVWebview {
                     };
                 }
 
-                _(connsToFile)
+                _(connsToFile).forEach(connEnd => {
+                    anchorConn(connEnd)
+                })
+
+                if (connsToFile[0].conn.index === undefined) {
+                    _(connsToFile)
                     // group by pairs and direction (if directed).
                     .groupBy(({conn, end}) => this.connKey(conn.conn, {lines: false, ordered: this.settings.directed}))
                     .forEach(connsBetweenFiles => {
@@ -534,11 +539,9 @@ export default class CBRVWebview {
                             if (even && conn.index >= 0) {
                                 conn.index += 1; // offset by 1 to skip 0 to make symmetrical
                             }
-
-                            // Set the anchor points
-                            anchorConn(connEnd);
                         });
                     });
+                }
             })
 
         // Set up control points
@@ -575,7 +578,7 @@ export default class CBRVWebview {
                     // calculate the perpendicular unit vector (perp vectors have dot product of 0)
                     let perpVec = rendering.unitVector([1, -vec[0] / vec[1]]);
 
-                    const dist = this.duplicateConnectionOffset * conn.index;
+                    const dist = this.duplicateConnectionOffset * conn.index!;
                     const control: Point = [midpoint[0] + perpVec[0] * dist, midpoint[1] + perpVec[1] * dist]
 
                     controls.splice(controls.length > 0 ? 1 : 0, 0, control); // insert in middle.
