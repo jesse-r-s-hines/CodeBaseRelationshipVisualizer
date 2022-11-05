@@ -7,7 +7,7 @@ import { Point, Box, uniqId } from './rendering';
 import _, { isEqual } from "lodash";
 
 type Node = d3.HierarchyCircularNode<AnyFile>;
-/** A connection along with placement and rendering data. */
+/** A connection along with some placement and rendering data. */
 type AnchoredConnection = { 
     conn: MergedConnection,
     from: {
@@ -382,7 +382,7 @@ export default class CBRVWebview {
                 const bidirectional = _(pairs).some(pair => !isEqual(pair.raised, raised)) // any a different direction
                 const connections = pairs.map(pair => pair.conn)
 
-                // use greatest to just get the only entry if merging if off
+                // use greatest to just get the only entry if merging is off
                 const width = CBRVWebview.mergers[rules ? rules.width!.rule : "greatest"](
                     connections.map(conn => conn.width ?? this.settings.connectionDefaults.width),
                     rules ? rules.width! : null,
