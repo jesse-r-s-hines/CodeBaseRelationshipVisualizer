@@ -31,8 +31,6 @@ type AnchoredConnection = {
      * Is used to modify control points, and to make unique ids. Can be negative.
      */
     index: number,
-    /** Control points for the bezier curve. */
-    controls: Point[],
 }
 
 /**
@@ -321,9 +319,49 @@ export default class CBRVWebview {
                     .attr("marker-start", ({conn}) =>
                         this.settings.directed && conn.bidirectional ? `url(#${uniqId(conn.color)})` : null
                     )
-                    .attr("d", ({conn, from, to, controls}) => {
+                    .attr("d", ({conn, from, to, index}) => {
                         // TODO Account for arrow width if needed
                         // TODO self loops. How to handle them and spacing?
+                        const dist = rendering.distance(from.anchor, to.anchor);
+                    
+                        let controls: Point[] = [];
+        
+                        if (conn.from && conn.to) { // connection from file to file
+                            // calculate control points such that the bezier curve will be perpendicular to the
+                            // circle by extending the line from the center of the circle to the anchor point.
+                            const offset = dist * this.controlOffset
+                            const control1 = rendering.extendLine([from.target, from.anchor], offset);
+                            const control2 = rendering.extendLine([to.target, to.anchor], offset);
+                            controls.push(control1, control2);
+                        } else {
+                            // For out-of-screen conns add controls on a straight line. We could leave these out but
+                            // but this makes the arrows line up if we have an offset for duplicate conns
+                            const offset = dist * this.outOfScreenControlOffset;
+                            const control1 = rendering.extendLine([from.anchor, to.anchor], -(dist - offset));
+                            const control2 = rendering.extendLine([from.anchor, to.anchor], -offset);
+                            controls.push(control1, control2);
+                        }
+        
+                        if (index != 0) {
+                            // If we have multiple connections between the same two files, calculate another control
+                            // point based on the index so that the connections don't overlap completely. The control
+                            // point will be a distance from the line between from and to at the midpoint.
+                            const midpoint: Point = rendering.midpoint(from.anchor, to.anchor);
+
+                            // Vector in direction of line between from and to
+                            const vec = [to.anchor[0] - from.anchor[0], to.anchor[1] - from.anchor[1]];
+                            // calculate the perpendicular unit vector (perp vectors have dot product of 0)
+                            let perpVec = rendering.unitVector([1, -vec[0] / vec[1]]);
+        
+                            const dist = this.duplicateConnectionOffset * index;
+                            const control: Point = [
+                                midpoint[0] + perpVec[0] * dist,
+                                midpoint[1] + perpVec[1] * dist
+                            ]
+        
+                            controls.splice(1, 0, control); // insert in middle.
+                        }
+        
                         return curve([from.anchor, ...controls, to.anchor])!.toString();
                     }),
                 update => update,
@@ -444,6 +482,7 @@ export default class CBRVWebview {
                 controls: undefined as Point[]|undefined,
             }
         })
+
         type IncompleteAnchoredConnection = typeof anchored[number];
         type ConnEnd = {conn: IncompleteAnchoredConnection, end: "from"|"to"}
 
@@ -547,54 +586,6 @@ export default class CBRVWebview {
                             });
                         });
                 }
-            })
-
-        // Set up control points
-        // do this in a second loop since we need all of the anchors defined to calculate these
-        _(anchored)
-            .forEach(conn => {
-                const [fromAnchor, toAnchor] = [conn.from.anchor!, conn.to.anchor!];
-                const dist = rendering.distance(fromAnchor, toAnchor);
-
-                let controls: Point[] = [];
-
-                if (conn.conn.from && conn.conn.to) { // connection from file to file
-                    // calculate control points such that the bezier curve will be perpendicular to the circle by
-                    // extending the line from the center of the circle to the anchor point.
-                    const control1 = rendering.extendLine([conn.from.target, fromAnchor], dist * this.controlOffset);
-                    const control2 = rendering.extendLine([conn.to.target, toAnchor], dist * this.controlOffset);
-                    controls.push(control1, control2);
-                } else {
-                    // with an out-of-screen connection add controls on a straight line. We could leave these out, but
-                    // this makes the arrows line up if we have an offset for duplicate connections down below.
-                    const offset = dist * this.outOfScreenControlOffset;
-                    const control1 = rendering.extendLine([fromAnchor, toAnchor], -(dist - offset));
-                    const control2 = rendering.extendLine([fromAnchor, toAnchor], -offset);
-                    controls.push(control1, control2);
-                }
-
-                if (conn.index != 0) {
-                    // If we have connections between the same two files, calculate another control point based on the
-                    // index so that the connections don't overlap completely. The control point will a distance from
-                    // the line between from and to at the midpoint.
-                    const midpoint: Point = rendering.midpoint(fromAnchor, toAnchor);
-                    // Vector in direction of line between from and to
-                    const vec = [toAnchor[0] - fromAnchor[0], toAnchor[1] - fromAnchor[1]];
-                    // calculate the perpendicular unit vector (perp vectors have dot product of 0)
-                    let perpVec = rendering.unitVector([1, -vec[0] / vec[1]]);
-
-                    const dist = this.duplicateConnectionOffset * conn.index!;
-                    const control: Point = [midpoint[0] + perpVec[0] * dist, midpoint[1] + perpVec[1] * dist]
-
-                    controls.splice(controls.length > 0 ? 1 : 0, 0, control); // insert in middle.
-
-                    // TODO I still don't quite like how this looks, maybe don't do the other two control points
-                    // if we have this one? But then the arrows don't line up perpendicular. Maybe just reducing the dist
-                    // to the control point?
-                }
-
-                // NOTE: were mutating the conn object, which is also in the anchored array.
-                conn.controls = controls;
             })
 
         return anchored as AnchoredConnection[]; // we've filled everything out.
