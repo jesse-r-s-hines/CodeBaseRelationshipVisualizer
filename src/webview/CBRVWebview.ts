@@ -523,26 +523,26 @@ export default class CBRVWebview {
 
                 if (connsToFile[0].conn.index === undefined) {
                     _(connsToFile)
-                    // group by pairs and direction (if directed).
-                    .groupBy(({conn, end}) => this.connKey(conn.conn, {lines: false, ordered: this.settings.directed}))
-                    .forEach(connsBetweenFiles => {
-                        const even = (connsBetweenFiles.length % 2 == 0);
-                        const startControl = -Math.floor(connsBetweenFiles.length / 2)
-                        // Set a index offset. We'll use this to make sure connections between the same files don't
-                        // overlap completely, and to make uniq id for the connection.
-                        // We'll make index symmetrically distributed around 0 to make control points symmetrical, e.g.
-                        // 3 conns -> -1, 0, 1
-                        // 4 conns -> -2, -1, 1, 2 (skipping 0 to make it symmetrical)
-                        connsBetweenFiles.forEach((connEnd, i) => {
-                            const {conn, end} = connEnd;
+                        // group by pairs and direction (if directed).
+                        .groupBy(({conn}) => this.connKey(conn.conn, {lines: false, ordered: this.settings.directed}))
+                        .forEach(connsBetweenFiles => {
+                            const even = (connsBetweenFiles.length % 2 == 0);
+                            const startControl = -Math.floor(connsBetweenFiles.length / 2)
+                            // Set a index offset. We'll use this to make sure connections between the same files don't
+                            // overlap completely, and to make uniq id for the connection.
+                            // Index will be symmetrically distributed around 0 so control points are symmetrical, e.g.
+                            // 3 conns -> -1, 0, 1
+                            // 4 conns -> -2, -1, 1, 2 (skipping 0 to make it symmetrical)
+                            connsBetweenFiles.forEach((connEnd, i) => {
+                                const {conn, end} = connEnd;
 
-                            // NOTE: were mutating the conn object, which is also in the anchored array.
-                            conn.index = startControl + i;
-                            if (even && conn.index >= 0) {
-                                conn.index += 1; // offset by 1 to skip 0 to make symmetrical
-                            }
+                                // NOTE: were mutating the conn object, which is also in the anchored array.
+                                conn.index = startControl + i;
+                                if (even && conn.index >= 0) {
+                                    conn.index += 1; // offset by 1 to skip 0 to make symmetrical
+                                }
+                            });
                         });
-                    });
                 }
             })
 
