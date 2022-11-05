@@ -456,7 +456,6 @@ export default class CBRVWebview {
             .forEach((connsToFile, file) => {
                 const node = file ? this.pathMap.get(file)! : undefined;
 
-                let anchorConn: (connEnd: ConnEnd) => void;
                 if (node) {
                     // Calculate number of anchor points by using the spaceBetweenConns arc length, but snapping to a
                     // number that is divisible by 4 so we get nice angles.
@@ -469,9 +468,9 @@ export default class CBRVWebview {
             
                     // assign to an anchor point and update the actual rendered point. Makes sure that connections going
                     // opposite directions don't go to the same anchor point.
-                    anchorConn = (connEnd) => {
+                    const anchorConn = (connEnd: ConnEnd) => {
                         const {conn, end} = connEnd;
-                        const rawTheta = conn[end].theta;
+                        const rawTheta = conn[end].theta!; // we know these aren't self loops
 
                         // Check if connection has an arrow to this file
                         const connHasArrow = hasArrow(connEnd);
@@ -494,9 +493,6 @@ export default class CBRVWebview {
                             const connEnds2 = anchorPoints[index2];
                             const hasArrow2 = connEnds2.length ? hasArrow(connEnds2[0]) : undefined;
 
-                            // NOTE: Mutating conn, which is also in the anchored array
-                            conn[end].anchor = rendering.polarToRect(theta2, node.r, [node.x, node.y]);
-
                             // no conflict on second choice
                             if (hasArrow2 == undefined || hasArrow2 == connHasArrow) {
                                 anchorPoints[index2].push(connEnd);
@@ -509,17 +505,24 @@ export default class CBRVWebview {
                             }
                         }
                     }
+
+                    // calculate all the anchor points
+                    connsToFile.forEach(connEnd => anchorConn(connEnd))
+                    // assign actual targets
+                    anchorPoints.forEach((conns, i) => {
+                        const theta = deltaTheta * i;
+                        conns.forEach(({conn, end}) => {
+                            // NOTE: Mutating conn, which is also in the anchored array
+                            conn[end].anchor = rendering.polarToRect(theta, node.r, [node.x, node.y]);
+                        })
+                    })
                 } else {
-                    anchorConn = ({conn, end}) => {
+                    connsToFile.forEach(({conn, end}) => {
                         // anchor is just the same as target, which is the closestPointOnBorder
                         // NOTE: Mutating conn, which is also in the anchored array
                         conn[end].anchor = [...conn[end].target];
-                    };
+                    })
                 }
-
-                _(connsToFile).forEach(connEnd => {
-                    anchorConn(connEnd)
-                })
 
                 if (connsToFile[0].conn.index === undefined) {
                     _(connsToFile)
