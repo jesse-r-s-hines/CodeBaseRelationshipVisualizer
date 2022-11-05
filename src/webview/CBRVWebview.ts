@@ -574,7 +574,7 @@ export default class CBRVWebview {
                     // If we have connections between the same two files, calculate another control point based on the
                     // index so that the connections don't overlap completely. The control point will a distance from
                     // the line between from and to at the midpoint.
-                    const midpoint: Point = [(fromAnchor[0] + toAnchor[0]) / 2, (fromAnchor[1] + toAnchor[1]) / 2];
+                    const midpoint: Point = rendering.midpoint(fromAnchor, toAnchor);
                     // Vector in direction of line between from and to
                     const vec = [toAnchor[0] - fromAnchor[0], toAnchor[1] - fromAnchor[1]];
                     // calculate the perpendicular unit vector (perp vectors have dot product of 0)

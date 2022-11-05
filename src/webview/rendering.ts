@@ -165,3 +165,13 @@ export function unitVector(vector: number[]): number[] {
     const len = Math.hypot(...vector);
     return vector.map(n => n / len);
 }
+
+/** Returns the midpoint between two points */
+export function midpoint(a: Point, b: Point): Point {
+    return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]
+}
+
+/** Returns the slope of the line between two points */
+export function slope(a: Point, b: Point): number {
+    return (b[1] - a[1]) / (b[0] - a[0])
+}
