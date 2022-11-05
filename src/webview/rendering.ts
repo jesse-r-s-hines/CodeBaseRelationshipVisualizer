@@ -1,4 +1,5 @@
 import { sha256 } from 'js-sha256';
+import * as d3 from 'd3';
 import _ from "lodash"
 
 export type Point = [number, number]

@@ -167,7 +167,6 @@ export default class CBRVWebview {
             .size([this.diagramSize, this.diagramSize])
             .padding(this.filePadding)(root);
 
-        const arc = d3.arc();
         const colorScale = this.getColorScale(packLayout);
         // Calculate unique key for each data. Use `type:path/to/file` so that changing file <-> directory is treated as
         // creating a new node rather than update the existing one, which simplifies the logic.
@@ -238,11 +237,15 @@ export default class CBRVWebview {
         changed.attr("transform", d => `translate(${d.x},${d.y})`);
 
         changed.select("path.circle")
-            .attr("d", d => arc({
-                innerRadius: 0, outerRadius: d.r,
-                // -pi to pi so the path starts at the bottom and we don't cut off the directory label
-                startAngle: -Math.PI, endAngle: Math.PI, 
-            }))
+            // use path instead of circle so we can textPath it. Start at PI/2 so that the path starts at the bottom of
+            // the circle and we don't cut off the directory label with the textPath
+            .attr("d", d => {
+                // use path instead of circle so we can textPath it. Start at PI/2 so that the path starts at the bottom
+                // of the circle and we don't cut off the directory label with the textPath
+                const path = d3.path();
+                path.arc(0, 0, d.r, Math.PI/2, 5*Math.PI/2);
+                return path.toString();
+            })
             .attr("fill", d => colorScale(d.data));
 
         const files = changed.filter(".file");
@@ -261,11 +264,10 @@ export default class CBRVWebview {
             .each((d, i, nodes) => {
                 const length = directoryLabels.nodes()[i].getComputedTextLength() + 4;
                 const angle = length / d.r;
-                const pathData = arc({
-                    innerRadius: d.r, outerRadius: d.r,
-                    startAngle: -angle / 2, endAngle: angle / 2,
-                })!;
-                nodes[i].setAttribute('d', pathData);
+                const top = 3*Math.PI/2;
+                const path = d3.path();
+                path.arc(0, 0, d.r,  top - angle / 2, top + angle / 2);
+                nodes[i].setAttribute('d', path.toString());
             });
 
         // Store a map of paths to nodes for future use in connections
