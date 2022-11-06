@@ -40,39 +40,52 @@ export default class CBRVWebview {
     codebase: Directory
     connections: Connection[]
 
-    // Settings and constants for the diagram
-
-    /** Size (width and height) of the diagram within the svg viewbox (in viewbox units) */
-    diagramSize = 1000
-    /** Margins of the svg diagram (in viewbox units). The viewbox will be diagramSize plus these. */
-    margins = { top: 10, right: 5, bottom: 5, left: 5 }
-    /** Padding between file circles */
-    filePadding = 20
-    /** Padding between labels and the outline of each file circle */
-    textPadding = 2
-    /** Maximum area of file circles (in viewbox units) */
-    minFileSize = 16
-    /** Minimum area of file circles (in viewbox units) */
-    maxFileSize = 1024 ** 2
-    /** Radius when a directory's contents will be hidden (in px) */
-    hideContentsRadius = 16
-    /** Radius when a directory's or file's labels will be hidden (in px) */
-    hideLabelsRadius = 20
-    /** Size of the labels at the highest level. */
-    labelFontSize = 12
-    /** Space between connections to the same files */
-    spaceBetweenConns = 25
-    /** Offset of control points in curves, as a percentage. */
-    controlOffset = 0.20;
-    /** Offset of control points for out-of-screen connections, as a percentage */
-    outOfScreenControlOffset = 0.10;
-    /** Duplicate connection offset, in pixels */
-    duplicateConnectionOffset = 12;
-    /** Distance between a circle outline and farthest side of a self loop */
-    selfLoopDistance = 20;
-
+    /**
+     * Settings and constants for the diagram
+     * These are in viewbox units unless specified otherwise
+     */
+    s = {
+        /** Size (width and height) of the diagram within the svg viewbox */
+        diagramSize: 1000,
+        /** Margins of the svg diagram. The viewbox will be diagramSize plus these. */
+        margin: { top: 10, right: 5, bottom: 5, left: 5 },
+        file: {
+            /** Padding between file circles */
+            padding: 20,
+            /** Minimum area of file circles */
+            minSize: 16,
+            /** Maximum area of file circles */
+            maxSize: 1024 ** 2,
+        },
+        label: {
+            /** Padding between labels and the outline of each file circle */
+            padding: 2,
+            /** Pixel size of the label font at the highest level. Size will shrink as we go down levels. */
+            fontMax: 12,
+            /** Minimum pixel size label font will shrink to at deepest depth. */
+            fontMin: 12,
+        },
+        conn: {
+            /** Space between connections to the same files distance along the circumference of the file circle  */
+            anchorSpacing: 25,
+            /** Duplicate connection offset, in pixels */
+            dupConnPadding: 12,
+            /** Distance between a circle outline and farthest side of a self loop */
+            selfLoopSize: 20,
+            /** Offset of control points in curves, as a percentage of the conn length */
+            controlOffset: 0.20,
+            /** Offset of control points for out-of-screen connections, as a percentage of the conn length */
+            outOfScreenControlOffset: 0.10,
+        },
+        zoom: {
+            /** Radius when a directory's contents will be hidden (in px) */
+            hideContentsR: 16,
+            /** Radius when a directory's or file's labels will be hidden (in px) */
+            hideLabelsR: 20,
+        },
+    }
+   
     // Parts of the d3 diagram
-
     diagram: d3.Selection<SVGSVGElement, unknown, null, undefined>
     defs: d3.Selection<SVGDefsElement, unknown, null, undefined>
     zoomWindow: d3.Selection<SVGGElement, unknown, null, undefined>
@@ -81,7 +94,7 @@ export default class CBRVWebview {
 
     // Some rendering variables
 
-    /** Actual pixel width and height of the svg diagram */
+    /** Actual current pixel width and height of the svg diagram */
     width = 0; height = 0
     transform: d3.ZoomTransform = new d3.ZoomTransform(1, 0, 0);
     /** Maps file paths to their rendered circle (or first visible circle if they are hidden) */
@@ -132,9 +145,9 @@ export default class CBRVWebview {
     }
 
     getViewbox(): Box {
-        const { top, right, bottom, left } = this.margins;
+        const { top, right, bottom, left } = this.s.margin;
         // use negatives to add margin since pack() starts at 0 0. Viewbox is [minX, minY, width, height]
-        return [ -left, -top, left + this.diagramSize + right, top + this.diagramSize + bottom]
+        return [ -left, -top, left + this.s.diagramSize + right, top + this.s.diagramSize + bottom]
     }
 
     throttledUpdate: () => void
@@ -157,14 +170,14 @@ export default class CBRVWebview {
 
         const root = d3.hierarchy<AnyFile>(this.codebase, f => f.type == FileType.Directory ? f.children : undefined);
         // Compute size of files and folders
-        root.sum(d => d.type == FileType.File ? _.clamp(d.size, this.minFileSize, this.maxFileSize) : 0);
+        root.sum(d => d.type == FileType.File ? _.clamp(d.size, this.s.file.minSize, this.s.file.maxSize) : 0);
         // Sort by descending size for layout purposes
         root.sort((a, b) => d3.descending(a.value, b.value));
 
         // Use d3 to calculate the circle packing layout
         const packLayout = d3.pack<AnyFile>()
-            .size([this.diagramSize, this.diagramSize])
-            .padding(this.filePadding)(root);
+            .size([this.s.diagramSize, this.s.diagramSize])
+            .padding(this.s.file.padding)(root);
 
         const colorScale = this.getColorScale(packLayout);
         // Calculate unique key for each data. Use `type:path/to/file` so that changing file <-> directory is treated as
@@ -202,7 +215,7 @@ export default class CBRVWebview {
                             .classed("label", true)
                             .attr("x", 0)
                             .attr("y", 0)
-                            .attr("font-size", d => this.labelFontSize - d.depth);
+                            .attr("font-size", d => Math.max(this.s.label.fontMax - d.depth, this.s.label.fontMin));
 
                     // Add a folder name at the top. Add a "background" path behind the text to contrast with the circle
                     // outline. We'll set the path in update after we've created the label so we can get the computed
@@ -216,7 +229,7 @@ export default class CBRVWebview {
                             .classed("label", true)
                             .attr("href", d => `#${uniqId(this.filePath(d))}`)
                             .attr("startOffset", "50%")
-                            .attr("font-size", d => this.labelFontSize - d.depth);
+                            .attr("font-size", d => Math.max(this.s.label.fontMax - d.depth, this.s.label.fontMin));
   
                     return all;
                 },
@@ -252,7 +265,7 @@ export default class CBRVWebview {
 
         files.select<SVGTSpanElement>(".label")
             .text(d => d.data.name)
-            .each((d, i, nodes) => rendering.ellipsisText(nodes[i], d.r * 2, d.r * 2, this.textPadding));
+            .each((d, i, nodes) => rendering.ellipsisText(nodes[i], d.r * 2, d.r * 2, this.s.label.padding));
 
         const directoryLabels = directories.select<SVGTextPathElement>(".label")
             .text(d => d.data.name)
@@ -331,14 +344,14 @@ export default class CBRVWebview {
                             if (conn.from && conn.to) { // connection from file to file
                                 // calculate control points such that the bezier curve will be perpendicular to the
                                 // circle by extending the line from the center of the circle to the anchor point.
-                                const offset = dist * this.controlOffset
+                                const offset = dist * this.s.conn.controlOffset
                                 const control1 = rendering.extendLine([from.target, from.anchor], offset);
                                 const control2 = rendering.extendLine([to.target, to.anchor], offset);
                                 controls.push(control1, control2);
                             } else {
                                 // For out-of-screen conns add controls on a straight line. We could leave these out but
                                 // but this makes the arrows line up if we have an offset for duplicate conns
-                                const offset = dist * this.outOfScreenControlOffset;
+                                const offset = dist * this.s.conn.outOfScreenControlOffset;
                                 const control1 = rendering.extendLine([from.anchor, to.anchor], -(dist - offset));
                                 const control2 = rendering.extendLine([from.anchor, to.anchor], -offset);
                                 controls.push(control1, control2);
@@ -355,7 +368,7 @@ export default class CBRVWebview {
                                 // calculate the perpendicular unit vector (perp vectors have dot product of 0)
                                 let perpVec = rendering.unitVector([1, -vec[0] / vec[1]]);
             
-                                const dist = this.duplicateConnectionOffset * dupOffset;
+                                const dist = this.s.conn.dupConnPadding * dupOffset;
                                 const control: Point = [
                                     midpoint[0] + perpVec[0] * dist,
                                     midpoint[1] + perpVec[1] * dist
@@ -384,8 +397,8 @@ export default class CBRVWebview {
 
                             // Calculate the third point on the arc, that will be selfLoopDistance past the edge of the
                             // file circle on the middle angle.
-                            const scaledDupOffset = dupOffset * this.duplicateConnectionOffset;
-                            const distFromFileCenter = from.r! + this.selfLoopDistance + scaledDupOffset;
+                            const scaledDupOffset = dupOffset * this.s.conn.dupConnPadding;
+                            const distFromFileCenter = from.r! + this.s.conn.selfLoopSize + scaledDupOffset;
                             const farPoint = rendering.polarToRect(middleTheta, distFromFileCenter, fileCenter);
 
                             // The center of the arc lies on the line between file center and farPoint and the
@@ -545,9 +558,9 @@ export default class CBRVWebview {
                 const node = file ? this.pathMap.get(file)! : undefined;
 
                 if (node) {
-                    // Calculate number of anchor points by using the spaceBetweenConns arc length, but snapping to a
+                    // Calculate number of anchor points by using the padding.connAnchorPoints arc length, but snapping to a
                     // number that is divisible by 4 so we get nice angles.
-                    const numAnchors = Math.max(rendering.snap((2*Math.PI * node.r) / this.spaceBetweenConns, 4), 4);
+                    const numAnchors = Math.max(rendering.snap((2*Math.PI * node.r) / this.s.conn.anchorSpacing, 4), 4);
                     const deltaTheta = (2*Math.PI) / numAnchors;
                     let anchorPoints: ConnEnd[][] = _.range(numAnchors).map(i => []);
 
@@ -744,16 +757,16 @@ export default class CBRVWebview {
 
     /** Convert svg viewport units to actual rendered pixel length  */
     calcPixelLength(viewPortLength: number) {
-        const viewToRenderedRatio = Math.min(this.width, this.height) / (this.diagramSize / this.transform.k);
+        const viewToRenderedRatio = Math.min(this.width, this.height) / (this.s.diagramSize / this.transform.k);
         return viewPortLength * viewToRenderedRatio;
     }
 
     shouldHideContents(d: d3.HierarchyCircularNode<AnyFile>) {
-        return d.data.type == FileType.Directory && this.calcPixelLength(d.r) <= this.hideContentsRadius;
+        return d.data.type == FileType.Directory && this.calcPixelLength(d.r) <= this.s.zoom.hideContentsR;
     }
 
     shouldHideLabels(d: d3.HierarchyCircularNode<AnyFile>) {
-        return this.calcPixelLength(d.r) <= this.hideLabelsRadius;
+        return this.calcPixelLength(d.r) <= this.s.zoom.hideLabelsR;
     }
 
     onZoom(e: d3.D3ZoomEvent<SVGSVGElement, Connection>) {
