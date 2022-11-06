@@ -1,36 +1,22 @@
 import * as d3 from 'd3';
 import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedConnection,
          NormalizedVisualizationSettings, AddRule, ValueRule } from '../shared';
-import { getExtension, filterFileTree, normalizedJSONStringify, loopIndex } from '../util';
+import { getExtension, filterFileTree, normalizedJSONStringify, loopIndex, OptionalKeys } from '../util';
 import * as rendering from './rendering';
 import { Point, Box, uniqId } from './rendering';
 import _, { isEqual } from "lodash";
 
 type Node = d3.HierarchyCircularNode<AnyFile>;
-/** A connection along with some placement and rendering data. */
-type AnchoredConnection = { 
-    conn: MergedConnection,
-    from: {
-        /** The center of the node or position on the border of the screen this connection logically connects to. */
-        target: Point,
-        /** Radius of the from node. */
-        r?: number,
-        /* Angle from from.target to to.target */
-        theta?: number,
-        /** The point on the circumference (or the border of the screen) where the rendered connection will end. */
-        anchor: Point,
-    },
-    to: {
-        target: Point,
-        r?: number,
-        theta?: number,
-        anchor: Point,
-    },
-    /** An uniq id to the connection */
-    id: string,
-    /** Rendering offset for duplicate connections */
-    dupOffset: number,
+type ConnPath = {id: string, conn: MergedConnection, path: string}
+type ConnEnd = {
+    conn: MergedConnection, end: "from"|"to",
+    target: Point, // center of node or position on border of screen this connection logically connects to
+    r?: number, // radius of the node (if applicable)
+    anchor: Point // The point on the circumference or the border where the rendered connection will end
+    anchorId: string, // a uniq id for the anchor we connected to
+    theta?: number, // Angle from from.target to to.target
 }
+type IncompleteConnEnd = OptionalKeys<ConnEnd, "anchor"|"anchorId">
 
 /**
  * This is the class that renders the actual diagram.
@@ -91,6 +77,10 @@ export default class CBRVWebview {
     zoomWindow: d3.Selection<SVGGElement, unknown, null, undefined>
     fileLayer: d3.Selection<SVGGElement, unknown, null, undefined>
     connectionLayer: d3.Selection<SVGGElement, unknown, null, undefined>
+
+    // Some d3 generation objects
+    // See https://observablehq.com/@d3/spline-editor to compare curves
+    curve = d3.line().curve(d3.curveBasis);
 
     // Some rendering variables
 
@@ -297,7 +287,8 @@ export default class CBRVWebview {
         }
 
         const merged = this.mergeConnections(this.connections);
-        const anchored = this.anchorConnections(merged);
+        const paths = this.calculatePaths(merged);
+
         // If directed == false, we don't need any markers
         let markers = this.settings.directed ? _(merged).map(c => c.color).uniq().value() : []
 
@@ -320,10 +311,8 @@ export default class CBRVWebview {
                 exit => exit.remove(),
             );
 
-        // See https://observablehq.com/@d3/spline-editor to compare curves
-        const curve = d3.line().curve(d3.curveBasis);
         this.connectionLayer.selectAll(".connection")
-            .data(anchored, (conn: any) => conn.id)
+            .data(paths, ({id}: any) => id)
             .join(
                 enter => enter.append("path")
                     .classed("connection", true)
@@ -333,97 +322,7 @@ export default class CBRVWebview {
                     .attr("marker-start", ({conn}) =>
                         this.settings.directed && conn.bidirectional ? `url(#${uniqId(conn.color)})` : null
                     )
-                    .attr("d", ({conn, from, to, dupOffset}) => {
-                        // TODO Account for arrow width if needed
-                        // TODO self loops. How to handle them and spacing?
-                        const dist = rendering.distance(from.anchor, to.anchor);
-                    
-                        if (conn.from?.file != conn.to?.file) {
-                            let controls: Point[] = [];
-            
-                            if (conn.from && conn.to) { // connection from file to file
-                                // calculate control points such that the bezier curve will be perpendicular to the
-                                // circle by extending the line from the center of the circle to the anchor point.
-                                const offset = dist * this.s.conn.controlOffset
-                                const control1 = rendering.extendLine([from.target, from.anchor], offset);
-                                const control2 = rendering.extendLine([to.target, to.anchor], offset);
-                                controls.push(control1, control2);
-                            } else {
-                                // For out-of-screen conns add controls on a straight line. We could leave these out but
-                                // but this makes the arrows line up if we have an offset for duplicate conns
-                                const offset = dist * this.s.conn.outOfScreenControlOffset;
-                                const control1 = rendering.extendLine([from.anchor, to.anchor], -(dist - offset));
-                                const control2 = rendering.extendLine([from.anchor, to.anchor], -offset);
-                                controls.push(control1, control2);
-                            }
-            
-                            if (dupOffset != 0) {
-                                // If we have multiple connections between the same two files, calculate another control
-                                // point based on the index so that the connections don't overlap completely. The
-                                // control point will be a distance from the line between from and to at the midpoint.
-                                const midpoint: Point = rendering.midpoint(from.anchor, to.anchor);
-
-                                // Vector in direction of line between from and to
-                                const vec = [to.anchor[0] - from.anchor[0], to.anchor[1] - from.anchor[1]];
-                                // calculate the perpendicular unit vector (perp vectors have dot product of 0)
-                                let perpVec = rendering.unitVector([1, -vec[0] / vec[1]]);
-            
-                                const dist = this.s.conn.dupConnPadding * dupOffset;
-                                const control: Point = [
-                                    midpoint[0] + perpVec[0] * dist,
-                                    midpoint[1] + perpVec[1] * dist
-                                ]
-            
-                                controls.splice(1, 0, control); // insert in middle.
-                            }
-            
-                            return curve([from.anchor, ...controls, to.anchor])!.toString();
-                        } else { // self loop
-                            // The arc will start at from.anchor, pass point between selfLoopDistance from the edge of
-                            // the file circle, and then end at to.anchor
-
-                            // Calculate the angle between from/to.anchor and the center of the file circle. Different
-                            // than from.theta, which is between two targets (and isn't on self loops anyways).
-                            const fileCenter = from.target; // these are both the same
-                            const [[fromX, fromY], [toX, toY]] = [from.anchor, to.anchor]
-
-                            const fromTheta = Math.atan2(fromY - fileCenter[1], fromX - fileCenter[0]);
-                            const toTheta = Math.atan2(toY - fileCenter[1], toX - fileCenter[0]);
-                            // Calculate the angle between from and to
-                            let middleTheta = (fromTheta + toTheta) / 2
-                            if (Math.abs(fromTheta - toTheta) > Math.PI) { // bisect gets the "larger" angle
-                                middleTheta = middleTheta + Math.PI // need to rotate around 180
-                            }
-
-                            // Calculate the third point on the arc, that will be selfLoopDistance past the edge of the
-                            // file circle on the middle angle.
-                            const scaledDupOffset = dupOffset * this.s.conn.dupConnPadding;
-                            const distFromFileCenter = from.r! + this.s.conn.selfLoopSize + scaledDupOffset;
-                            const farPoint = rendering.polarToRect(middleTheta, distFromFileCenter, fileCenter);
-
-                            // The center of the arc lies on the line between file center and farPoint and the
-                            // perpendicular bisector of the cord betwee from.target and farPoint
-                            const m1 = rendering.slope(fileCenter, farPoint);
-                            const m2 = -1 / rendering.slope(from.anchor, farPoint); // perpendicular slope
-                            const midpoint = rendering.midpoint(from.anchor, farPoint);
-                            const [midX, midY] = midpoint;
-
-                            const arcCenter: Point = [ // solve the two equations for their intersection
-                                (fromX * m1 - fromY - midX * m2 + midY) / (m1 - m2),
-                                (midY * m1 - m2 * (m1 * (midX - fromX) + fromY)) / (m1 - m2),
-                            ]
-
-                            const arcR = rendering.distance(arcCenter, farPoint);
-
-                            // whether the arc is greater than 180 or not. This will be large-arc-flag
-                            const large = dist < 2 * arcR ? 1 : 0;
-                            // sweep-flag will always be 1 (positive angle or clockwise) to go outside of the file
-
-                            // d3 paths take angles, so its actually easier to just make an svg path string directly
-                            // A rx ry x-axis-rotation large-arc-flag sweep-flag x y
-                            return `M ${fromX} ${fromY} A ${arcR},${arcR} 0 ${large} 1 ${toX},${toY}`;
-                        }
-                    }),
+                    .attr("d", ({path}) => path),
                 update => update,
                 exit => exit.remove(),
             );
@@ -499,215 +398,280 @@ export default class CBRVWebview {
             .value()
     }
 
-    /** Create a list of "anchored" with positioning data. */
-    anchorConnections(connections: MergedConnection[]): AnchoredConnection[] {
+    /** Calculate the paths for each connection. */
+    calculatePaths(connections: MergedConnection[]): ConnPath[] {
         const viewbox = this.getViewbox()
 
-        const anchored = connections.map(conn => {
-            const incomplete = {
-                r: undefined as number|undefined, // will fill these below
-                anchor: undefined as Point|undefined,
-            }
-
-            const [from, to] = [conn.from, conn.to]
-                .map(e => e ? this.pathMap.get(e.file)! : undefined)
-                .map((node, i, arr) => {
-                    if (node) {
-                        return {
-                            ...incomplete,
-                            target: [node.x, node.y] as Point,
-                            r: node.r,
-                            theta: undefined as number|undefined, // set below
-                        }
-                    } else {
-                        const other = arr[+!i]! // hack to get other node in the array
-                        return {
-                            ...incomplete,
-                            target: rendering.closestPointOnBorder([other.x, other.y], viewbox),
-                            theta: undefined as number|undefined, // set below
-                        }
-                    }
-                })
-            
-            if (conn.from?.file != conn.to?.file) { // theta is meaningless for self loops
-                from.theta = Math.atan2(to.target[1] - from.target[1], to.target[0] - from.target[0]);
-                // The other angle is just 180 deg around (saves us calculating atan2 again)
-                to.theta = rendering.normalizeAngle(from.theta + Math.PI);
-            }
-
-            /** Return a partially completed AnchoredConnection  */
-            return {
-                conn,
-                from, to,
-                id: undefined as string|undefined,
-                dupOffset: undefined as number|undefined,
-                controls: undefined as Point[]|undefined,
-            }
-        })
-
-        type IncompleteAnchoredConnection = typeof anchored[number];
-        type ConnEnd = {conn: IncompleteAnchoredConnection, end: "from"|"to"}
-
-        // Group connections by each node they connect to. Each connection will show up twice, once for from and to.
-        // Then we will do rendering calculations for each connection to the file and mutate anchored with the results.
-        _(anchored)
-            // split out each "end" of the connections
-            .flatMap<ConnEnd>((conn) => [{conn, end: "from"}, {conn, end: "to"}])
-            .groupBy(({conn, end}) => conn.conn[end]?.file ?? '') // group all ends that connect to each file
-            .forEach((connsToFile, file) => {
-                const node = file ? this.pathMap.get(file)! : undefined;
-
-                if (node) {
-                    // Calculate number of anchor points by using the padding.connAnchorPoints arc length, but snapping to a
-                    // number that is divisible by 4 so we get nice angles.
-                    const numAnchors = Math.max(rendering.snap((2*Math.PI * node.r) / this.s.conn.anchorSpacing, 4), 4);
-                    const deltaTheta = (2*Math.PI) / numAnchors;
-                    let anchorPoints: ConnEnd[][] = _.range(numAnchors).map(i => []);
-
-                    const hasArrow = ({conn, end}: ConnEnd) =>
-                        this.settings.directed && (end == "to" || conn.conn.bidirectional)
-            
-                    // assign to an anchor point and update the actual rendered point. Makes sure that connections going
-                    // opposite directions don't go to the same anchor point.
-                    const anchorConn = (connEnd: ConnEnd) => {
-                        const {conn, end} = connEnd;
-                        const rawTheta = conn[end].theta!; // we know these aren't self loops
-
-                        // Check if connection has an arrow to this file
-                        const connHasArrow = hasArrow(connEnd);
-                        
-                        // Snap to angle, round to index to account for any floating point error
-                        const theta1 = rendering.snapAngle(rawTheta, deltaTheta);
-                        const index1 = Math.round(theta1 / deltaTheta);
-                        const hasArrow1 = anchorPoints[index1].length ? hasArrow(anchorPoints[index1][0]) : undefined;
-
-                        // no conflict on first choice
-                        if (hasArrow1 == undefined || hasArrow1 == connHasArrow) {
-                            anchorPoints[index1].push(connEnd);
+        // split out each "end" of the connections and calculate angles and target coords
+        const ends = _(connections)
+            .flatMap<IncompleteConnEnd>((conn) => {
+                const [from, to] = [conn.from, conn.to]
+                    .map(e => e ? this.pathMap.get(e.file)! : undefined)
+                    .map((node, i, arr) => {
+                        if (node) {
+                            return { target: [node.x, node.y] as Point, r: node.r }
                         } else {
-                            // fallback index if conflict. Assign in to even, and out to odd anchors.
-                            // May be same as index1
-                            const theta2 = rendering.snapAngle(rawTheta, 2 * deltaTheta, connHasArrow ? 0 : deltaTheta);
-                            const index2 = Math.round(theta2 / deltaTheta);
-                            const connEnds2 = anchorPoints[index2];
-                            const hasArrow2 = connEnds2.length ? hasArrow(connEnds2[0]) : undefined;
+                            const other = arr[+!i]! // hack to get other node in the array
+                            return { target: rendering.closestPointOnBorder([other.x, other.y], viewbox) }
+                        }
+                    })
+                
+                let fromTheta: number|undefined
+                let toTheta: number|undefined
+                if (conn.from?.file != conn.to?.file) { // theta is meaningless for self loops
+                    fromTheta = Math.atan2(to.target[1] - from.target[1], to.target[0] - from.target[0]);
+                    // The other angle is just 180 deg around (saves us calculating atan2 again)
+                    toTheta = rendering.normalizeAngle(fromTheta + Math.PI);
+                }
 
-                            // no conflict on second choice
-                            if (hasArrow2 == undefined || hasArrow2 == connHasArrow) {
-                                anchorPoints[index2].push(connEnd);
-                            } else { // conflict on second choice
-                                anchorPoints[index2] = [connEnd];
+                return [
+                    {conn, end: "from", ...from, theta: fromTheta},
+                    {conn, end: "to", ...to, theta: toTheta},
+                ]
+            })
+            .value()
 
-                                for (let connEnd of connEnds2) {
-                                    anchorConn(connEnd); // may need to resolve conflicts recursively
-                                }
-                            }
+        _(ends)
+            // group all ends that connect to each file
+            .groupBy(({conn, end}) => conn[end]?.file ?? '')
+            .forEach(ends => this.anchorEnds(ends)) // anchor ends to actual coords
+
+        return _(ends as ConnEnd[]) // we've completed the ConnEnds now
+            .chunk(2) // combine from/to back together
+            // group by connections between the same two anchor points
+            .groupBy(([from, to]) => JSON.stringify([from.anchorId, to.anchorId]))
+            .flatMap((pairs, key) =>
+                pairs.map(([from, to], i) => ({
+                    conn: from.conn,
+                    id: `${key}:${i}`, // uniq id based on anchor points rather than from/to since that isn't unique
+                    path: this.calculatePath(from, to, pairs.length, i), // calculate paths with control points etc.
+                }))
+            )
+            .value()
+    }
+
+    /**
+     * Pass list of incomplete conn ends that go to the same file, and it will anchor them all.
+     * NOTE: It mutates the ends in ends.
+     */
+    anchorEnds(ends: IncompleteConnEnd[]): void {
+        const {target, r: targetR, conn, end} = ends[0];
+        const file = conn[end]?.file ?? '';
+
+        if (targetR) { // This is an end to a normal file
+            // Calculate number of anchor points by using the padding.connAnchorPoints arc length, but snapping
+            // to a number that is divisible by 4 so we get nice angles.
+            const numAnchors = Math.max(rendering.snap((2*Math.PI*targetR) / this.s.conn.anchorSpacing, 4), 4);
+            const deltaTheta = (2*Math.PI) / numAnchors;
+            let anchorPoints: IncompleteConnEnd[][] = _.range(numAnchors).map(i => []);
+
+            const hasArrow = ({conn, end}: IncompleteConnEnd) =>
+                this.settings.directed && (end == "to" || conn.bidirectional)
+    
+            // assign to an anchor point and update the actual rendered point. Makes sure that connections going
+            // opposite directions don't go to the same anchor point.
+            const anchorConn = (connEnd: IncompleteConnEnd) => {
+                const rawTheta = connEnd.theta!; // we know these aren't self loops
+
+                // Check if connection has an arrow to this file
+                const endHasArrow = hasArrow(connEnd);
+                
+                // Snap to angle, round to index to account for any floating point error
+                const theta1 = rendering.snapAngle(rawTheta, deltaTheta);
+                const index1 = Math.round(theta1 / deltaTheta);
+                const hasArrow1 = anchorPoints[index1].length ? hasArrow(anchorPoints[index1][0]) : undefined;
+
+                // no conflict on first choice
+                if (hasArrow1 == undefined || hasArrow1 == endHasArrow) {
+                    anchorPoints[index1].push(connEnd);
+                } else {
+                    // fallback index if conflict. Assign in to even, and out to odd anchors.
+                    // May be same as index1
+                    const theta2 = rendering.snapAngle(rawTheta, 2 * deltaTheta, endHasArrow ? 0 : deltaTheta);
+                    const index2 = Math.round(theta2 / deltaTheta);
+                    const connEnds2 = anchorPoints[index2];
+                    const hasArrow2 = connEnds2.length ? hasArrow(connEnds2[0]) : undefined;
+
+                    // no conflict on second choice
+                    if (hasArrow2 == undefined || hasArrow2 == endHasArrow) {
+                        anchorPoints[index2].push(connEnd);
+                    } else { // conflict on second choice
+                        anchorPoints[index2] = [connEnd];
+
+                        for (let connEnd of connEnds2) {
+                            anchorConn(connEnd); // may need to resolve conflicts recursively
                         }
                     }
-
-                    const [selfLoops, regular] = _(connsToFile)
-                        .partition(({conn}) => conn.conn.from?.file == conn.conn.to?.file)
-                        .value()
-
-                    regular.forEach(connEnd => anchorConn(connEnd))
-
-                    _(selfLoops)
-                        .chunk(2) // group and partition keep order, so we can just chunk by 2 to group self loop ends
-                        .forEach(([from, to]) => {
-                            const len = anchorPoints.length;
-                            
-                            // try to find two consecutive empty slots
-                            let toAnchor = anchorPoints.findIndex(
-                                (a, i, arr) => arr[loopIndex(i - 1, len)].length == 0 && a.length == 0
-                            )
-                            
-                            // second best, find one empty even (to avoid arrow conflicts) slot for "to"
-                            if (toAnchor < 0) {
-                                toAnchor = anchorPoints.findIndex((a, i) => i % 2 == 0 && a.length == 0);
-                            }
-
-                            // third best, even slot (to avoid arrow conflicts) with fewest self loops already
-                            if (toAnchor < 0) {
-                                const min = _(anchorPoints)
-                                    .filter((p, i) => i % 2 == 0)
-                                    .minBy(anchor => // count number of self loops
-                                        _(anchor).sumBy(({conn}) => +(conn.conn.from?.file == conn.conn.to?.file))
-                                    )!
-                                toAnchor = anchorPoints.findIndex(v => v == min)
-                            }
-
-                            const fromAnchor = loopIndex(toAnchor - 1, len);
-
-                            anchorPoints[fromAnchor].push(from)
-                            anchorPoints[toAnchor].push(to)
-                        })
-
-                    // assign actual targets
-                    anchorPoints.forEach((connEnds, i) => {
-                        if (connEnds.length == 0) return
-
-                        const theta = deltaTheta * i;
-                        const even = (connEnds.length % 2 == 0)
-                        const selfLoop = connEnds[0].conn.conn.from?.file == connEnds[0].conn.conn.to?.file
-
-                        const startControl = selfLoop ? 0 : -Math.floor(connEnds.length / 2)
-                        // Set a index offset. We'll use this to make sure connections between the same files don't
-                        // overlap completely, and to make uniq id for the connection.
-                        // Index will be symmetrically distributed around 0 so control points are symmetrical, e.g.
-                        // 3 conns -> -1, 0, 1
-                        // 4 conns -> -2, -1, 1, 2 (skipping 0 to make it symmetrical)
-                        connEnds.forEach(({conn, end}, iInAnchor) => {
-                            // NOTE: Mutating conn, which is also in the anchored array
-                            conn[end].anchor = rendering.polarToRect(theta, node.r, [node.x, node.y]);
-                            conn.dupOffset = startControl + iInAnchor;
-                            if (even && !selfLoop && conn.dupOffset >= 0) {
-                                conn.dupOffset += 1; // offset by 1 to skip 0 to make symmetrical
-                            }
-                        })
-                    })
-                } else { // out-of-boundary
-                    connsToFile.forEach(({conn, end}) => {
-                        // anchor is just the same as target, which is the closestPointOnBorder
-                        // NOTE: Mutating conn, which is also in the anchored array
-                        conn[end].anchor = [...conn[end].target];
-                    })
-
-                    _(connsToFile) // TODO duplicate code
-                        // group by pairs and direction (if directed).
-                        .groupBy(({conn}) => this.connKey(conn.conn, {lines: false, ordered: this.settings.directed}))
-                        .forEach(connsBetweenFiles => {
-                            const even = (connsBetweenFiles.length % 2 == 0)
-                            const startControl = -Math.floor(connsBetweenFiles.length / 2)
-                            // Set a index offset. We'll use this to make sure connections between the same files don't
-                            // overlap completely, and to make uniq id for the connection.
-                            // Index will be symmetrically distributed around 0 so control points are symmetrical, e.g.
-                            // 3 conns -> -1, 0, 1
-                            // 4 conns -> -2, -1, 1, 2 (skipping 0 to make it symmetrical)
-                            connsBetweenFiles.forEach(({conn, end}, i) => {
-                                // NOTE: were mutating the conn object, which is also in the anchored array.
-                                conn.dupOffset = startControl + i;
-                                if (even && conn.dupOffset >= 0) {
-                                    conn.dupOffset += 1; // offset by 1 to skip 0 to make symmetrical
-                                }
-                            });
-                        })
                 }
+            }
+
+            // should be called after all regular files are placed
+            const anchorSelfLoop = (from: IncompleteConnEnd, to: IncompleteConnEnd) => {
+                const len = anchorPoints.length;
+                    
+                // try to find two consecutive empty slots
+                let toAnchor = anchorPoints.findIndex(
+                    (a, i, arr) => arr[loopIndex(i - 1, len)].length == 0 && a.length == 0
+                )
                 
+                // second best, find one empty even (to avoid arrow conflicts) slot for "to"
+                if (toAnchor < 0) {
+                    toAnchor = anchorPoints.findIndex((a, i) => i % 2 == 0 && a.length == 0);
+                }
 
-                _(connsToFile)
-                    // group by pairs and direction (if directed).
-                    .groupBy(({conn}) => this.connKey(conn.conn, {lines: false, ordered: this.settings.directed}))
-                    .forEach(connsBetweenFiles => {
-                        if (connsBetweenFiles[0].conn.id === undefined) {
-                            connsBetweenFiles.forEach(({conn}, i) => {
-                                // NOTE: were mutating the conn object, which is also in the anchored array.
-                                conn.id = `${this.connKey(conn.conn)}:${i}`
-                            });
-                        }
-                    });
+                // third best, even slot (to avoid arrow conflicts) with fewest self loops already
+                if (toAnchor < 0) {
+                    const min = _(anchorPoints)
+                        .filter((p, i) => i % 2 == 0)
+                        .minBy(anchor => // count number of self loops
+                            _(anchor).sumBy(({conn}) => +(conn.from?.file == conn.to?.file))
+                        )!
+                    toAnchor = anchorPoints.findIndex(v => v == min)
+                }
+
+                const fromAnchor = loopIndex(toAnchor - 1, len);
+
+                anchorPoints[fromAnchor].push(from)
+                anchorPoints[toAnchor].push(to)
+            }
+
+            const [selfLoops, regular] = _(ends)
+                .partition(({conn}) => conn.from?.file == conn.to?.file)
+                .value()
+
+            regular.forEach(connEnd => anchorConn(connEnd))
+
+            // group and partition keep order, so we can just chunk to combine ends back together
+            _(selfLoops).chunk(2).forEach(([from, to]) => anchorSelfLoop(from, to))
+
+            // assign actual targets
+            anchorPoints.forEach((ends, anchorI) => {
+                ends.forEach(end => {
+                    // NOTE: Mutating end
+                    end.anchor = rendering.polarToRect(deltaTheta * anchorI, targetR, target);
+                    end.anchorId = JSON.stringify([file, anchorI]);
+                })
             })
+        } else { // out-of-screen connection
+            ends.forEach(end => {
+                // NOTE: Mutating end
+                end.anchor = end.target; // anchor is just the same as target, which is closestPointOnBorder
+                // use the file of the end that is connected to a real file as the anchorId
+                end.anchorId = JSON.stringify(["", end.conn[end.end == "from" ? "to" : "from"]!.file]);
+            })
+        }
+    }
 
-        return anchored as AnchoredConnection[]; // we've filled everything out.
+    calculatePath(from: ConnEnd, to: ConnEnd, numDups: number, index: number): string {
+        const conn = from.conn; // from/to should be same conn
+
+        if (conn.from?.file != conn.to?.file) { // not a self loop
+            return this.calculateRegularPath(from, to, numDups, index);
+        } else { // self loop
+            return this.calculateSelfLoopPath(from, to, numDups, index);
+        }
+    }
+
+    calculateRegularPath(from: ConnEnd, to: ConnEnd, numDups: number, index: number): string {
+        const conn = from.conn; // from/to should be same conn
+        const dist = rendering.distance(from.anchor, to.anchor);
+        const even = (numDups % 2 == 0)
+
+        let controls: Point[] = [];
+
+        if (conn.from && conn.to) { // connection from file to file
+            // calculate control points such that the bezier curve will be perpendicular to the
+            // circle by extending the line from the center of the circle to the anchor point.
+            const offset = dist * this.s.conn.controlOffset
+            const control1 = rendering.extendLine([from.target, from.anchor], offset);
+            const control2 = rendering.extendLine([to.target, to.anchor], offset);
+            controls.push(control1, control2);
+        } else {
+            // For out-of-screen conns add controls on a straight line. We could leave these out but
+            // but this makes the arrows line up if we have an offset for duplicate conns
+            const offset = dist * this.s.conn.outOfScreenControlOffset;
+            const control1 = rendering.extendLine([from.anchor, to.anchor], -(dist - offset));
+            const control2 = rendering.extendLine([from.anchor, to.anchor], -offset);
+            controls.push(control1, control2);
+        }
+
+        // Set a dupOffset. We'll use this to make sure connections between the same files don't overlap completely,
+        // dupOffset will be symmetrically distributed around 0 so control points are symmetrical, e.g.
+        // 3 conns -> -1, 0, 1
+        // 4 conns -> -2, -1, 1, 2 (skipping 0 to make it symmetrical)
+        let dupOffset = -Math.floor(numDups / 2) + index
+        if (even && dupOffset >= 0) {
+            dupOffset += 1;
+        }
+
+        if (dupOffset != 0) {
+            // If we have multiple connections between the same two files, calculate another control
+            // point based on the index so that the connections don't overlap completely. The
+            // control point will be a distance from the line between from and to at the midpoint.
+            const midpoint: Point = rendering.midpoint(from.anchor, to.anchor);
+
+            // Vector in direction of line between from and to
+            const vec = [to.anchor[0] - from.anchor[0], to.anchor[1] - from.anchor[1]];
+            // calculate the perpendicular unit vector (perp vectors have dot product of 0)
+            let perpVec = rendering.unitVector([1, -vec[0] / vec[1]]);
+
+            const dist = this.s.conn.dupConnPadding * dupOffset;
+            const control: Point = [
+                midpoint[0] + perpVec[0] * dist,
+                midpoint[1] + perpVec[1] * dist
+            ]
+
+            controls.splice(1, 0, control); // insert in middle.
+        }
+
+        return this.curve([from.anchor, ...controls, to.anchor])!.toString();
+    }
+
+    calculateSelfLoopPath(from: ConnEnd, to: ConnEnd, numDups: number, index: number): string {
+        const dist = rendering.distance(from.anchor, to.anchor);
+        // The arc will start at from.anchor, pass point between selfLoopDistance from the edge of
+        // the file circle, and then end at to.anchor
+
+        // Calculate the angle between from/to.anchor and the center of the file circle. Different
+        // than from.theta, which is between two targets (and isn't on self loops anyways).
+        const fileCenter = from.target; // these are both the same
+        const [[fromX, fromY], [toX, toY]] = [from.anchor, to.anchor]
+
+        const fromTheta = Math.atan2(fromY - fileCenter[1], fromX - fileCenter[0]);
+        const toTheta = Math.atan2(toY - fileCenter[1], toX - fileCenter[0]);
+        // Calculate the angle between from and to
+        let middleTheta = (fromTheta + toTheta) / 2
+        if (Math.abs(fromTheta - toTheta) > Math.PI) { // bisect gets the "larger" angle
+            middleTheta = middleTheta + Math.PI // need to rotate around 180
+        }
+
+        // Calculate the third point on the arc, that will be selfLoopDistance past the edge of the
+        // file circle on the middle angle.
+        const scaledDupOffset = index * this.s.conn.dupConnPadding;
+        const distFromFileCenter = from.r! + this.s.conn.selfLoopSize + scaledDupOffset;
+        const farPoint = rendering.polarToRect(middleTheta, distFromFileCenter, fileCenter);
+
+        // The center of the arc lies on the line between file center and farPoint and the
+        // perpendicular bisector of the cord betwee from.target and farPoint
+        const m1 = rendering.slope(fileCenter, farPoint);
+        const m2 = -1 / rendering.slope(from.anchor, farPoint); // perpendicular slope
+        const midpoint = rendering.midpoint(from.anchor, farPoint);
+        const [midX, midY] = midpoint;
+
+        const arcCenter: Point = [ // solve the two equations for their intersection
+            (fromX * m1 - fromY - midX * m2 + midY) / (m1 - m2),
+            (midY * m1 - m2 * (m1 * (midX - fromX) + fromY)) / (m1 - m2),
+        ]
+
+        const arcR = rendering.distance(arcCenter, farPoint);
+
+        // whether the arc is greater than 180 or not. This will be large-arc-flag
+        const large = dist < 2 * arcR ? 1 : 0;
+        // sweep-flag will always be 1 (positive angle or clockwise) to go outside of the file
+
+        // d3 paths take angles, so its actually easier to just make an svg path string directly
+        // A rx ry x-axis-rotation large-arc-flag sweep-flag x y
+        return `M ${fromX} ${fromY} A ${arcR},${arcR} 0 ${large} 1 ${toX},${toY}`;
     }
 
     // TODO should probably do this in Visualization

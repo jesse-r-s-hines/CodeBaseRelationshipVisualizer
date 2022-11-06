@@ -37,6 +37,9 @@ export function normalizedJSONStringify(val: any) {
  * Converts i into a number in the range [0, len) such that len + 1 = 0 and -1 = len
  * Can be used to convert a number into a valid index in an array with circular semantics
  */
- export function loopIndex(i: number, len: number): number {
+export function loopIndex(i: number, len: number): number {
     return (i < 0 ? len : 0) + i % len;
 }
+
+/** Makes a set of keys on type optional */
+export type OptionalKeys<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>
