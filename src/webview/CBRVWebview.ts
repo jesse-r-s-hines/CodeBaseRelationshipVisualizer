@@ -521,8 +521,6 @@ export default class CBRVWebview {
 
                         // no conflict on first choice
                         if (hasArrow1 == undefined || hasArrow1 == connHasArrow) {
-                            // NOTE: Mutating conn, which is also in the anchored array
-                            conn[end].anchor = rendering.polarToRect(theta1, node.r, [node.x, node.y]);
                             anchorPoints[index1].push(connEnd);
                         } else {
                             // fallback index if conflict. Assign in to even, and out to odd anchors.
