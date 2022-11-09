@@ -26,7 +26,7 @@ export class Visualization {
             file: "ignore",
             line: "ignore",
             direction: "ignore",
-            width: {rule: "add", max: 10},
+            width: {rule: "add", max: 4},
             color: "mostCommon",
         },
     };
