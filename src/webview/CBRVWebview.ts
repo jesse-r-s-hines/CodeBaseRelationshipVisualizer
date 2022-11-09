@@ -4,6 +4,7 @@ import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedC
 import { getExtension, filterFileTree, normalizedJSONStringify, loopIndex, OptionalKeys } from '../util';
 import * as rendering from './rendering';
 import { Point, Box, uniqId } from './rendering';
+import { mergeByRules } from './merging';
 import _, { isEqual } from "lodash";
 
 type Node = d3.HierarchyCircularNode<AnyFile>;
@@ -89,16 +90,6 @@ export default class CBRVWebview {
     transform: d3.ZoomTransform = new d3.ZoomTransform(1, 0, 0);
     /** Maps file paths to their rendered circle (or first visible circle if they are hidden) */
     pathMap: Map<string, Node> = new Map()
-
-    static mergers: Record<string, (items: any[], rule: any) => any> = {
-        least: items => _(items).min(),
-        greatest: items => _(items).max(),
-        // find the most/least common item. items is gauranteed to be non-empty
-        leastCommon: items => _(items).countBy().toPairs().minBy(([item, count]) => count)![0],
-        mostCommon: items => _(items).countBy().toPairs().maxBy(([item, count]) => count)![0],
-        add: (items, rule: AddRule) => Math.min(_(items).sum(), rule.max),
-        value: (items, rule: ValueRule) => items.length <= 1 ? items[0] : rule.value,
-    }
 
     /** Pass the selector for the canvas svg */
     constructor(diagram: string, codebase: Directory, settings: NormalizedVisualizationSettings, connections: Connection[]) {
@@ -334,68 +325,57 @@ export default class CBRVWebview {
      */
     mergeConnections(connections: Connection[]): MergedConnection[] {
         // Each keyFunc will split up connections in to smaller groups
-        const rules = this.normalizedMergeRules()
-
-        let groupKeyFuncs: ((c: NormalizedConnection, raised: NormalizedConnection, index: number) => any)[] = []
-        if (rules) {
-            // top level group is the from/to after being raised to the first visible files/folders
-            groupKeyFuncs.push((c, raised) => this.connKey(raised, {lines: false, ordered: false}))
-
-            if (this.settings.directed && rules.direction?.rule == "same") {
-                groupKeyFuncs.push(c => (c.from?.file ?? '') <= (c.to?.file ?? '')) // split by order
-            }
-            if (rules.file?.rule == "same") {
-                groupKeyFuncs.push(c => this.connKey(c, {lines: rules.line?.rule == "same", ordered: false}))
-            }
-
-            groupKeyFuncs.push(
-                ..._(rules)
-                    .omit(['file', 'line', 'direction']) // these were handled already
-                    .pickBy(rule => rule?.rule == "same")
-                    .map((rule, prop) => ((c: Connection) => c[prop]))
-                    .value()
+        const raised = _(connections).map((conn) => {
+            const normConn = this.normalizeConn(conn)
+            // TODO handle missing files
+            const [from, to] = [normConn.from, normConn.to].map(
+                f => f ? this.filePath(this.pathMap.get(f.file)!) : undefined
             )
-        } else {
-            groupKeyFuncs.push((c, r, index) => index) // hack to not group anything
-        }
+            const raised = this.normalizeConn({ from, to })
+            return {conn: normConn, raised}
+        })
 
-        return _(connections)
-            .map((conn, index) => {
-                const normConn = this.normalizeConn(conn)
-                // TODO handle missing files
-                const [from, to] = [normConn.from, normConn.to].map(
-                    f => f ? this.filePath(this.pathMap.get(f.file)!) : undefined
-                )
-                const raised = this.normalizeConn({ from, to })
-                return {conn: normConn, raised, index}
-            })
-            .groupBy(({conn, raised, index}) =>
-                normalizedJSONStringify(groupKeyFuncs.map(func => func(conn, raised, index)))
-            )
-            .values()
-            .map<MergedConnection>((pairs, key) => {
-                const raised = pairs[0].raised;
-                const bidirectional = _(pairs).some(pair => !isEqual(pair.raised, raised)) // any a different direction
-                const connections = pairs.map(pair => pair.conn)
+        if (this.settings.mergeRules) {
+            return raised
+                // top level is from/to after being raised to the first visible files/folders, regardless of merging
+                .groupBy(({raised}) => this.connKey(raised, {lines: false, ordered: false}))
+                .flatMap((pairs) => {
+                    const obj = pairs.map(({conn, raised}) => ({
+                        ...this.settings.connectionDefaults,
+                        ...conn,
+                        // special props for the special merge rules
+                        file: this.connKey(conn, {lines: false, ordered: false}),
+                        line: this.connKey(conn, {lines: true, ordered: false}),
+                        direction: (raised.from?.file ?? '') <= (raised.to?.file ?? ''),
+                        // We'll group these into arrays for use later
+                        from: raised.from, to: raised.to, // override conn.from/to with raised
+                        connections: conn,
+                    }))
 
-                // use greatest to just get the only entry if merging is off
-                const width = CBRVWebview.mergers[rules ? rules.width!.rule : "greatest"](
-                    connections.map(conn => conn.width ?? this.settings.connectionDefaults.width),
-                    rules ? rules.width! : null,
-                )
-
-                const color = CBRVWebview.mergers[rules ? rules.color!.rule : "greatest"](
-                    connections.map(conn => conn.color ?? this.settings.connectionDefaults.color),
-                    rules ? rules.color! : null,
-                )
-
-                return {
+                    return mergeByRules(obj, {
+                        ...this.settings.mergeRules,
+                        from: "group", to: "group", connections: "group",
+                    })
+                })
+                .map<MergedConnection>(obj => {
+                    return {
+                        ..._.omit(obj, ["file", "line", "direction"]),
+                        from: obj.from[0], to: obj.to[0],
+                        bidirectional: _(obj.from).some(from => isEqual(from, obj.to[0])),
+                    } as MergedConnection
+                })
+                .value()
+        } else { // no merging
+            return raised
+                .map(({conn, raised}) => ({
+                    ...this.settings.connectionDefaults,
+                    ...conn,
                     ...raised,
-                    width, color, bidirectional,
-                    connections,
-                }
-            })
-            .value()
+                    bidirectional: false,
+                    connections: [conn],
+                }))
+                .value()
+        }
     }
 
     /** Calculate the paths for each connection. */
@@ -672,15 +652,6 @@ export default class CBRVWebview {
         // d3 paths take angles, so its actually easier to just make an svg path string directly
         // A rx ry x-axis-rotation large-arc-flag sweep-flag x y
         return `M ${fromX} ${fromY} A ${arcR},${arcR} 0 ${large} 1 ${toX},${toY}`;
-    }
-
-    // TODO should probably do this in Visualization
-    normalizedMergeRules() {
-        if (this.settings.mergeRules) {
-            return _(this.settings.mergeRules).mapValues(r => (typeof r == "string" ? {rule: r} : r)).value()
-        } else {
-            return false
-        }
     }
 
     /** Returns a function used to compute color from file extension */

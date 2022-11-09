@@ -102,6 +102,8 @@ export interface VisualizationSettings {
      * Rules for how to merge connections when multiple connections go between the same files or folders. If omitted or
      * false connections will never be merged. Setting to true is the same as using all the default merge options.
      * 
+     * TODO update these docs
+     * 
      * Pass an object where each key is a custom property in your `Connection`s and each value is one of:
      * - `"same"`: Only merge connections with equal values for this prop.
      * - `"ignore"`: Ignore this prop when merging connections, i.e. merged connections can have different values for
@@ -173,6 +175,8 @@ export interface MergedConnection {
     * Will be sorted using the order function if one is given.
     */
     connections: Connection[]
+
+    [key: string]: any
   }
 
 // Internal types
@@ -197,14 +201,14 @@ export type MergeRules = {
     [key: string]: SameRule | IgnoreRule
 }
 
-interface MergeRule<Name extends string> {rule: Name}
-type SimpleMergeRule<Name extends string> = Name | MergeRule<Name>
-
-export type SameRule = SimpleMergeRule<'same'>;
-export type IgnoreRule = SimpleMergeRule<'ignore'>;
-export type LeastRule = SimpleMergeRule<'least'>;
-export type GreatestRule = SimpleMergeRule<'greatest'>;
-export type LeastCommonRule = SimpleMergeRule<'leastCommon'>;
-export type MostCommonRule = SimpleMergeRule<'mostCommon'>;
-export interface AddRule extends MergeRule<"add"> {max: number}
-export interface ValueRule extends MergeRule<"value"> {value: any}
+// TODO duplicate types
+export type MergeRule<Name extends string = string> = {rule: Name} | string
+export type SameRule = MergeRule<'same'>;
+export type IgnoreRule = MergeRule<'ignore'>;
+export type LeastRule = MergeRule<'least'>;
+export type GreatestRule = MergeRule<'greatest'>;
+export type LeastCommonRule = MergeRule<'leastCommon'>;
+export type MostCommonRule = MergeRule<'mostCommon'>;
+export type GroupRule = MergeRule<'group'>;
+export interface AddRule {rule: "add", max: number}
+export interface ValueRule {rule: "value", value: any}
