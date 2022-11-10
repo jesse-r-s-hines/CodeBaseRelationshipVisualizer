@@ -2,8 +2,9 @@ import * as d3 from 'd3';
 import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedConnection,
          NormalizedVisualizationSettings, AddRule, ValueRule } from '../shared';
 import { getExtension, filterFileTree, normalizedJSONStringify, loopIndex, OptionalKeys } from '../util';
-import * as rendering from './rendering';
-import { Point, Box, uniqId } from './rendering';
+import * as geo from './geometry';
+import { Point, Box } from './geometry';
+import { uniqId, ellipsisText } from './rendering';
 import { mergeByRules } from './merging';
 import _, { isEqual } from "lodash";
 
@@ -120,7 +121,7 @@ export default class CBRVWebview {
         zoom(this.diagram as any);
         d3.select(window).on('resize', (e) => this.onResize(e));
 
-        [this.width, this.height] = rendering.getRect(this.diagram.node()!);
+        [this.width, this.height] = geo.getRect(this.diagram.node()!);
 
         this.update(this.codebase, this.settings, this.connections);
     }
@@ -246,11 +247,11 @@ export default class CBRVWebview {
 
         files.select<SVGTSpanElement>(".label")
             .text(d => d.data.name)
-            .each((d, i, nodes) => rendering.ellipsisText(nodes[i], d.r * 2, d.r * 2, this.s.label.padding));
+            .each((d, i, nodes) => ellipsisText(nodes[i], d.r * 2, d.r * 2, this.s.label.padding));
 
         const directoryLabels = directories.select<SVGTextPathElement>(".label")
             .text(d => d.data.name)
-            .each((d, i, nodes) => rendering.ellipsisText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
+            .each((d, i, nodes) => ellipsisText(nodes[i], Math.PI * d.r /* 1/2 circumference */));
 
         // Set the label background to the length of the labels
         directories.select<SVGTextElement>(".label-background")
@@ -392,7 +393,7 @@ export default class CBRVWebview {
                             return { target: [node.x, node.y] as Point, r: node.r }
                         } else {
                             const other = arr[+!i]! // hack to get other node in the array
-                            return { target: rendering.closestPointOnBorder([other.x, other.y], viewbox) }
+                            return { target: geo.closestPointOnBorder([other.x, other.y], viewbox) }
                         }
                     })
                 
@@ -401,7 +402,7 @@ export default class CBRVWebview {
                 if (conn.from?.file != conn.to?.file) { // theta is meaningless for self loops
                     fromTheta = Math.atan2(to.target[1] - from.target[1], to.target[0] - from.target[0]);
                     // The other angle is just 180 deg around (saves us calculating atan2 again)
-                    toTheta = rendering.normalizeAngle(fromTheta + Math.PI);
+                    toTheta = geo.normalizeAngle(fromTheta + Math.PI);
                 }
 
                 return [
@@ -441,7 +442,7 @@ export default class CBRVWebview {
         if (targetR) { // This is an end to a normal file
             // Calculate number of anchor points by using the padding.connAnchorPoints arc length, but snapping
             // to a number that is divisible by 4 so we get nice angles.
-            const numAnchors = Math.max(rendering.snap((2*Math.PI*targetR) / this.s.conn.anchorSpacing, 4), 4);
+            const numAnchors = Math.max(geo.snap((2*Math.PI*targetR) / this.s.conn.anchorSpacing, 4), 4);
             const deltaTheta = (2*Math.PI) / numAnchors;
             let anchorPoints: IncompleteConnEnd[][] = _.range(numAnchors).map(i => []);
 
@@ -457,7 +458,7 @@ export default class CBRVWebview {
                 const endHasArrow = hasArrow(connEnd);
                 
                 // Snap to angle, round to index to account for any floating point error
-                const theta1 = rendering.snapAngle(rawTheta, deltaTheta);
+                const theta1 = geo.snapAngle(rawTheta, deltaTheta);
                 const index1 = Math.round(theta1 / deltaTheta);
                 const hasArrow1 = anchorPoints[index1].length ? hasArrow(anchorPoints[index1][0]) : undefined;
 
@@ -467,7 +468,7 @@ export default class CBRVWebview {
                 } else {
                     // fallback index if conflict. Assign in to even, and out to odd anchors.
                     // May be same as index1
-                    const theta2 = rendering.snapAngle(rawTheta, 2 * deltaTheta, endHasArrow ? 0 : deltaTheta);
+                    const theta2 = geo.snapAngle(rawTheta, 2 * deltaTheta, endHasArrow ? 0 : deltaTheta);
                     const index2 = Math.round(theta2 / deltaTheta);
                     const connEnds2 = anchorPoints[index2];
                     const hasArrow2 = connEnds2.length ? hasArrow(connEnds2[0]) : undefined;
@@ -528,7 +529,7 @@ export default class CBRVWebview {
             anchorPoints.forEach((ends, anchorI) => {
                 ends.forEach(end => {
                     // NOTE: Mutating end
-                    end.anchor = rendering.polarToRect(deltaTheta * anchorI, targetR, target);
+                    end.anchor = geo.polarToRect(deltaTheta * anchorI, targetR, target);
                     end.anchorId = JSON.stringify([file, anchorI]);
                 })
             })
@@ -554,7 +555,7 @@ export default class CBRVWebview {
 
     calculateRegularPath(from: ConnEnd, to: ConnEnd, numDups: number, index: number): string {
         const conn = from.conn; // from/to should be same conn
-        const dist = rendering.distance(from.anchor, to.anchor);
+        const dist = geo.distance(from.anchor, to.anchor);
         const even = (numDups % 2 == 0)
 
         let controls: Point[] = [];
@@ -563,15 +564,15 @@ export default class CBRVWebview {
             // calculate control points such that the bezier curve will be perpendicular to the
             // circle by extending the line from the center of the circle to the anchor point.
             const offset = dist * this.s.conn.controlOffset
-            const control1 = rendering.extendLine([from.target, from.anchor], offset);
-            const control2 = rendering.extendLine([to.target, to.anchor], offset);
+            const control1 = geo.extendLine([from.target, from.anchor], offset);
+            const control2 = geo.extendLine([to.target, to.anchor], offset);
             controls.push(control1, control2);
         } else {
             // For out-of-screen conns add controls on a straight line. We could leave these out but
             // but this makes the arrows line up if we have an offset for duplicate conns
             const offset = dist * this.s.conn.outOfScreenControlOffset;
-            const control1 = rendering.extendLine([from.anchor, to.anchor], -(dist - offset));
-            const control2 = rendering.extendLine([from.anchor, to.anchor], -offset);
+            const control1 = geo.extendLine([from.anchor, to.anchor], -(dist - offset));
+            const control2 = geo.extendLine([from.anchor, to.anchor], -offset);
             controls.push(control1, control2);
         }
 
@@ -588,12 +589,12 @@ export default class CBRVWebview {
             // If we have multiple connections between the same two files, calculate another control
             // point based on the index so that the connections don't overlap completely. The
             // control point will be a distance from the line between from and to at the midpoint.
-            const midpoint: Point = rendering.midpoint(from.anchor, to.anchor);
+            const midpoint: Point = geo.midpoint(from.anchor, to.anchor);
 
             // Vector in direction of line between from and to
             const vec = [to.anchor[0] - from.anchor[0], to.anchor[1] - from.anchor[1]];
             // calculate the perpendicular unit vector (perp vectors have dot product of 0)
-            let perpVec = rendering.unitVector([1, -vec[0] / vec[1]]);
+            let perpVec = geo.unitVector([1, -vec[0] / vec[1]]);
 
             const dist = this.s.conn.dupConnPadding * dupOffset;
             const control: Point = [
@@ -608,7 +609,7 @@ export default class CBRVWebview {
     }
 
     calculateSelfLoopPath(from: ConnEnd, to: ConnEnd, numDups: number, index: number): string {
-        const dist = rendering.distance(from.anchor, to.anchor);
+        const dist = geo.distance(from.anchor, to.anchor);
         // The arc will start at from.anchor, pass point between selfLoopDistance from the edge of
         // the file circle, and then end at to.anchor
 
@@ -629,13 +630,13 @@ export default class CBRVWebview {
         // file circle on the middle angle.
         const scaledDupOffset = index * this.s.conn.dupConnPadding;
         const distFromFileCenter = from.r! + this.s.conn.selfLoopSize + scaledDupOffset;
-        const farPoint = rendering.polarToRect(middleTheta, distFromFileCenter, fileCenter);
+        const farPoint = geo.polarToRect(middleTheta, distFromFileCenter, fileCenter);
 
         // The center of the arc lies on the line between file center and farPoint and the
         // perpendicular bisector of the cord betwee from.target and farPoint
-        const m1 = rendering.slope(fileCenter, farPoint);
-        const m2 = -1 / rendering.slope(from.anchor, farPoint); // perpendicular slope
-        const midpoint = rendering.midpoint(from.anchor, farPoint);
+        const m1 = geo.slope(fileCenter, farPoint);
+        const m2 = -1 / geo.slope(from.anchor, farPoint); // perpendicular slope
+        const midpoint = geo.midpoint(from.anchor, farPoint);
         const [midX, midY] = midpoint;
 
         const arcCenter: Point = [ // solve the two equations for their intersection
@@ -643,7 +644,7 @@ export default class CBRVWebview {
             (midY * m1 - m2 * (m1 * (midX - fromX) + fromY)) / (m1 - m2),
         ]
 
-        const arcR = rendering.distance(arcCenter, farPoint);
+        const arcR = geo.distance(arcCenter, farPoint);
 
         // whether the arc is greater than 180 or not. This will be large-arc-flag
         const large = dist < 2 * arcR ? 1 : 0;
@@ -714,7 +715,7 @@ export default class CBRVWebview {
     }
 
     onResize(e: Event) {
-        [this.width, this.height] = rendering.getRect(this.diagram.node()!);
+        [this.width, this.height] = geo.getRect(this.diagram.node()!);
         this.throttledUpdate();
     }
 }
