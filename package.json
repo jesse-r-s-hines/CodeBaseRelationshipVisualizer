@@ -36,7 +36,10 @@
         "watch": "npm-run-all -p watch:*",
         "watch:extension": "tsc -w -p ./src",
         "watch:webview": "webpack --env dev --watch",
-        "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'test/**/*.test.ts'"
+        "test": "npm-run-all test:*",
+        "test:unit": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'test/**/*.test.ts' --exclude test/integration/**/*",
+        "test:integration": "npm run pretest && node ./dist/test/test/integration/run.js",
+        "pretest": "tsc --project test/integration"
     },
     "devDependencies": {
         "@babel/core": "^7.20.2",
@@ -45,6 +48,7 @@
         "@types/chai": "^4.3.4",
         "@types/d3": "^7.4.0",
         "@types/d3-selection-multi": "^1.0.10",
+        "@types/glob": "^8.0.0",
         "@types/lodash": "^4.14.184",
         "@types/mocha": "^10.0.0",
         "@types/node": "^12.12.0",
@@ -54,6 +58,7 @@
         "@types/webpack": "^5.28.0",
         "@typescript-eslint/eslint-plugin": "^4.16.0",
         "@typescript-eslint/parser": "^4.16.0",
+        "@vscode/test-electron": "^2.2.0",
         "chai": "^4.3.7",
         "css-loader": "^6.7.1",
         "eslint": "^7.21.0",
@@ -70,6 +75,7 @@
     "dependencies": {
         "d3": "^7.4.4",
         "d3-selection-multi": "^1.0.1",
+        "glob": "^8.0.3",
         "js-sha256": "^0.9.0",
         "lodash": "^4.17.21",
         "text-encoding": "^0.7.0",

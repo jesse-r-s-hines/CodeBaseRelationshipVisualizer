@@ -1,0 +1,10 @@
+{
+    "extends": "../../tsconfig.json",
+    "compilerOptions": {
+        "rootDir": "../..", // proj root so we can see both src and test
+        "outDir": "../../dist/test",
+    },
+    "include": [
+        "**/*.ts"
+    ],
+}
