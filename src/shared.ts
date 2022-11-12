@@ -202,13 +202,17 @@ export type MergeRules = {
 }
 
 // TODO duplicate types
-export type MergeRule<Name extends string = string> = {rule: Name} | string
-export type SameRule = MergeRule<'same'>;
-export type IgnoreRule = MergeRule<'ignore'>;
-export type LeastRule = MergeRule<'least'>;
-export type GreatestRule = MergeRule<'greatest'>;
-export type LeastCommonRule = MergeRule<'leastCommon'>;
-export type MostCommonRule = MergeRule<'mostCommon'>;
-export type GroupRule = MergeRule<'group'>;
-export interface AddRule {rule: "add", max: number}
-export interface ValueRule {rule: "value", value: any}
+export type SimpleMergeRule<Name extends string = string> = {rule: Name} | string
+
+export type SameRule = SimpleMergeRule<'same'>;
+export type IgnoreRule = SimpleMergeRule<'ignore'>;
+export type LeastRule = SimpleMergeRule<'least'>;
+export type GreatestRule = SimpleMergeRule<'greatest'>;
+export type LeastCommonRule = SimpleMergeRule<'leastCommon'>;
+export type MostCommonRule = SimpleMergeRule<'mostCommon'>;
+export type GroupRule = SimpleMergeRule<'group'>;
+export type AddRule = SimpleMergeRule<"add"> | {rule: "add", max: number}
+export type ValueRule = {rule: "value", value: any}
+
+export type DefaultMergeRule = SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule |
+                               GroupRule | AddRule | ValueRule

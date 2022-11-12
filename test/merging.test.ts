@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import {mergeByRules} from '../src/webview/merging';
+import { mergeByRules, MergeRules } from '../src/webview/merging';
 
 describe("Test merging.ts", () => {
     const basic = [
@@ -93,7 +93,7 @@ describe("Test merging.ts", () => {
 
         expect(mergeByRules([{}], {
             a: "same",
-        })).to.eql([{a: undefined}])
+        })).to.eql([{}])
 
         expect(mergeByRules(basic, {/* Ignore all */})).to.eql([{}])
     })
@@ -153,9 +153,97 @@ describe("Test merging.ts", () => {
             b: "group",
         })).to.eql([
             {b: [1, 2], o: {o1: {o2: 2}}},
-            {b: [3,4], o: {o1: {o2: undefined}}},
+            {b: [3,4]},
         ])
-        
+    })
+
+    it('test each default merger', () => {
+        const data = [
+            {num: 1, str: "a", bool: true, int: 1n, sym: Symbol('foo'), obj: {a: 1}, arr: [1,2], n: null, u: undefined},
+            {num: 1, str: "a", bool: true, int: 1n, sym: Symbol('foo'), obj: {a: 1}, arr: [1,2], n: null, u: undefined},
+
+            {num: 2, str: "a", bool: true, int: 1n, sym: Symbol('foo'), obj: {a: 1}, arr: [1,2]},
+        ]
+
+        let rules: MergeRules = {a: 'least'}
+        expect(mergeByRules([{a: 2}, {a: 1}], rules)).to.eql([{a: 1}])
+        expect(mergeByRules([{a: 1}], rules)).to.eql([{a: 1}])
+        expect(mergeByRules([{a: 1}, {a: 2}, {a: null}, {}], rules)).to.eql([{a: 1}])
+        expect(mergeByRules([{}], rules)).to.eql([{}])
+        expect(mergeByRules([{a: "A"}, {a: "B"}], rules)).to.eql([{a: "A"}])
+        expect(mergeByRules([{a: 1n}, {a: 2n}], rules)).to.eql([{a: 1n}])
+
+        rules = {a: 'greatest'}
+        expect(mergeByRules([{a: 2}, {a: 1}], rules)).to.eql([{a: 2}])
+        expect(mergeByRules([{a: 1}], rules)).to.eql([{a: 1}])
+        expect(mergeByRules([{a: 1}, {a: 2}, {a: null}, {}], rules)).to.eql([{a: 2}])
+        expect(mergeByRules([{}], rules)).to.eql([{}])
+        expect(mergeByRules([{a: "A"}, {a: "B"}], rules)).to.eql([{a: "B"}])
+        expect(mergeByRules([{a: 1n}, {a: 2n}], rules)).to.eql([{a: 2n}])
+
+        rules = {a: 'leastCommon'}
+        expect(mergeByRules([{a: 2}, {a: 2}, {a: 1}], rules)).to.eql([{a: 1}])
+        expect(mergeByRules([{a: 1}], rules)).to.eql([{a: 1}])
+        expect(mergeByRules([{a: 1}, {a: 2}], rules)).to.eql([{a: 1}]) // use first
+        expect(mergeByRules([{a: "A"}, {a: "A"}, {a: "B"}], rules)).to.eql([{a: "B"}])
+        expect(mergeByRules([{a: "A"}, {a: "A"}, {a: 1}], rules)).to.eql([{a: 1}])
+        // ignore undefined
+        expect(mergeByRules([{a: 1}, {a: 1}, {a: 1}, {a: 2}, {a: 2}, {}], rules)).to.eql([{a: 2}])
+        // null can be returned though
+        expect(mergeByRules([{a: 1}, {a: 1}, {a: 1}, {a: 2}, {a: 2}, {a: null}], rules)).to.eql([{a: null}])
+        expect(mergeByRules([{a: {a: 1, b: 2}}, {a: {b: 2, a: 1}}, {a: {a: 2, b: 3}}], rules)).to
+            .eql([{a: {a: 2, b: 3}}])
+
+        rules = {a: 'mostCommon'}
+        expect(mergeByRules([{a: 2}, {a: 2}, {a: 1}], rules)).to.eql([{a: 2}])
+        expect(mergeByRules([{a: 1}], rules)).to.eql([{a: 1}])
+        expect(mergeByRules([{a: 1}, {a: 2}], rules)).to.eql([{a: 1}]) // use first
+        expect(mergeByRules([{a: "A"}, {a: "A"}, {a: "B"}], rules)).to.eql([{a: "A"}])
+        expect(mergeByRules([{a: "A"}, {a: "A"}, {a: 1}], rules)).to.eql([{a: "A"}])
+        // ignore undefined
+        expect(mergeByRules([{}, {}, {}, {a: 2}, {a: 2}, {a: 1}], rules)).to.eql([{a: 2}])
+        // null can be returned though
+        expect(mergeByRules([{a: null}, {a: null}, {a: null}, {a: 2}, {a: 2}, {a: 1}], rules)).to.eql([{a: null}])
+        expect(mergeByRules([{a: {a: 1, b: 2}}, {a: {b: 2, a: 1}}, {a: {a: 2, b: 3}}], rules)).to
+            .eql([{a: {a: 1, b: 2}}])
+
+
+        rules = {a: 'add'}
+        expect(mergeByRules([{a: 1}, {a: 2}, {a: 3}], rules)).to.eql([{a: 6}])
+        expect(mergeByRules([{a: "a"}, {a: "b"}], rules)).to.eql([{a: "ab"}])
+        expect(mergeByRules([{a: 1}], rules)).to.eql([{a: 1}])
+        expect(mergeByRules([{a: 1}, {a: 2}, {a: null}, {}], rules)).to.eql([{a: 3}])
+        expect(mergeByRules([{}], rules)).to.eql([{}])
+        expect(mergeByRules([{a: 1n}, {a: 2n}], rules)).to.eql([{a: 3n}])
+        expect(mergeByRules([{a: "a"}, {a: 1}], rules)).to.eql([{a: "a1"}])
+
+        rules = {a: {rule: 'add', max: 5}}
+        expect(mergeByRules([{a: 1}, {a: 2}], rules)).to.eql([{a: 3}])
+        expect(mergeByRules([{a: 1}, {a: 2}, {a: 3}], rules)).to.eql([{a: 5}])
+        expect(mergeByRules([{a: 7}], rules)).to.eql([{a: 5}])
+        expect(mergeByRules([{a: 1}, {a: 2}, {a: null}, {}], rules)).to.eql([{a: 3}])
+        expect(mergeByRules([{}], rules)).to.eql([{}])
+
+        rules = {a: {rule: 'value', value: "merged"}}
+        expect(mergeByRules([{a: 1}, {a: 2}], rules)).to.eql([{a: "merged"}])
+        expect(mergeByRules([{a: 1}, {a: 2}, {a: 3}], rules)).to.eql([{a: "merged"}])
+        expect(mergeByRules([{a: 1}], rules)).to.eql([{a: 1}])
+        expect(mergeByRules([{a: 1}, {a: 2}, {a: null}, {}], rules)).to.eql([{a: "merged"}])
+        expect(mergeByRules([{}], rules)).to.eql([{}])
+        expect(mergeByRules([{}, {}], rules)).to.eql([{}])
+        expect(mergeByRules([{a: 1, b: 2}, {a: 1, b: 3}, {a: 2, b: 4}], {
+            a: "same",
+            b: {rule: 'value', value: Infinity},
+        })).to.eql([
+            {a: 1, b: Infinity},
+            {a: 2, b: 4},
+        ])
+
+        rules = {a: "group"}
+        expect(mergeByRules([{a: 2}, {a: 1}], rules)).to.eql([{a: [2, 1]}])
+        expect(mergeByRules([{a: 1}], rules)).to.eql([{a: [1]}])
+        expect(mergeByRules([{a: 1}, {}, {a: null}], rules)).to.eql([{a: [1, null]}])
+        expect(mergeByRules([{}], rules)).to.eql([{a: []}])
     })
 })
 
