@@ -9,7 +9,7 @@ export type GreatestRule = MergeRule<'greatest'>;
 export type LeastCommonRule = MergeRule<'leastCommon'>;
 export type MostCommonRule = MergeRule<'mostCommon'>;
 export type GroupRule = MergeRule<'group'>;
-export interface AddRule {rule: "add", max: number}
+export type AddRule = MergeRule<"add"> | {rule: "add", max: number}
 export interface ValueRule {rule: "value", value: any}
 
 const defaultMergers: Record<string, (items: any[], rule: any) => any> = {
@@ -19,7 +19,7 @@ const defaultMergers: Record<string, (items: any[], rule: any) => any> = {
     // find the most/least common item. items is gauranteed to be non-empty
     leastCommon: items => _(items).countBy().toPairs().minBy(([item, count]) => count)![0],
     mostCommon: items => _(items).countBy().toPairs().maxBy(([item, count]) => count)![0],
-    add: (items, rule) => Math.min(_(items).sum(), rule.max),
+    add: (items, rule) => rule.max != undefined ? _.min([_(items).sum(), rule.max]) : _(items).sum(),
     value: (items, rule) => items.length == 1 ? items[0] : rule.value,
     group: items => items,
 }
