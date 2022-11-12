@@ -1,9 +1,8 @@
 {
     "extends": "../../tsconfig.json",
     "compilerOptions": {
-        "module": "CommonJS",
+        "rootDir": "..", // root dir is still src so we can access shared.
         "lib": ["dom", "dom.iterable", "es2022"],
-        "esModuleInterop": true,
     },
     "include": [
         "**/*.ts"

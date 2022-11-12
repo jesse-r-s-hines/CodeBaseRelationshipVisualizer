@@ -1,9 +1,8 @@
 {
     "extends": "../tsconfig.json",
     "compilerOptions": {
-        "module": "commonjs",
+        "rootDir": ".",
         "lib": ["es2022"],
-        "esModuleInterop": true,
     },
     "include": [
         "**/*.ts"
