@@ -58,6 +58,18 @@ describe("Test merging.ts", () => {
             c: "same",
             d: "same",
         })).to.eql(basic)
+
+
+    })
+
+    it('Test longform rule format', () => {
+        expect(mergeByRules(basic, {
+            a: {rule: "add"},
+            b: {rule: "group"},
+            c: {rule: "ignore"},
+        })).to.eql([
+            {a: 7, b: ['a', 'a', 'c']},
+        ])
     })
 
     it('empty/single lists and objects', () => {
