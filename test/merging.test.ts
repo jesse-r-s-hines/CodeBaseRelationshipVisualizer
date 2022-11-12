@@ -2,13 +2,13 @@ import { expect } from 'chai';
 import {mergeByRules} from '../src/webview/merging';
 
 describe("Test merging.ts", () => {
-    it('basic', () => {
-        const basic = [
-            {a: 1, b: "a", c: [1], d: true},
-            {a: 2, b: "a", c: [2], d: true},
-            {a: 4, b: "c", c: [2], d: false},
-        ]
+    const basic = [
+        {a: 1, b: "a", c: [1], d: true},
+        {a: 2, b: "a", c: [2], d: true},
+        {a: 4, b: "c", c: [2], d: false},
+    ]
 
+    it('basic', () => {
         expect(mergeByRules(basic, {
             a: "add",
             b: "group",
@@ -60,7 +60,7 @@ describe("Test merging.ts", () => {
         })).to.eql(basic)
     })
 
-    it('empty/single lists', () => {
+    it('empty/single lists and objects', () => {
         const single = [
             {a: 1, b: "a", c: [1], d: true},
         ]
@@ -78,6 +78,12 @@ describe("Test merging.ts", () => {
             b: "group",
             c: "ignore",
         })).to.eql([])
+
+        expect(mergeByRules([{}], {
+            a: "same",
+        })).to.eql([{a: undefined}])
+
+        expect(mergeByRules(basic, {/* Ignore all */})).to.eql([{}])
     })
 
     it('nested properties', () => {
