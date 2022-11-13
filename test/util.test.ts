@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import { describe, test } from "mocha"
 import { AnyFile, FileType } from '../src/shared';
 import * as util from '../src/util';
 

@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import { describe, test } from "mocha"
 import { mergeByRules, MergeRules, Mergers } from '../src/webview/merging';
 
 describe("Test merging.ts", () => {

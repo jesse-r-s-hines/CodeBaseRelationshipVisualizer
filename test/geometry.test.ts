@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import { describe, test } from "mocha"
 import "./helpers" // add custom assertions
 import * as geo from '../src/webview/geometry';
 import { Point, Box } from '../src/webview/geometry';
