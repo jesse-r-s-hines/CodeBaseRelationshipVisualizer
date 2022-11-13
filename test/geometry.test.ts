@@ -69,4 +69,58 @@ describe("Test geometry.ts", () => {
 
         expect(() => geo.closestPointOnBorder([0, 0], border)).to.throw("Point [0,0] is outside border [1,2,5,6]")
     })
+
+    it('moveAlongBorder', () => {
+        let border: Box = [1, 2, 5, 6] // [x, y, width, height]
+
+        // basic
+        expect(geo.moveAlongBorder([1, 5], 1, border)).to.eql([1, 6]);
+        expect(geo.moveAlongBorder([1, 5], -1, border)).to.eql([1, 4]);
+        expect(geo.moveAlongBorder([3, 8], 1, border)).to.eql([4, 8]);
+        expect(geo.moveAlongBorder([3, 8], -1, border)).to.eql([2, 8]);
+        expect(geo.moveAlongBorder([6, 6], 1, border)).to.eql([6, 5]);
+        expect(geo.moveAlongBorder([6, 6], -1, border)).to.eql([6, 7]);
+        expect(geo.moveAlongBorder([4, 2], 1, border)).to.eql([3, 2]);
+        expect(geo.moveAlongBorder([4, 2], -1, border)).to.eql([5, 2]);
+
+        // corners
+        expect(geo.moveAlongBorder([1, 2], 1, border)).to.eql([1, 3]);
+        expect(geo.moveAlongBorder([1, 8], 1, border)).to.eql([2, 8]);
+        expect(geo.moveAlongBorder([6, 8], 1, border)).to.eql([6, 7]);
+        expect(geo.moveAlongBorder([6, 2], 1, border)).to.eql([5, 2]);
+
+        expect(geo.moveAlongBorder([1, 2], -1, border)).to.eql([2, 2]);
+        expect(geo.moveAlongBorder([1, 8], -1, border)).to.eql([1, 7]);
+        expect(geo.moveAlongBorder([6, 8], -1, border)).to.eql([5, 8]);
+        expect(geo.moveAlongBorder([6, 2], -1, border)).to.eql([6, 3]);
+
+        // to corner
+        expect(geo.moveAlongBorder([2, 2], 1, border)).to.eql([1, 2]);
+        expect(geo.moveAlongBorder([2, 8], -1, border)).to.eql([1, 8]);
+        expect(geo.moveAlongBorder([5, 8], 1, border)).to.eql([6, 8]);
+        expect(geo.moveAlongBorder([5, 2], -1, border)).to.eql([6, 2]);
+
+        // zero
+        expect(geo.moveAlongBorder([1, 2], 0, border)).to.eql([1, 2]);
+        expect(geo.moveAlongBorder([1, 5], 0, border)).to.eql([1, 5]);
+
+        // around corner
+        expect(geo.moveAlongBorder([2, 2], 2, border)).to.eql([1, 3]);
+        expect(geo.moveAlongBorder([1, 7], 2, border)).to.eql([2, 8]);
+        expect(geo.moveAlongBorder([5, 8], 2, border)).to.eql([6, 7]);
+        expect(geo.moveAlongBorder([6, 3], 2, border)).to.eql([5, 2]);
+
+        expect(geo.moveAlongBorder([1, 3], -2, border)).to.eql([2, 2]);
+        expect(geo.moveAlongBorder([2, 8], -2, border)).to.eql([1, 7]);
+        expect(geo.moveAlongBorder([6, 7], -2, border)).to.eql([5, 8]);
+        expect(geo.moveAlongBorder([5, 2], -2, border)).to.eql([6, 3]);
+
+        // loop de loop
+        expect(geo.moveAlongBorder([1, 3], 28, border)).to.eql([2, 8]);
+        expect(geo.moveAlongBorder([2, 8], -28, border)).to.eql([1, 3]);
+
+        expect(() => geo.moveAlongBorder([0, 0], 1, border)).to.throw("Point [0,0] is not on border [1,2,5,6]");
+        expect(() => geo.moveAlongBorder([10, 10], 1, border)).to.throw("Point [10,10] is not on border [1,2,5,6]");
+        expect(() => geo.moveAlongBorder([1, 10], 1, border)).to.throw("Point [1,10] is not on border [1,2,5,6]");
+    })
 })

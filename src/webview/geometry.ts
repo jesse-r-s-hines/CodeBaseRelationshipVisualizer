@@ -54,30 +54,29 @@ export function closestPointOnBorder([x, y]: Point, border: Box): Point {
 }
 
 /**
- * Returns the point d distance away from [x, y] clockwise around the border. [x, y] must be on border.
+ * Returns the point d distance away from [x, y] clockwise around the border (or counter-clockwise if y positive is
+ * down like in SVG). [x, y] must be on border.
  */
 export function moveAlongBorder([x, y]: Point, dist: number, border: Box): Point {
     const [left, bottom, width, height] = border
     const [right, top] = [left + width, bottom + height]
 
-    if (x < left || right < x || y < bottom || top < y) {
-        throw Error(`${[x, y]} is outside border ${border}`)
-    }
+    if (!isOnBorder([x, y], border))
+        throw Error(`Point ${JSON.stringify([x, y])} is not on border ${JSON.stringify(border)}`)
 
     while (dist != 0) {
         let [newX, newY] = [x, y]
-        if (x == left) {
-            newY = _.clamp(y + dist, bottom, left)
-        } else if (y == top) {
-            newX = _.clamp(x + dist, left, right)
-        } else if (x == right) {
-            newY = _.clamp(y - dist, bottom, left)
-        } else if (y == bottom) {
-            newX = _.clamp(x - dist, left, right)
-        } else {
-            throw Error(`${[x, y]} is inside border`) // we 
-        }
 
+        // no else-if so that corners get checked twice
+        if (x == left)
+            newY = _.clamp(y + dist, bottom, top)
+        if (y == top)
+            newX = _.clamp(x + dist, left, right)
+        if (x == right)
+            newY = _.clamp(y - dist, bottom, top)
+        if (y == bottom)
+            newX = _.clamp(x - dist, left, right)
+        
         dist -= Math.sign(dist) * (Math.abs(newX - x) + Math.abs(newY - y));
 
         [x, y] = [newX, newY];
