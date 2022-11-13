@@ -213,4 +213,16 @@ describe("Test geometry.ts", () => {
         expect(geo.midpoint([1, 1], [1, 1])).to.eql([1, 1]);
         expect(geo.midpoint([0, 0], [0, 0])).to.eql([0, 0]);
     })
+
+    it('slope', () => {
+        expect(geo.slope([0, 0], [1, 1])).to.eql(1);
+        expect(geo.slope([1, 1], [0, 0])).to.eql(1);
+        expect(geo.slope([0, 0], [-1, 1])).to.eql(-1);
+        expect(geo.slope([0, 0], [-1, -1])).to.eql(1);
+
+        expect(geo.slope([5, 6], [2, 1])).to.eql(5/3);
+
+        expect(geo.slope([0, 0], [1, 0])).to.eql(0);
+        expect(geo.slope([0, 0], [0, 1])).to.eql(Infinity);
+    })
 })
