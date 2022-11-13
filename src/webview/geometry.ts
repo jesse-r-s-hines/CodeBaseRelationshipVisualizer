@@ -86,10 +86,13 @@ export function moveAlongBorder([x, y]: Point, dist: number, border: Box): Point
 }
 
 /**
- * Snaps a number to be divisible by delta
+ * Snaps a number the nearest value in the series created by delta.
+ * E.g. use delta 4 to snap to 0, 4, 8, 12, ... or use delta 1 to snap to 0, 1, 2, 3, ...
+ * If delta is 0, will just return x directly without snapping.
  */
 export function snap(x: number, delta: number) {
-    return delta * Math.round(x / delta);
+    delta = Math.abs(delta)
+    return delta != 0 ? delta * Math.round(x / delta) : x;
 }
 
 /**

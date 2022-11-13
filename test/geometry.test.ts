@@ -123,4 +123,20 @@ describe("Test geometry.ts", () => {
         expect(() => geo.moveAlongBorder([10, 10], 1, border)).to.throw("Point [10,10] is not on border [1,2,5,6]");
         expect(() => geo.moveAlongBorder([1, 10], 1, border)).to.throw("Point [1,10] is not on border [1,2,5,6]");
     })
+
+    it('snap', () => {
+        expect(geo.snap(7, 3)).to.eql(6);
+        expect(geo.snap(7, 2)).to.eql(8);
+        expect(geo.snap(7, -2)).to.eql(8);
+        expect(geo.snap(1.0001, 1)).to.eql(1);
+        expect(geo.snap(-6.3, 0.5)).to.eql(-6.5);
+        expect(geo.snap(7.35, 0.2)).to.eql(7.4);
+        expect(geo.snap(16, 4)).to.eql(16);
+        expect(geo.snap(0, 4)).to.eql(0);
+        expect(geo.snap(1.5, 4)).to.eql(0);
+        expect(geo.snap(17, 1)).to.eql(17);
+        expect(geo.snap(17.3, 1)).to.eql(17);
+        expect(geo.snap(10.3, 0)).to.eql(10.3);
+    })
 })
+
