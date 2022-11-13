@@ -16,6 +16,25 @@
             ],
             "outFiles": ["${workspaceFolder}/dist/**/*.js"],
             "preLaunchTask": "npm: watch"
-        }
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Mocha Tests",
+            "env": {
+                "TS_NODE_COMPILER_OPTIONS": "{\"module\": \"commonjs\" }"
+            },
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "args": [
+              "-r", "ts-node/register",
+              "--exclude", "${workspaceFolder}/test/integration/**/*",
+              "--colors",
+              "${workspaceFolder}/test/**/*.test.ts"
+            ],
+            "internalConsoleOptions": "openOnSessionStart",
+            "skipFiles": [
+              "<node_internals>/**"
+            ]
+          },
     ]
 }
