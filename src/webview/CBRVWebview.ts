@@ -633,7 +633,10 @@ export default class CBRVWebview {
         const farPoint = geo.polarToRect(middleTheta, distFromFileCenter, fileCenter);
 
         // The center of the arc lies on the line between file center and farPoint and the
-        // perpendicular bisector of the cord betwee from.target and farPoint
+        // perpendicular bisector of the cord between from.target and farPoint
+        // NOTE: neither slope can be vertical since numAnchors is divisible by 4, so top/bottom/left/right are anchors,
+        // and the self loop will always connect to two adjacent anchors meaning it can't cross over the vertical to
+        // make m1 vertical, or cross over the horizontal to make m2 vertical
         const m1 = geo.slope(fileCenter, farPoint);
         const m2 = -1 / geo.slope(from.anchor, farPoint); // perpendicular slope
         const midpoint = geo.midpoint(from.anchor, farPoint);
