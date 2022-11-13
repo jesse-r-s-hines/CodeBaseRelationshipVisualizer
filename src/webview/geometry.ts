@@ -20,11 +20,6 @@ export function extendLine([start, end]: [Point, Point], dist: number): Point {
     ];
 }
 
-export function getRect(el: Element): [number, number] {
-    const rect = el.getBoundingClientRect();
-    return [rect.width, rect.height];
-}
-
 /**
  * Returns the closest point on the rectangle border to `p`.
  * @param p A point inside the border.

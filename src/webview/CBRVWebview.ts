@@ -4,7 +4,7 @@ import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedC
 import { getExtension, filterFileTree, normalizedJSONStringify, loopIndex, OptionalKeys } from '../util';
 import * as geo from './geometry';
 import { Point, Box } from './geometry';
-import { uniqId, ellipsisText } from './rendering';
+import { uniqId, ellipsisText, getRect } from './rendering';
 import { mergeByRules } from './merging';
 import _, { isEqual } from "lodash";
 
@@ -121,7 +121,7 @@ export default class CBRVWebview {
         zoom(this.diagram as any);
         d3.select(window).on('resize', (e) => this.onResize(e));
 
-        [this.width, this.height] = geo.getRect(this.diagram.node()!);
+        [this.width, this.height] = getRect(this.diagram.node()!);
 
         this.update(this.codebase, this.settings, this.connections);
     }
@@ -715,7 +715,7 @@ export default class CBRVWebview {
     }
 
     onResize(e: Event) {
-        [this.width, this.height] = geo.getRect(this.diagram.node()!);
+        [this.width, this.height] = getRect(this.diagram.node()!);
         this.throttledUpdate();
     }
 }

@@ -37,6 +37,11 @@ export function ellipsisText(el: SVGTextContentElement, width: number, height = 
     return el.textContent ?? "";
 }
 
+export function getRect(el: Element): [number, number] {
+    const rect = el.getBoundingClientRect();
+    return [rect.width, rect.height];
+}
+
 /**
  * Converts an arbitrary string key into a unique html id containing only alphanumeric characters, Using
  * same key again will return the same id. Optionally add a prefix to the generated id.
