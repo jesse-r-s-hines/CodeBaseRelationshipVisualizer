@@ -27,8 +27,9 @@ export function extendLine([start, end]: [Point, Point], dist: number): Point {
  */
 export function closestPointOnBorder([x, y]: Point, border: Box): Point {
     const [bx, by, width, height] = border
-    const [distLeft, distRight, distTop, distBottom] = [x - bx, (bx + width) - x, y - by, (by + height) - by]
+    const [distLeft, distRight, distTop, distBottom] = [x - bx, (bx + width) - x, y - by, (by + height) - y]
     const min = Math.min(distLeft, distRight, distTop, distBottom)
+    if (min < 0) throw Error(`Point ${JSON.stringify([x, y])} is outside border ${JSON.stringify(border)}`)
 
     if (min == distLeft) {
         return [bx, y]
