@@ -248,7 +248,7 @@ describe("Test merging.ts", () => {
 
 
     it('same on missing', () => {
-        const basic = [
+        const data = [
             {a: 1, b: "a"},
             {a: 1, b: "b"},
             {a: null, b: "c"},
@@ -257,13 +257,45 @@ describe("Test merging.ts", () => {
             {b: "f"},
         ]
 
-        expect(mergeByRules(basic, {
+        expect(mergeByRules(data, {
             a: "same",
             b: "group",
         })).to.eql([
             {a: 1, b: ['a', 'b']},
             {a: null, b: ['c', 'd']},
             {b: ['e', 'f']},
+        ])
+    })
+
+
+    it('same on different types', () => {
+        const data = [
+            {a: 1, b: "a"},
+            {a: 1, b: "b"},
+            {a: null, b: "c"},
+            {a: null, b: "d"},
+            {a: "a", b: "e"},
+            {a: "a", b: "f"},
+            {a: [], b: "g"},
+            {a: [], b: "h"},
+            {a: [1], b: "i"},
+            {a: {o: 1}, b: "j"},
+            {a: {o: 1}, b: "k"},
+            {a: {o: 2}, b: "l"},
+
+        ]
+
+        expect(mergeByRules(data, {
+            a: "same",
+            b: "group",
+        })).to.eql([
+            {a: 1, b: ["a", "b"]},
+            {a: null, b: ["c", "d"]},
+            {a: "a", b: ["e", "f"]},
+            {a: [], b: ["g", "h"]},
+            {a: [1], b: ["i"]},
+            {a: {o: 1}, b: ["j", "k"]},
+            {a: {o: 2}, b: ["l"]},
         ])
     })
 })
