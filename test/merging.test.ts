@@ -328,5 +328,35 @@ describe("Test merging.ts", () => {
             {a: 2, b: 98},
         ])
     })
+
+    it('exceptions', () => {
+        expect(() => mergeByRules(basic, {a: 'notARule'})).to.throw('Unknown rule "notARule"')
+
+        const nested = [
+            {a: 1, o: {o1: 3}},
+            {a: 1, o: 4},
+        ]
+
+        expect(() => mergeByRules(nested, {o: "group", "o.o1": "add"}))
+            .to.throw('Duplicate rules for the same key "o", "o.o1"')
+
+        expect(() => mergeByRules(nested, {a: "add", o: "group", b: "add", "o.o1": "add"}))
+            .to.throw('Duplicate rules for the same key "o", "o.o1"')
+
+        expect(mergeByRules(nested, {"o.o2.o3": "group", "o.o2.o4": "group"}))
+            .to.eql([{o: {o2: {o3: [], o4: []}} }])
+
+        expect(() => mergeByRules(nested, {"o.o2.o3": "group", "o.o2": "group"}))
+            .to.throw('Duplicate rules for the same key "o.o2.o3", "o.o2"')
+
+        expect(() => mergeByRules(nested, {"o.o2": "group", 'o["o2"]': "group"}))
+            .to.throw('Duplicate rules for the same key "o.o2", "o["o2"]"')
+
+        expect(() => mergeByRules(nested, {"o.o2.o3": "group", 'o["o2"]': "group"}))
+            .to.throw('Duplicate rules for the same key "o.o2.o3", "o["o2"]"')
+
+        expect(() => mergeByRules(nested, {"o[0]": "group", "o[0][1]": "group"}))
+            .to.throw('Duplicate rules for the same key "o[0]", "o[0][1]"')
+    })
 })
 
