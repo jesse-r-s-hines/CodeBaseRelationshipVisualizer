@@ -204,4 +204,13 @@ describe("Test geometry.ts", () => {
 
         expect(geo.unitVector([0, 0])).to.eql([NaN, NaN]);
     })
+
+    it('midpoint', () => {
+        expect(geo.midpoint([0, 1], [0, 3])).to.eql([0, 2]);
+        expect(geo.midpoint([1, 0], [3, 0])).to.eql([2, 0]);
+        expect(geo.midpoint([1, 1], [-3, -3])).to.eql([-1, -1]);
+        expect(geo.midpoint([1, 1], [7, 4])).to.eql([4, 2.5]);
+        expect(geo.midpoint([1, 1], [1, 1])).to.eql([1, 1]);
+        expect(geo.midpoint([0, 0], [0, 0])).to.eql([0, 0]);
+    })
 })
