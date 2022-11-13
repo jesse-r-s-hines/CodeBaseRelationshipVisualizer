@@ -20,6 +20,17 @@ export function extendLine([start, end]: [Point, Point], dist: number): Point {
     ];
 }
 
+/** Returns true if point is on the border */
+export function isOnBorder([x, y]: Point, border: Box): boolean {
+    const [left, bottom, width, height] = border
+    const [right, top] = [left + width, bottom + height]
+
+    return (
+        ((x == left || x == right) && bottom <= y && y <= top) ||
+        ((y == bottom || y == top) && left <= x && x <= right)
+    )
+}
+
 /**
  * Returns the closest point on the rectangle border to `p`.
  * @param p A point inside the border.

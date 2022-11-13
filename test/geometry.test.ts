@@ -23,6 +23,17 @@ describe("Test geometry.ts", () => {
         expect(geo.extendLine([[0, 0], [0, 2]], -3)).to.eql([0, -1]);
     })
 
+    it('isOnBorder', () => {
+        let border: Box = [1, 2, 5, 6] // [x, y, width, height]
+
+        // basic
+        expect(geo.isOnBorder([1, 2], border)).to.be.true;
+        expect(geo.isOnBorder([3, 2], border)).to.be.true;
+        expect(geo.isOnBorder([5, 8], border)).to.be.true;
+        expect(geo.isOnBorder([0, 0], border)).to.be.false;
+        expect(geo.isOnBorder([3, 3], border)).to.be.false;
+    })
+
     it('closestPointOnBorder', () => {
         let border: Box = [1, 2, 5, 6] // [x, y, width, height]
 
