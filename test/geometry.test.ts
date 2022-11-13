@@ -163,4 +163,20 @@ describe("Test geometry.ts", () => {
         expect(geo.normalizeAngle(3.3*Math.PI, Math.PI)).to.eql(1.3 * Math.PI);
         expect(geo.normalizeAngle(7.3*Math.PI, Math.PI)).to.be.closeTo(1.3 * Math.PI, 1e-6);
     })
+
+    it('polarToRect', () => {
+        expect(geo.polarToRect(Math.PI/2, 4)).to.be.deepCloseTo([0, 4]);
+        expect(geo.polarToRect(Math.PI/2, 4, [1, 2])).to.be.deepCloseTo([1, 6]);
+
+        expect(geo.polarToRect(Math.PI/4, 1)).to.be.deepCloseTo([Math.sqrt(2)/2, Math.sqrt(2)/2]);
+
+        expect(geo.polarToRect(-Math.PI, 4)).to.deepCloseTo([-4, 0]);
+        expect(geo.polarToRect(-3 * Math.PI, 4)).to.deepCloseTo([-4, 0]);
+
+        expect(geo.polarToRect(0, 4)).to.deepCloseTo([4, 0]);
+        expect(geo.polarToRect(2*Math.PI, 4)).to.deepCloseTo([4, 0]);
+
+        expect(geo.polarToRect(0, 0)).to.deepCloseTo([0, 0]);
+        expect(geo.polarToRect(0, 0, [1, 1])).to.deepCloseTo([1, 1]);
+    })
 })
