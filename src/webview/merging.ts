@@ -52,10 +52,14 @@ export function mergeByRules<T>(
     const normalizedRules = _.mapValues(rules, rule => typeof rule == "string" ? {rule: rule} : rule);
     const mergers = {...defaultMergers, ...customMergers}
     const groupKeys = _(normalizedRules).pickBy(rule => rule?.rule == "same").keys().value()
+    const keyFunc = (item: T) => groupKeys
+        // hack to make undefined unique JSONized so missing keys group separately
+        .map(key => _.get(item, key) !== undefined ? normJSON(_.get(item, key)) : "undefined")
+        .join(",")
 
     return _(items)
         // Group items that don't have conflicts on the "same" rules
-        .groupBy(item => normJSON(groupKeys.map(key => _.get(item, key))))
+        .groupBy(keyFunc)
         // Compute the merged values for each group
         .map(group => {
             const mergedObj = _(normalizedRules)

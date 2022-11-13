@@ -245,5 +245,26 @@ describe("Test merging.ts", () => {
         expect(mergeByRules([{a: 1}, {}, {a: null}], rules)).to.eql([{a: [1, null]}])
         expect(mergeByRules([{}], rules)).to.eql([{a: []}])
     })
+
+
+    it('same on missing', () => {
+        const basic = [
+            {a: 1, b: "a"},
+            {a: 1, b: "b"},
+            {a: null, b: "c"},
+            {a: null, b: "d"},
+            {b: "e"},
+            {b: "f"},
+        ]
+
+        expect(mergeByRules(basic, {
+            a: "same",
+            b: "group",
+        })).to.eql([
+            {a: 1, b: ['a', 'b']},
+            {a: null, b: ['c', 'd']},
+            {b: ['e', 'f']},
+        ])
+    })
 })
 
