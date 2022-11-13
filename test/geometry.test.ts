@@ -138,5 +138,30 @@ describe("Test geometry.ts", () => {
         expect(geo.snap(17.3, 1)).to.eql(17);
         expect(geo.snap(10.3, 0)).to.eql(10.3);
     })
-})
 
+    it('normalizeAngle', () => {
+        // default center 0 to get [-PI, PI)
+        expect(geo.normalizeAngle(1)).to.eql(1);
+        expect(geo.normalizeAngle(0)).to.eql(0);
+        expect(geo.normalizeAngle(Math.PI)).to.eql(-Math.PI);
+        expect(geo.normalizeAngle(-Math.PI)).to.eql(-Math.PI);
+        expect(geo.normalizeAngle(2*Math.PI)).to.eql(0);
+        expect(geo.normalizeAngle(-2*Math.PI)).to.eql(0);
+        expect(geo.normalizeAngle(3*Math.PI)).to.eql(-Math.PI);
+        expect(geo.normalizeAngle(-3*Math.PI)).to.eql(-Math.PI);
+        expect(geo.normalizeAngle(3.3*Math.PI)).to.eql(-0.7 * Math.PI);
+        expect(geo.normalizeAngle(7.3*Math.PI)).to.be.closeTo(-0.7 * Math.PI, 1e-6);
+
+        // center PI to get [0, 2*PI)
+        expect(geo.normalizeAngle(1, Math.PI)).to.eql(1);
+        expect(geo.normalizeAngle(0, Math.PI)).to.eql(0);
+        expect(geo.normalizeAngle(Math.PI, Math.PI)).to.eql(Math.PI);
+        expect(geo.normalizeAngle(-Math.PI, Math.PI)).to.eql(Math.PI);
+        expect(geo.normalizeAngle(2*Math.PI, Math.PI)).to.eql(0);
+        expect(geo.normalizeAngle(-2*Math.PI, Math.PI)).to.eql(0);
+        expect(geo.normalizeAngle(3*Math.PI, Math.PI)).to.eql(Math.PI);
+        expect(geo.normalizeAngle(-3*Math.PI, Math.PI)).to.eql(Math.PI);
+        expect(geo.normalizeAngle(3.3*Math.PI, Math.PI)).to.eql(1.3 * Math.PI);
+        expect(geo.normalizeAngle(7.3*Math.PI, Math.PI)).to.be.closeTo(1.3 * Math.PI, 1e-6);
+    })
+})
