@@ -179,4 +179,17 @@ describe("Test geometry.ts", () => {
         expect(geo.polarToRect(0, 0)).to.deepCloseTo([0, 0]);
         expect(geo.polarToRect(0, 0, [1, 1])).to.deepCloseTo([1, 1]);
     })
+
+    it('snapAngle', () => {
+        expect(geo.snapAngle(0, Math.PI/2)).to.be.closeTo(0, 1e-8);
+        expect(geo.snapAngle(0.4, Math.PI/2)).to.be.closeTo(0, 1e-8);
+        expect(geo.snapAngle(1.5, Math.PI/2)).to.be.closeTo(Math.PI/2, 1e-8);
+        expect(geo.snapAngle(3.4*Math.PI, Math.PI/2)).to.be.closeTo(1.5*Math.PI, 1e-8);
+        expect(geo.snapAngle(-3.4*Math.PI, Math.PI/2)).to.be.closeTo(0.5*Math.PI, 1e-8);
+        expect(geo.snapAngle(Math.PI/4, Math.PI/2)).to.be.closeTo(Math.PI/2, 1e-8);
+
+        // offset
+        expect(geo.snapAngle(0.01, Math.PI/4, Math.PI/8)).to.be.closeTo(Math.PI/8, 1e-8);
+        expect(geo.snapAngle(2.01*Math.PI, Math.PI/4, Math.PI/8)).to.be.closeTo(Math.PI/8, 1e-8);
+    })
 })
