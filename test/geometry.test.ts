@@ -193,7 +193,7 @@ describe("Test geometry.ts", () => {
         expect(geo.snapAngle(2.01*Math.PI, Math.PI/4, Math.PI/8)).to.be.closeTo(Math.PI/8, 1e-8);
     })
 
-    it('unit vector', () => {
+    it('unitVector', () => {
         expect(geo.unitVector([0, 1])).to.eql([0, 1]);
         expect(geo.unitVector([0, 5])).to.eql([0, 1]);
         expect(geo.unitVector([5, 0])).to.eql([1, 0]);
