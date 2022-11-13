@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import "./helpers" // add custom assertions
 import * as geo from '../src/webview/geometry';
 import { Point, Box } from '../src/webview/geometry';
 
@@ -15,9 +16,7 @@ describe("Test geometry.ts", () => {
         expect(geo.extendLine([[0, 0], [0, 2]], 1)).to.eql([0, 3]);
         expect(geo.extendLine([[0, 0], [0, 2]], 0)).to.eql([0, 2]);
         expect(geo.extendLine([[0, 0], [0, 2]], -1)).to.eql([0, 1]);
-        const p = geo.extendLine([[1, 2], [3, 4]], 5)
-        expect(p[0]).to.be.closeTo(6.536, 0.0005);
-        expect(p[1]).to.be.closeTo(7.536, 0.0005);
+        expect(geo.extendLine([[1, 2], [3, 4]], 5)).to.be.deepCloseTo([6.536, 7.536], 0.0005);
 
         expect(geo.extendLine([[0, 0], [0, 2]], -2)).to.eql([0, 0]);
         expect(geo.extendLine([[0, 0], [0, 2]], -3)).to.eql([0, -1]);
