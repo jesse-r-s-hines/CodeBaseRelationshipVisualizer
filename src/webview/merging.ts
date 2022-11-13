@@ -4,6 +4,7 @@ import { normalizedJSONStringify as normJSON } from "../util"
 export type MergeRule<Name extends string = string> = {rule: Name, [key: string]: any} | string
 export type SimpleMergeRule<Name extends string = string> = {rule: Name} | string
 export type MergeRules = Record<string, MergeRule>
+export type Mergers = Record<string, (items: any[], rule: any) => any>
 
 export type SameRule = SimpleMergeRule<'same'>;
 export type IgnoreRule = SimpleMergeRule<'ignore'>;
@@ -47,7 +48,7 @@ const defaultMergers: Record<string, (items: any[], rule: any) => any> = {
 export function mergeByRules<T>(
     items: T[],
     rules: Record<string, MergeRule>,
-    customMergers: Record<string, (items: any[], rule: any) => any> = {},
+    customMergers: Mergers = {},
 ): Record<string, any>[] {
     const normalizedRules = _.mapValues(rules, rule => typeof rule == "string" ? {rule: rule} : rule);
     const mergers = {...defaultMergers, ...customMergers}
