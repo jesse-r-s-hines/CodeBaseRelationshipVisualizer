@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { mergeByRules, MergeRules } from '../src/webview/merging';
+import { mergeByRules, MergeRules, Mergers } from '../src/webview/merging';
 
 describe("Test merging.ts", () => {
     const basic = [
@@ -296,6 +296,36 @@ describe("Test merging.ts", () => {
             {a: [1], b: ["i"]},
             {a: {o: 1}, b: ["j", "k"]},
             {a: {o: 2}, b: ["l"]},
+        ])
+    })
+
+    it('custom mergers', () => {
+        const data = [
+            {a: 1, b: "a", c: 3},
+            {a: 1, b: "b"},
+            {a: 2, b: "b"},
+        ]
+
+        let mergers: Mergers = {
+            myMerger: (items, rule) => items.join(rule.sep ?? ","),
+        }
+
+        expect(mergeByRules(data, {a: 'same', b: 'myMerger'}, mergers)).to.eql([
+            {a: 1, b: "a,b"},
+            {a: 2, b: "b"},
+        ])
+
+        expect(mergeByRules(data, {a: 'same', b: {rule: 'myMerger', sep: "+"}}, mergers)).to.eql([
+            {a: 1, b: "a+b"},
+            {a: 2, b: "b"},
+        ])
+
+        mergers = { // override add
+            add: items => items.reduce((accum, i) => accum + i.charCodeAt(0), 0)
+        }
+        expect(mergeByRules(data, {a: 'same', b: 'add'}, mergers)).to.eql([
+            {a: 1, b: 97 + 98},
+            {a: 2, b: 98},
         ])
     })
 })
