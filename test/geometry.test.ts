@@ -168,7 +168,7 @@ describe("Test geometry.ts", () => {
         expect(geo.polarToRect(Math.PI/2, 4)).to.be.deepCloseTo([0, 4]);
         expect(geo.polarToRect(Math.PI/2, 4, [1, 2])).to.be.deepCloseTo([1, 6]);
 
-        expect(geo.polarToRect(Math.PI/4, 1)).to.be.deepCloseTo([Math.sqrt(2)/2, Math.sqrt(2)/2]);
+        expect(geo.polarToRect(Math.PI/4, 1)).to.be.deepCloseTo([Math.SQRT2/2, Math.SQRT2/2]);
 
         expect(geo.polarToRect(-Math.PI, 4)).to.deepCloseTo([-4, 0]);
         expect(geo.polarToRect(-3 * Math.PI, 4)).to.deepCloseTo([-4, 0]);
@@ -191,5 +191,17 @@ describe("Test geometry.ts", () => {
         // offset
         expect(geo.snapAngle(0.01, Math.PI/4, Math.PI/8)).to.be.closeTo(Math.PI/8, 1e-8);
         expect(geo.snapAngle(2.01*Math.PI, Math.PI/4, Math.PI/8)).to.be.closeTo(Math.PI/8, 1e-8);
+    })
+
+    it('unit vector', () => {
+        expect(geo.unitVector([0, 1])).to.eql([0, 1]);
+        expect(geo.unitVector([0, 5])).to.eql([0, 1]);
+        expect(geo.unitVector([5, 0])).to.eql([1, 0]);
+        expect(geo.unitVector([1, 1])).to.be.deepCloseTo([Math.SQRT2/2, Math.SQRT2/2]);
+
+        expect(geo.unitVector([5, 0, 5])).to.be.deepCloseTo([Math.SQRT2/2, 0, Math.SQRT2/2]);
+        expect(geo.unitVector([6])).to.eql([1]);
+
+        expect(geo.unitVector([0, 0])).to.eql([NaN, NaN]);
     })
 })
