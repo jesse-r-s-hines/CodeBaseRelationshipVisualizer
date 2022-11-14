@@ -6,7 +6,7 @@ import { AnyFile, Directory, FileType } from "./shared";
 export async function getWorkspaceFileTree(): Promise<Directory | undefined> {
     if (vscode.workspace.workspaceFolders !== undefined) {
         const base = vscode.workspace.workspaceFolders[0].uri;
-        return await getFileTree(base, FileType.Directory) as any; // will always be a Directory
+        return await getFileTree(base) as Directory; // will always be a Directory
     } else {
         return undefined;
     }
