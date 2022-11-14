@@ -20,7 +20,7 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Mocha Tests",
+            "name": "Mocha Unit Tests",
             "env": {
                 "TS_NODE_COMPILER_OPTIONS": "{\"module\": \"commonjs\" }"
             },
@@ -36,6 +36,20 @@
             "skipFiles": [
               "<node_internals>/**"
             ]
-          },
+        },
+        {
+            "name": "Integration Tests",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${execPath}",
+            "args": [
+                "${workspaceFolder}/test/sample-codebases",
+                "--extensionDevelopmentPath=${workspaceFolder}",
+                "--extensionTestsPath=${workspaceFolder}/dist/test/test/integration/index",
+                "--disable-extensions",
+            ],
+            "outFiles": ["${workspaceFolder}/dist/test/**/*.js"],
+            "preLaunchTask": "npm: pretest"
+        },
     ]
 }
