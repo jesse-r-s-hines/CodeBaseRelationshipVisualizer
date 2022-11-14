@@ -12,6 +12,7 @@ export async function getWorkspaceFileTree(): Promise<Directory | undefined> {
     }
 }
 
+/** Returns a tree of all the files under uri */
 export async function getFileTree(uri: Uri, type?: FileType): Promise<AnyFile> {
     type = type ?? (await vscode.workspace.fs.stat(uri)).type;
     const name = path.basename(uri.fsPath);
@@ -26,6 +27,7 @@ export async function getFileTree(uri: Uri, type?: FileType): Promise<AnyFile> {
     }
 }
 
+/** Returns the set of the paths of all files under base, relative to base. Folders will not be in the set. */
 export async function getPathSet(base: Uri): Promise<Set<string>> {
     const type = (await vscode.workspace.fs.stat(base)).type;
     const pathSet = new Set<string>();
@@ -33,7 +35,6 @@ export async function getPathSet(base: Uri): Promise<Set<string>> {
     return pathSet;
 }
 
-/** Return set of the paths of all files under base, relative to base */
 async function pathSetHelper(pathSet: Set<string>, base: Uri, parts: string[], type: FileType): Promise<void> {
     if (type == FileType.Directory) {
         const children = await vscode.workspace.fs.readDirectory(Uri.joinPath(base, ...parts));
@@ -45,6 +46,6 @@ async function pathSetHelper(pathSet: Set<string>, base: Uri, parts: string[], t
     } else if (type == FileType.File) {
         pathSet.add(parts.join("/"));
     } else {
-        throw new Error("Other file types not supported");
+        throw new Error("Other file types not supported"); // TODO
     }
 }
