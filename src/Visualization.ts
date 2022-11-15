@@ -18,6 +18,7 @@ export class Visualization {
     private static readonly defaultSettings: NormalizedVisualizationSettings = {
         title: 'CodeBase Relationship Visualizer',
         directed: false,
+        showOnHover: false,
         connectionDefaults: {
             width: 2,
             color: 'yellow',
@@ -37,11 +38,15 @@ export class Visualization {
         connections: Iterable<Connection> = []
     ) {
         this.context = context;
+        settings = _.cloneDeep(settings)
+        if (settings.mergeRules === true) {
+            settings.mergeRules = {} // just use all the defaults
+        }
+        if (settings.showOnHover === true) {
+            settings.showOnHover = "both"
+        }
 
-        this.settings = _.merge({},
-            Visualization.defaultSettings,
-            _.omit(settings, settings.mergeRules === true ? ['mergeRules'] : []), // true is same as default.
-        )
+        this.settings = _.merge({}, Visualization.defaultSettings, settings)
         this.connections = [...connections];
     }
 

@@ -123,7 +123,7 @@ export default class CBRVWebview {
 
         [this.width, this.height] = getRect(this.diagram.node()!);
 
-        this.update(this.codebase, this.settings, this.connections);
+        this.update(this.settings, this.codebase, this.connections);
     }
 
     getViewbox(): Box {
@@ -134,9 +134,19 @@ export default class CBRVWebview {
 
     throttledUpdate: () => void
 
-    update(codebase?: Directory, settings?: NormalizedVisualizationSettings, connections?: Connection[]) {
+    update(settings?: NormalizedVisualizationSettings, codebase?: Directory, connections?: Connection[]) {
         if (settings) {
             this.settings = settings;
+
+            // if not directed, show all connections regardless of direction specified. 
+            const showAll = settings.showOnHover == "both" || (settings.showOnHover && !this.settings.directed)
+
+            // add some settings as data attributes for CSS access
+            this.diagram
+                .attr("data-show-on-hover", !!settings.showOnHover)
+                .attr("data-show-on-hover-in", settings.showOnHover == "in" || showAll)
+                .attr("data-show-on-hover-out", settings.showOnHover == "out" || showAll)
+
             this.updateCodebase(codebase ?? this.codebase); // force rerender
             this.updateConnections(connections ?? this.connections);
         } else {
@@ -173,7 +183,7 @@ export default class CBRVWebview {
             .join(
                 enter => {
                     const all = enter.append('g')
-                        .attr('data-filepath', d => this.filePath(d))
+                        .attr('data-file', d => this.filePath(d))
                         .classed("file", d => d.data.type == FileType.File)
                         .classed("directory", d => d.data.type == FileType.Directory)
                         .classed("new", true); // We'll use this to reselect newly added nodes later.
@@ -213,6 +223,29 @@ export default class CBRVWebview {
                             .attr("startOffset", "50%")
                             .attr("font-size", d => Math.max(this.s.label.fontMax - d.depth, this.s.label.fontMin));
   
+
+                    const setHoverClasses = (node: Node, toggle: boolean) => {
+                        // add hover classes to connected connections. CSS will hide/show connections
+                        const file = this.filePath(node)
+                        this.connectionLayer
+                            .selectAll(`[data-from="${file}"], [data-to="${file}"][data-bidirectional=true]`)
+                            .classed("hover-out", toggle)
+                        this.connectionLayer
+                            .selectAll(`[data-to="${file}"], [data-from="${file}"][data-bidirectional=true]`)
+                            .classed("hover-in", toggle)
+                    }
+                    
+                    // Add hover event listeners.
+                    // Filter root node. TODO: We have conflicting meanings here, which is causing a conflict. "" is
+                    // "out-of-screen", but "" is also the path of the root node. Normally we can't have connections to
+                    // the root but theoretically if we zoomed out enough it could have self loops. We either need to
+                    // ensure zoom can't go out that far, or rethink how we represent it. Guess I'd have to do more
+                    // JSONizing and make null out of screen an "" root? Or make root "/"? But that'll make tooltips
+                    // look like absolute paths unless we strip the /.
+                    all.filter(d => d.depth > 0)
+                        .on("mouseover", (event, node) => setHoverClasses(node, true))
+                        .on("mouseout", (event, node) => setHoverClasses(node, false))
+
                     return all;
                 },
                 update => { // TODO transitions
@@ -308,6 +341,9 @@ export default class CBRVWebview {
             .join(
                 enter => enter.append("path")
                     .classed("connection", true)
+                    .attr("data-from", ({conn}) => conn.from?.file ?? "")
+                    .attr("data-to", ({conn}) => conn.to?.file ?? "")
+                    .attr("data-bidirectional", ({conn}) => conn.bidirectional)
                     .attr("stroke-width", ({conn}) => conn.width)
                     .attr("stroke", ({conn}) => conn.color)
                     .attr("marker-end", ({conn}) => this.settings.directed ? `url(#${uniqId(conn.color)})` : null)

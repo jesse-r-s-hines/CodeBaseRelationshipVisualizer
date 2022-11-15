@@ -90,6 +90,21 @@ export interface VisualizationSettings {
      */
     directed?: boolean
 
+    /**
+     * Settings to limit which connections are shown based on the hovered
+     * file.
+     * 
+     * Can be set to:
+     * - `"in"`: Show only directed connections into the hovered file.
+     * - `"out"`: Show only directed connections out of the hovered file.
+     * - `"both"`: Show all connections connected to the hovered file.
+     * - `true`: Same as "both".
+     * - `false`: Default. Ignore hover, show connections for all files.
+     * 
+     * If connections are undirected, "in", "out", and "both" behave the same.
+     */
+    showOnHover?: "in"|"out"|"both"|boolean
+
     connectionDefaults?: {
         /** Default width of the SVG path for connections. Can be overridden per connection via `Connection.width` */
         width?: number
@@ -137,11 +152,12 @@ export interface VisualizationSettings {
 export interface NormalizedVisualizationSettings {
     title: string
     directed: boolean
+    showOnHover: "in"|"out"|"both"|false
     connectionDefaults: {
         width: number
         color: string
     }
-    mergeRules: MergeRules|false // TODO maybe normalize the merge rules here
+    mergeRules: MergeRules|false
 }
 
 /**

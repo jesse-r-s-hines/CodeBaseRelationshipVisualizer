@@ -44,3 +44,13 @@ body {
 .connection {
     fill: none;
 }
+
+#canvas[data-show-on-hover=true] .connection {
+    display: none;
+}
+#canvas[data-show-on-hover-in=true] .connection.hover-in {
+    display: inherit;
+}
+#canvas[data-show-on-hover-out=true] .connection.hover-out {
+    display: inherit;
+}
