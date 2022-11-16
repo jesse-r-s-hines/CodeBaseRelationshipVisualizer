@@ -236,13 +236,7 @@ export default class CBRVWebview {
                     }
                     
                     // Add hover event listeners.
-                    // Filter root node. TODO: We have conflicting meanings here, which is causing a conflict. "" is
-                    // "out-of-screen", but "" is also the path of the root node. Normally we can't have connections to
-                    // the root but theoretically if we zoomed out enough it could have self loops. We either need to
-                    // ensure zoom can't go out that far, or rethink how we represent it. Guess I'd have to do more
-                    // JSONizing and make null out of screen an "" root? Or make root "/"? But that'll make tooltips
-                    // look like absolute paths unless we strip the /.
-                    all.filter(d => d.depth > 0)
+                    all
                         .on("mouseover", (event, node) => setHoverClasses(node, true))
                         .on("mouseout", (event, node) => setHoverClasses(node, false))
 
@@ -707,7 +701,11 @@ export default class CBRVWebview {
     }
 
     filePath(d: Node): string {
-        return d.ancestors().reverse().slice(1).map(d => d.data.name).join("/");
+        const ancestors = d.ancestors().reverse().slice(1).map(d => d.data.name)
+        // Root dir will be "/". Since these aren't absolute paths and all other paths don't start with /, "" would be
+        // more natural, but "" is already used for "out-of-screen" targets. root won't show up in any connections 
+        // or tooltips anyway, so this is only internal.
+        return ancestors.length == 0 ? "/" : ancestors.join("/");
     }
 
     normalizeConn(conn: Connection): NormalizedConnection {
