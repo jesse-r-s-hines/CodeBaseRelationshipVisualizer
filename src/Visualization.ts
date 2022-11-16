@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
+import { workspace } from "vscode"
 import { Uri, Webview, FileSystemWatcher } from 'vscode';
-import { Connection, VisualizationSettings, NormalizedVisualizationSettings } from "./shared";
+import { Connection, VisualizationSettings, NormalizedVisualizationSettings, CBRVMessage } from "./shared";
 import * as fileHelper from "./fileHelper";
 import _ from 'lodash'
 
@@ -27,7 +28,7 @@ export class Visualization {
             file: "ignore",
             line: "ignore",
             direction: "ignore",
-            width: {rule: "add", max: 4},
+            width: { rule: "add", max: 4 },
             color: "mostCommon",
         },
     };
@@ -54,23 +55,30 @@ export class Visualization {
         this.webview = this.createWebview();
 
         this.webview.onDidReceiveMessage(
-            message => {
+            async (message: CBRVMessage) => {
                 if (message.type == "ready") {
                     this.send(true, this.settings, this.connections);
-                    this.fsWatcher = vscode.workspace.createFileSystemWatcher(
+                    this.fsWatcher = workspace.createFileSystemWatcher(
                         // TODO this should use excludes
-                        new vscode.RelativePattern(vscode.workspace.workspaceFolders![0], '**/*')
+                        new vscode.RelativePattern(workspace.workspaceFolders![0], '**/*')
                     );
-        
+
                     // TODO might have issues with using default excludes?
                     // TODO send only changes? Likely use a merge-throttle pattern to clump multiple changes.
                     this.fsWatcher.onDidChange(uri => this.send(true));
                     this.fsWatcher.onDidCreate(uri => this.send(true));
                     this.fsWatcher.onDidDelete(uri => this.send(true));
                     // this.fsWatcher.dispose(); // TODO dispose after usage
-                    
+                } else if (message.type == "open") {
+                    // NOTE: we could do these and Command URIs inside the webview instead. That might be simpler,
+                    // but would require sending the full path into the webview.
+                    const path = vscode.Uri.file(`${workspace.workspaceFolders![0]!.uri.fsPath}/${message.file}`)
+                    await vscode.commands.executeCommand("vscode.open", path)
+                } else if (message.type == "reveal-in-explorer") {
+                    const path = vscode.Uri.file(`${workspace.workspaceFolders![0]!.uri.fsPath}/${message.file}`)
+                    await vscode.commands.executeCommand("revealInExplorer", path)
                 }
-            },  
+            },
             undefined,
             this.context.subscriptions
         );
@@ -85,6 +93,7 @@ export class Visualization {
             {
                 enableScripts: true,
                 localResourceRoots: [vscode.Uri.file(this.context.extensionPath)],
+                // enableCommandUris: true,
             }
         );
 
@@ -125,8 +134,8 @@ export class Visualization {
 
         this.webview!.postMessage({
             type: "set",
-            codebase: codebase,
             settings: settings,
+            codebase: codebase,
             connections: connections,
         });
     }

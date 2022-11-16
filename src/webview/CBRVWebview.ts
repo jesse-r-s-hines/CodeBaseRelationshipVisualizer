@@ -93,7 +93,7 @@ export default class CBRVWebview {
     pathMap: Map<string, Node> = new Map()
 
     /** Pass the selector for the canvas svg */
-    constructor(diagram: string, codebase: Directory, settings: NormalizedVisualizationSettings, connections: Connection[]) {
+    constructor(diagram: string, settings: NormalizedVisualizationSettings, codebase: Directory, connections: Connection[]) {
         // filter empty directories
         this.codebase = filterFileTree(codebase, f => !(f.type == FileType.Directory && f.children.length == 0));
         this.settings = settings;
@@ -118,7 +118,10 @@ export default class CBRVWebview {
             .extent(extent)
             .scaleExtent([1, Infinity])
             .translateExtent(extent);
-        zoom(this.diagram as any);
+        this.diagram
+            .call(zoom as any)
+            .on("dblclick.zoom", null); // double-click zoom interferes with clicking on files and folders
+
         d3.select(window).on('resize', (e) => this.onResize(e));
 
         [this.width, this.height] = getRect(this.diagram.node()!);
@@ -239,6 +242,13 @@ export default class CBRVWebview {
                     all
                         .on("mouseover", (event, node) => setHoverClasses(node, true))
                         .on("mouseout", (event, node) => setHoverClasses(node, false))
+                        .on("dblclick", (event, node) => {
+                            if (node.data.type == FileType.Directory) {
+                                this.emit("reveal-in-explorer", {file: this.filePath(node)})
+                            } else {
+                                this.emit("open", {file: this.filePath(node)})
+                            }
+                        })
 
                     return all;
                 },
@@ -754,5 +764,9 @@ export default class CBRVWebview {
     onResize(e: Event) {
         [this.width, this.height] = getRect(this.diagram.node()!);
         this.throttledUpdate();
+    }
+
+    emit(event: string, data: any) {
+        this.diagram.node()!.dispatchEvent(new CustomEvent(`cbrv:${event}`, {detail: data}))
     }
 }

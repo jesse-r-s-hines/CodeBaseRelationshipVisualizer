@@ -232,3 +232,22 @@ export type ValueRule = {rule: "value", value: any}
 
 export type DefaultMergeRule = SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule |
                                GroupRule | AddRule | ValueRule
+
+
+// messages for communication between the webview and VSCode
+export type CBRVMessage = ReadyMessage|SetMessage|OpenMessage|RevealInExplorerMessage
+export type ReadyMessage = { type: "ready" }
+export type SetMessage = {
+    type: "set",
+    settings?: NormalizedVisualizationSettings,
+    codebase?: Directory,
+    connections?: Connection[],
+}
+export type OpenMessage = {
+    type: "open",
+    file: string,
+}
+export type RevealInExplorerMessage = {
+    type: "reveal-in-explorer",
+    file: string,
+}
