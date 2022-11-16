@@ -58,6 +58,7 @@ export class Visualization {
                 if (message.type == "ready") {
                     this.send(true, this.settings, this.connections);
                     this.fsWatcher = vscode.workspace.createFileSystemWatcher(
+                        // TODO this should use excludes
                         new vscode.RelativePattern(vscode.workspace.workspaceFolders![0], '**/*')
                     );
         
