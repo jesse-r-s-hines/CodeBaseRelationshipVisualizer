@@ -74,6 +74,7 @@
     },
     "dependencies": {
         "d3": "^7.4.4",
+        "d3-context-menu": "^2.1.0",
         "d3-selection-multi": "^1.0.1",
         "glob": "^8.0.3",
         "js-sha256": "^0.9.0",

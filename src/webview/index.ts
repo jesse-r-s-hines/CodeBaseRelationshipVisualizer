@@ -18,7 +18,8 @@ function main() {
     });
 
     // just pass events through as webview messages
-    for (let type of ["open", "reveal-in-explorer"]) {
+    const events = ["open", "reveal-in-explorer", "copy-path", "copy-relative-path"]
+    for (let type of events) {
         svg.addEventListener(`cbrv:${type}`, (event: any) => {
             vscode.postMessage({ type: type, ...event.detail })
         })

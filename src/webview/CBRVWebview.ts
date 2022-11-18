@@ -1,4 +1,16 @@
 import * as d3 from 'd3';
+
+// d3-context-menu lacks types, so just manually requiring. This is working, but should consider better options:
+// - VSCode built-in menu configuration
+//     - Webview context menu support is new and zero documentation on how to get it working. See
+//         - https://code.visualstudio.com/api/references/contribution-points#contributes.views
+//         - https://github.com/microsoft/vscode/pull/154524
+//         - https://github.com/microsoft/vscode/issues/156224
+//         - https://github.com/gitkraken/vscode-gitlens/blob/main/package.json
+// - Or 'vanilla-context-menu' has types
+const d3ContextMenu = require("d3-context-menu")
+require("d3-context-menu/css/d3-context-menu.css") // manually require the CSS
+
 import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedConnection,
          NormalizedVisualizationSettings, AddRule, ValueRule } from '../shared';
 import { getExtension, filterFileTree, normalizedJSONStringify, loopIndex, OptionalKeys } from '../util';
@@ -249,6 +261,7 @@ export default class CBRVWebview {
                                 this.emit("open", {file: this.filePath(node)})
                             }
                         })
+                        .on("contextmenu", d3ContextMenu((d: Node) => this.contextMenu(d)))
 
                     return all;
                 },
@@ -768,5 +781,26 @@ export default class CBRVWebview {
 
     emit(event: string, data: any) {
         this.diagram.node()!.dispatchEvent(new CustomEvent(`cbrv:${event}`, {detail: data}))
+    }
+
+    contextMenu(d: Node) {
+        return [
+            {
+                title: 'Reveal in Explorer',
+                action: (d: Node) => this.emit("reveal-in-explorer", {file: this.filePath(d)})
+            },
+            d.data.type == FileType.File ? {
+                title: 'Open in Editor',
+                action: (d: Node) => this.emit("open", {file: this.filePath(d)})
+            } : undefined,
+            {
+                title: 'Copy Path',
+                action: (d: Node) => this.emit("copy-path", {file: this.filePath(d)})
+            },
+            {
+                title: 'Copy Relative Path',
+                action: (d: Node) => this.emit("copy-relative-path", {file: this.filePath(d)})
+            }
+        ].filter(item => item)
     }
 }

@@ -70,13 +70,14 @@ export class Visualization {
                     this.fsWatcher.onDidDelete(uri => this.send(true));
                     // this.fsWatcher.dispose(); // TODO dispose after usage
                 } else if (message.type == "open") {
-                    // NOTE: we could do these and Command URIs inside the webview instead. That might be simpler,
-                    // but would require sending the full path into the webview.
-                    const path = vscode.Uri.file(`${workspace.workspaceFolders![0]!.uri.fsPath}/${message.file}`)
-                    await vscode.commands.executeCommand("vscode.open", path)
+                    // NOTE: we could do these and Command URIs inside the webview instead. That might be simpler
+                    await vscode.commands.executeCommand("vscode.open", this.getUri(message.file))
                 } else if (message.type == "reveal-in-explorer") {
-                    const path = vscode.Uri.file(`${workspace.workspaceFolders![0]!.uri.fsPath}/${message.file}`)
-                    await vscode.commands.executeCommand("revealInExplorer", path)
+                    await vscode.commands.executeCommand("revealInExplorer", this.getUri(message.file))
+                } else if (message.type == "copy-path") {
+                    vscode.env.clipboard.writeText(this.getUri(message.file).fsPath)
+                } else if (message.type == "copy-relative-path") {
+                    vscode.env.clipboard.writeText(message.file)
                 }
             },
             undefined,
@@ -138,6 +139,10 @@ export class Visualization {
             codebase: codebase,
             connections: connections,
         });
+    }
+
+    private getUri(file: string): Uri {
+        return vscode.Uri.file(`${workspace.workspaceFolders![0]!.uri.fsPath}/${file}`)
     }
 }
 
