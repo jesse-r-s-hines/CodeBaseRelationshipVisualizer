@@ -43,7 +43,6 @@ const minimal_contents = {
 }
 
 
-
 describe('Test fileHelper', () => {
     test('getFileTree', async () => {
         let tree = await fileHelper.getFileTree(minimal);
@@ -85,6 +84,100 @@ describe('Test fileHelper', () => {
                 children: [{type: FileType.File, name: "E.txt", size: 1828}]
             }],
         });
+    });
+
+    test('getFilteredFileTree', async () => {
+        let tree = await fileHelper.getFilteredFileTree(minimal, '**/*')
+        expect(tree).to.eql(minimal_contents);
+
+        tree = await fileHelper.getFilteredFileTree(minimal, '**/*', ' ') // should be trimmed and ignored
+        expect(tree).to.eql(minimal_contents);
+
+        tree = await fileHelper.getFilteredFileTree(minimal, 'A/*')
+        expect(tree).to.eql({
+            "name": "minimal",
+            "type": FileType.Directory,
+            "children": [
+                {
+                    "name": "A",
+                    "type": FileType.Directory,
+                    "children": [
+                        {"name": "E.txt", "size": 1828, "type": FileType.File},
+                        {"name": "F.txt", "size": 630, "type": FileType.File},
+                        {"name": "G.md", "size": 124, "type": FileType.File},
+                    ],
+                },
+            ]
+        });
+
+        // tree = await fileHelper.getFilteredFileTree(minimal, '**/*', 'A')
+        // expect(tree).to.eql({
+        //     "name": "minimal",
+        //     "type": FileType.Directory,
+        //     "children": [
+        //         {"name": "C.txt", "size": 1117, "type": FileType.File},
+        //         {"name": "D.md", "size": 841, "type": FileType.File},
+        //         {"name": "Supercalifragilisticexpialidocious.py", "size": 44, "type": FileType.File},
+        //         {
+        //             "name": "deoxyribonucleicAcid",
+        //             "type": FileType.Directory,
+        //             "children": [
+        //                 {"name": "I", "size": 1, "type": FileType.File},
+        //             ],
+        //         }
+        //     ]
+        // });
+
+        tree = await fileHelper.getFilteredFileTree(minimal, '**/*', 'A, *.txt')
+        expect(tree).to.eql({
+            "name": "minimal",
+            "type": FileType.Directory,
+            "children": [
+                {"name": "D.md", "size": 841, "type": FileType.File},
+                {"name": "Supercalifragilisticexpialidocious.py", "size": 44, "type": FileType.File},
+                {
+                    "name": "deoxyribonucleicAcid",
+                    "type": FileType.Directory,
+                    "children": [
+                        {"name": "I", "size": 1, "type": FileType.File},
+                    ],
+                }
+            ]
+        });
+
+        // tree = await fileHelper.getFilteredFileTree(minimal, 'A/{E,F}.txt')
+        // expect(tree).to.eql({
+        //     "name": "minimal",
+        //     "type": FileType.Directory,
+        //     "children": [
+        //         {
+        //             "name": "A",
+        //             "type": FileType.Directory,
+        //             "children": [
+        //                 {"name": "E.txt", "size": 1828, "type": FileType.File},
+        //                 {"name": "F.txt", "size": 630, "type": FileType.File},
+        //             ],
+        //         },
+        //     ]
+        // });
+
+        // tree = await fileHelper.getFilteredFileTree(minimal, 'A/*.{txt,md}, D.md')
+        // expect(tree).to.eql({
+        //     "name": "minimal",
+        //     "type": FileType.Directory,
+        //     "children": [
+        //         {
+        //             "name": "A",
+        //             "type": FileType.Directory,
+        //             "children": [
+        //                 {"name": "E.txt", "size": 1828, "type": FileType.File},
+        //                 {"name": "F.txt", "size": 630, "type": FileType.File},
+        //                 {"name": "G.md", "size": 124, "type": FileType.File},
+        //             ],
+        //         },
+        //         {"name": "D.md", "size": 841, "type": FileType.File},
+        //     ]
+        // });
     });
 
     test('getPathSet', async () => {

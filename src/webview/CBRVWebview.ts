@@ -96,6 +96,9 @@ export default class CBRVWebview {
     connectionLayer: d3.Selection<SVGGElement, unknown, HTMLElement, undefined>
     connectionSelection?: d3.Selection<SVGPathElement, ConnPath, SVGGElement, unknown>
 
+    includeInput: d3.Selection<HTMLInputElement, unknown, HTMLElement, undefined>
+    excludeInput: d3.Selection<HTMLInputElement, unknown, HTMLElement, undefined>
+
     // Some d3 generation objects
     // See https://observablehq.com/@d3/spline-editor to compare curves
     curve = d3.line().curve(d3.curveBasis);
@@ -147,6 +150,17 @@ export default class CBRVWebview {
         tippy.setDefaultProps({
             plugins: [followCursor],
         });
+
+        this.includeInput = d3.select<HTMLInputElement, unknown>("#include")
+        this.excludeInput = d3.select<HTMLInputElement, unknown>("#exclude")
+
+
+        const updateFilters = () => this.emit('filter', {
+            include: this.includeInput.property('value'),
+            exclude: this.excludeInput.property('value'),
+        })
+        this.includeInput.on('change', updateFilters)
+        this.excludeInput.on('change', updateFilters)
 
         this.update(this.settings, this.codebase, this.connections);
     }

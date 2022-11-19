@@ -263,7 +263,7 @@ export type DefaultMergeRule = SameRule | IgnoreRule | LeastRule | GreatestRule 
 
 // messages for communication between the webview and VSCode
 export type CBRVMessage = ReadyMessage|SetMessage|OpenMessage|RevealInExplorerMessage|CopyPathMessage|
-                          CopyRelativePathMessage|TooltipRequestMessage|TooltipSetMessage
+                          CopyRelativePathMessage|TooltipRequestMessage|TooltipSetMessage|FilterMessage
 export type ReadyMessage = { type: "ready" }
 export type SetMessage = {
     type: "set",
@@ -277,3 +277,4 @@ export type CopyPathMessage = { type: "copy-path", file: string }
 export type CopyRelativePathMessage = {type: "copy-relative-path", file: string }
 export type TooltipRequestMessage = { type: "tooltip-request", id: string, conn: MergedConnection }
 export type TooltipSetMessage = { type: "tooltip-set", id: string, content: string }
+export type FilterMessage = { type: "filter", include: string, exclude: string }

@@ -17,6 +17,9 @@ export class Visualization {
     private webview?: vscode.Webview
     private fsWatcher?: FileSystemWatcher
 
+    private include = "**/*"
+    private exclude = ""
+
     private static readonly defaultSettings: NormalizedVisualizationSettings = {
         title: 'CodeBase Relationship Visualizer',
         directed: false,
@@ -79,6 +82,10 @@ export class Visualization {
                     this.fsWatcher.onDidCreate(uri => this.sendUpdate(true));
                     this.fsWatcher.onDidDelete(uri => this.sendUpdate(true));
                     // this.fsWatcher.dispose(); // TODO dispose after usage
+                } else if (message.type == "filter") {
+                    this.include = message.include;
+                    this.exclude = message.exclude;
+                    this.sendUpdate(true);
                 } else if (message.type == "open") {
                     // NOTE: we could do these and Command URIs inside the webview instead. That might be simpler
                     await vscode.commands.executeCommand("vscode.open", this.getUri(message.file))
@@ -155,8 +162,15 @@ export class Visualization {
     private async sendUpdate(getCodebase: boolean, settings?: WebviewVisualizationSettings, connections?: Connection[]) {
         let codebase = undefined;
         if (getCodebase) {
-            codebase = await this.getCodebase()
+            codebase = await fileHelper.getFilteredFileTree(this.base, this.include, this.exclude)
         }
+
+        console.log("sendUpdate", {
+            type: "set",
+            settings: settings,
+            codebase: codebase,
+            connections: connections,
+        })
 
         this.webview!.postMessage({
             type: "set",
@@ -168,14 +182,6 @@ export class Visualization {
 
     private getUri(file: string): Uri {
         return vscode.Uri.file(`${this.base.fsPath}/${file}`)
-    }
-
-    // TODO maybe combine with getPathSet or make getPathSet use this to get the file list with excludes?
-    private async getCodebase(include: string = '**/*', exclude?: string) {
-        const includePattern = new vscode.RelativePattern(this.base, include);
-        const excludePattern = exclude ? new vscode.RelativePattern(this.base, exclude) : undefined;
-        const fileList = await workspace.findFiles(includePattern, excludePattern);
-        return fileHelper.listToFileTree(this.base, fileList);
     }
 }
 

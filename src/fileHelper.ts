@@ -8,7 +8,7 @@ import _ from "lodash";
  * Returns a tree of all the files under uri
  * Children of each directory will be sorted name.
  */
- export async function getFileTree(uri: Uri, type?: FileType): Promise<AnyFile> {
+export async function getFileTree(uri: Uri, type?: FileType): Promise<AnyFile> {
     type = type ?? (await vscode.workspace.fs.stat(uri)).type;
     const name = path.basename(uri.fsPath);
     if (type == FileType.Directory) {
@@ -20,6 +20,22 @@ import _ from "lodash";
     } else {
         throw new Error("Other file types not supported"); // TODO: handle symlinks and other special files
     }
+}
+
+/** Gets a file tree from base with similar semantics as the built-in VSCode search interface. */
+export async function getFilteredFileTree(base: Uri, include?: string, exclude?: string) {
+    // TODO this means you can't use {} in the globs
+    // also you can't pass a whole folder as part of include/exclude either.
+    // Exceptions?
+    const parseGlob = (glob: string) => {
+        glob = `{${glob.split(",").map(g => g.trim()).join(",")}}`
+        return new vscode.RelativePattern(base, glob)
+    }
+
+    const includePattern = parseGlob(include?.trim() ? include : '**/*')
+    const excludePattern = exclude?.trim() ? parseGlob(exclude) : undefined;
+    const fileList = await vscode.workspace.findFiles(includePattern, excludePattern);
+    return listToFileTree(base, fileList);
 }
 
 /**
