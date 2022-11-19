@@ -13,6 +13,7 @@ export class Visualization {
     private settings: NormalizedVisualizationSettings
     private connections: Connection[]
 
+    private base: Uri
     private webview?: vscode.Webview
     private fsWatcher?: FileSystemWatcher
 
@@ -40,6 +41,7 @@ export class Visualization {
         settings: VisualizationSettings = {},
         connections: Iterable<Connection> = []
     ) {
+        this.base = workspace.workspaceFolders![0].uri;
         this.context = context;
         settings = _.cloneDeep(settings)
         if (settings.mergeRules === true) {
@@ -66,7 +68,7 @@ export class Visualization {
                     this.sendUpdate(true, this.getWebviewSettings(), this.connections);
                     this.fsWatcher = workspace.createFileSystemWatcher(
                         // TODO this should use excludes
-                        new vscode.RelativePattern(workspace.workspaceFolders![0], '**/*')
+                        new vscode.RelativePattern(this.base, '**/*')
                     );
 
                     // TODO might have issues with using default excludes?
@@ -154,7 +156,7 @@ export class Visualization {
     }
 
     private getUri(file: string): Uri {
-        return vscode.Uri.file(`${workspace.workspaceFolders![0]!.uri.fsPath}/${file}`)
+        return vscode.Uri.file(`${this.base.fsPath}/${file}`)
     }
 }
 
