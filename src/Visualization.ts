@@ -41,7 +41,9 @@ export class Visualization {
         settings: VisualizationSettings = {},
         connections: Iterable<Connection> = []
     ) {
+        if (!workspace.workspaceFolders?.[0]) throw new Error("No workspace to visualize");
         this.base = workspace.workspaceFolders![0].uri;
+
         this.context = context;
         settings = _.cloneDeep(settings)
         if (settings.mergeRules === true) {
@@ -153,8 +155,7 @@ export class Visualization {
     private async sendUpdate(getCodebase: boolean, settings?: WebviewVisualizationSettings, connections?: Connection[]) {
         let codebase = undefined;
         if (getCodebase) {
-            codebase = await fileHelper.getWorkspaceFileTree();
-            if (!codebase) throw new Error("No workspace to visualize");
+            codebase = await this.getCodebase()
         }
 
         this.webview!.postMessage({
@@ -167,6 +168,14 @@ export class Visualization {
 
     private getUri(file: string): Uri {
         return vscode.Uri.file(`${this.base.fsPath}/${file}`)
+    }
+
+    // TODO maybe combine with getPathSet or make getPathSet use this to get the file list with excludes?
+    private async getCodebase(include: string = '**/*', exclude?: string) {
+        const includePattern = new vscode.RelativePattern(this.base, include);
+        const excludePattern = exclude ? new vscode.RelativePattern(this.base, exclude) : undefined;
+        const fileList = await workspace.findFiles(includePattern, excludePattern);
+        return fileHelper.listToFileTree(this.base, fileList);
     }
 }
 

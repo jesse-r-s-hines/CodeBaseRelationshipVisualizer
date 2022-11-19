@@ -45,15 +45,6 @@ const minimal_contents = {
 
 
 describe('Test fileHelper', () => {
-    test('getWorkspaceFileTree', async () => {
-        // Opening files doesn't work reliably, so we are just opening sample-codebases in the launch script.
-        // await vscode.commands.executeCommand("vscode.openFolder", minimal);
-
-        const tree = await fileHelper.getWorkspaceFileTree();
-        expect(tree?.name).to.eql("sample-codebases")
-        // we'll test the content in getFileTree directly
-    });
-
     test('getFileTree', async () => {
         let tree = await fileHelper.getFileTree(minimal);
         expect(tree).to.eql(minimal_contents);
