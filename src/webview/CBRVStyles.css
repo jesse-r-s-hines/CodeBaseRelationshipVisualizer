@@ -17,6 +17,11 @@ body {
     font-family: sans-serif;
 }
 
+/* Adding a tooltip makes an svg element "selectable" and show a border on click, disable that. */
+#canvas *:focus {
+    outline: none;
+}
+
 .directory > path {
     stroke: #bbb;
     stroke-width: 1;
