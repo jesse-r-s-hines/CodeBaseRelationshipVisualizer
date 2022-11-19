@@ -94,6 +94,7 @@ export default class CBRVWebview {
     zoomWindow: d3.Selection<SVGGElement, unknown, null, undefined>
     fileLayer: d3.Selection<SVGGElement, unknown, null, undefined>
     connectionLayer: d3.Selection<SVGGElement, unknown, null, undefined>
+    connectionSelection?: d3.Selection<SVGPathElement, ConnPath, SVGGElement, unknown>
 
     // Some d3 generation objects
     // See https://observablehq.com/@d3/spline-editor to compare curves
@@ -243,13 +244,18 @@ export default class CBRVWebview {
   
 
                     const setHoverClasses = (node: Node, toggle: boolean) => {
-                        // add hover classes to connected connections. CSS will hide/show connections
                         const file = this.filePath(node)
-                        this.connectionLayer
-                            .selectAll(`[data-from="${file}"], [data-to="${file}"][data-bidirectional=true]`)
-                            .classed("hover-out", toggle)
-                        this.connectionLayer
-                            .selectAll(`[data-to="${file}"], [data-from="${file}"][data-bidirectional=true]`)
+                        // add hover classes to connected connections. CSS will hide/show connections
+                        this.connectionSelection // selection will be set once we render connections
+                            ?.filter(({conn}) =>
+                                conn.from?.file == file || (conn.bidirectional && conn.to?.file == file)
+                            )
+                            .classed("hover-in", toggle)
+
+                        this.connectionSelection
+                            ?.filter(({conn}) =>
+                                conn.to?.file == file || (conn.bidirectional && conn.from?.file == file)
+                            )
                             .classed("hover-in", toggle)
                     }
                     
@@ -368,7 +374,7 @@ export default class CBRVWebview {
                         .attr("fill", color => color),
             );
 
-        this.connectionLayer.selectAll(".connection")
+        this.connectionSelection = this.connectionLayer.selectAll<SVGPathElement, unknown>(".connection")
             .data(paths, ({id}: any) => id)
             .join(
                 enter => enter.append("path")
