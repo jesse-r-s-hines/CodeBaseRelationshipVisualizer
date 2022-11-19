@@ -200,8 +200,15 @@ export default class CBRVWebview {
         }
 
         const root = d3.hierarchy<AnyFile>(this.codebase, f => f.type == FileType.Directory ? f.children : undefined);
-        // Compute size of files and folders
-        root.sum(d => d.type == FileType.File ? _.clamp(d.size, this.s.file.minSize, this.s.file.maxSize) : 0);
+
+        root.sum(d => { // Compute size of files and folders.
+            if (d.type == FileType.File) {
+                return _.clamp(d.size, this.s.file.minSize, this.s.file.maxSize)
+            } else { // only give empty folders a size (empty folders are normally filtered, but root can be empty)
+                return d.children.length == 0 ? 1 : 0 
+            }
+        })
+
         // Sort by descending size for layout purposes
         root.sort((a, b) => d3.descending(a.value, b.value));
 
