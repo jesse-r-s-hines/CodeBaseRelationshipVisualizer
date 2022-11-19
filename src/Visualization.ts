@@ -144,7 +144,7 @@ export class Visualization {
                         <input id="exclude" title="e.g. *.ts, src/**/include"></input>
                     </div>
                 </div>
-                <svg id="canvas"></svg>
+                <svg id="diagram"></svg>
                 <script>var exports = {}</script>
                 <script src="${scriptUri}"></script>
             </body>

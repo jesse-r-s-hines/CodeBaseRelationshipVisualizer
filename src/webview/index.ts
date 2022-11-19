@@ -4,13 +4,13 @@ const vscode = acquireVsCodeApi();
 
 function main() {
     let view: CBRVWebview|undefined;
-    const svg = document.getElementById("canvas")!
+    const svg = document.getElementById("diagram")!
 
     addEventListener('message', event => {
         const message: CBRVMessage = event.data;
         if (message.type == "set") {
             if (!view) {
-                view = new CBRVWebview("#canvas", message.settings!, message.codebase!, message.connections!);
+                view = new CBRVWebview("#diagram", message.settings!, message.codebase!, message.connections!);
             } else {
                 view.update(message.settings, message.codebase, message.connections);
             }
