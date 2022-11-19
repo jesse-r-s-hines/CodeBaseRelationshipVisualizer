@@ -11,6 +11,9 @@ import * as d3 from 'd3';
 const d3ContextMenu = require("d3-context-menu")
 import "d3-context-menu/css/d3-context-menu.css" // manually require the CSS
 
+import tippy, {followCursor}from 'tippy.js';
+import 'tippy.js/dist/tippy.css'; // optional for styling
+
 import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedConnection,
          NormalizedVisualizationSettings } from '../shared';
 import { getExtension, filterFileTree, loopIndex, OptionalKeys } from '../util';
@@ -138,6 +141,11 @@ export default class CBRVWebview {
 
         [this.width, this.height] = getRect(this.diagram.node()!);
 
+        tippy.setDefaultProps({
+            followCursor: true,
+            plugins: [followCursor],
+        });
+
         this.update(this.settings, this.codebase, this.connections);
     }
 
@@ -209,11 +217,6 @@ export default class CBRVWebview {
                         .classed("circle", true)
                         .attr("id", d => uniqId(this.filePath(d)));
 
-                    // Add a tooltip
-                    all.filter(d => d.depth > 0)
-                        .append("title")
-                        .text(d => this.filePath(d));
-
                     const files = all.filter(d => d.data.type == FileType.File);
                     const directories = all.filter(d => d.data.type == FileType.Directory);
 
@@ -263,6 +266,18 @@ export default class CBRVWebview {
                             }
                         })
                         .on("contextmenu", d3ContextMenu((d: Node) => this.contextMenu(d)))
+
+                    files.each((d, i, nodes) => tippy(nodes[i], {
+                        content: this.filePath(d),
+                        delay: [1000, 0], // [show, hide]
+                    }))
+                    directories
+                        .filter(d => d.depth > 0)
+                        .select<SVGElement>(".label")
+                        .each((d, i, nodes) => tippy(nodes[i], {
+                            content: this.filePath(d),
+                            delay: [1000, 0], // [show, hide]
+                        }))
 
                     return all;
                 },
