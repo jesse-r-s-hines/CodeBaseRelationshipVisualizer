@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { workspace } from "vscode"
 import { Uri, Webview, FileSystemWatcher } from 'vscode';
-import { Connection, VisualizationSettings, NormalizedVisualizationSettings, CBRVMessage } from "./shared";
+import { Connection, VisualizationSettings, WebviewVisualizationSettings, CBRVMessage } from "./shared";
 import * as fileHelper from "./fileHelper";
 import _ from 'lodash'
 
@@ -10,13 +10,13 @@ import _ from 'lodash'
  */
 export class Visualization {
     private context: vscode.ExtensionContext;
-    private settings: NormalizedVisualizationSettings
+    private settings: WebviewVisualizationSettings
     private connections: Connection[]
 
     private webview?: vscode.Webview
     private fsWatcher?: FileSystemWatcher
 
-    private static readonly defaultSettings: NormalizedVisualizationSettings = {
+    private static readonly defaultSettings: WebviewVisualizationSettings = {
         title: 'CodeBase Relationship Visualizer',
         directed: false,
         showOnHover: false,

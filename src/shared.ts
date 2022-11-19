@@ -149,7 +149,7 @@ export interface VisualizationSettings {
 }
 
 // TODO Maybe make this with DeepRequired, thought that causes some issues with MergeRules
-export interface NormalizedVisualizationSettings {
+export interface WebviewVisualizationSettings {
     title: string
     directed: boolean
     showOnHover: "in"|"out"|"both"|false
@@ -239,7 +239,7 @@ export type CBRVMessage = ReadyMessage|SetMessage|OpenMessage|RevealInExplorerMe
 export type ReadyMessage = { type: "ready" }
 export type SetMessage = {
     type: "set",
-    settings?: NormalizedVisualizationSettings,
+    settings?: WebviewVisualizationSettings,
     codebase?: Directory,
     connections?: Connection[],
 }

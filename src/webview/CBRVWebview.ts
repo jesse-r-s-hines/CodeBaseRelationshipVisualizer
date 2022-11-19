@@ -15,7 +15,7 @@ import tippy, {followCursor}from 'tippy.js';
 import 'tippy.js/dist/tippy.css'; // optional for styling
 
 import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedConnection,
-         NormalizedVisualizationSettings } from '../shared';
+         WebviewVisualizationSettings } from '../shared';
 import { getExtension, filterFileTree, loopIndex, OptionalKeys } from '../util';
 import * as geo from './geometry';
 import { Point, Box } from './geometry';
@@ -39,7 +39,7 @@ type IncompleteConnEnd = OptionalKeys<ConnEnd, "anchor"|"anchorId">
  * This is the class that renders the actual diagram.
  */
 export default class CBRVWebview {
-    settings: NormalizedVisualizationSettings
+    settings: WebviewVisualizationSettings
     codebase: Directory
     connections: Connection[]
 
@@ -108,7 +108,7 @@ export default class CBRVWebview {
     pathMap: Map<string, Node> = new Map()
 
     /** Pass the selector for the canvas svg */
-    constructor(diagram: string, settings: NormalizedVisualizationSettings, codebase: Directory, connections: Connection[]) {
+    constructor(diagram: string, settings: WebviewVisualizationSettings, codebase: Directory, connections: Connection[]) {
         // filter empty directories
         this.codebase = filterFileTree(codebase, f => !(f.type == FileType.Directory && f.children.length == 0));
         this.settings = settings;
@@ -157,7 +157,7 @@ export default class CBRVWebview {
 
     throttledUpdate: () => void
 
-    update(settings?: NormalizedVisualizationSettings, codebase?: Directory, connections?: Connection[]) {
+    update(settings?: WebviewVisualizationSettings, codebase?: Directory, connections?: Connection[]) {
         if (settings) {
             this.settings = settings;
 
