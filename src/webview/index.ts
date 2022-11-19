@@ -14,11 +14,13 @@ function main() {
             } else {
                 view.update(message.settings, message.codebase, message.connections);
             }
+        } else if (message.type == "tooltip-set") {
+            view!.setTooltip(message.id, message.content)
         }
     });
 
     // just pass events through as webview messages
-    const events = ["open", "reveal-in-explorer", "copy-path", "copy-relative-path"]
+    const events = ["open", "reveal-in-explorer", "copy-path", "copy-relative-path", "tooltip-request"]
     for (let type of events) {
         svg.addEventListener(`cbrv:${type}`, (event: any) => {
             vscode.postMessage({ type: type, ...event.detail })

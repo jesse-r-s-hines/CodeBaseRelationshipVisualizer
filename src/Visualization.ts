@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { workspace } from "vscode"
 import { Uri, Webview, FileSystemWatcher } from 'vscode';
-import { Connection, VisualizationSettings, WebviewVisualizationSettings, CBRVMessage } from "./shared";
+import { Connection, VisualizationSettings, WebviewVisualizationSettings, CBRVMessage, NormalizedVisualizationSettings } from "./shared";
 import * as fileHelper from "./fileHelper";
 import _ from 'lodash'
 
@@ -10,19 +10,20 @@ import _ from 'lodash'
  */
 export class Visualization {
     private context: vscode.ExtensionContext;
-    private settings: WebviewVisualizationSettings
+    private settings: NormalizedVisualizationSettings
     private connections: Connection[]
 
     private webview?: vscode.Webview
     private fsWatcher?: FileSystemWatcher
 
-    private static readonly defaultSettings: WebviewVisualizationSettings = {
+    private static readonly defaultSettings: NormalizedVisualizationSettings = {
         title: 'CodeBase Relationship Visualizer',
         directed: false,
         showOnHover: false,
         connectionDefaults: {
             width: 2,
             color: 'yellow',
+            tooltip: (conn) => conn.tooltip,
         },
         mergeRules: {
             file: "ignore",
@@ -30,6 +31,7 @@ export class Visualization {
             direction: "ignore",
             width: { rule: "add", max: 4 },
             color: "mostCommon",
+            tooltip: { rule: "join", sep: "<br/>" },
         },
     };
 
@@ -51,13 +53,17 @@ export class Visualization {
         this.connections = [...connections];
     }
 
+    getWebviewSettings(): WebviewVisualizationSettings {
+        return _.omit(this.settings, ["title", "connectionDefaults.tooltip"]) as WebviewVisualizationSettings
+    }
+
     async launch() {
         this.webview = this.createWebview();
 
         this.webview.onDidReceiveMessage(
             async (message: CBRVMessage) => {
                 if (message.type == "ready") {
-                    this.sendUpdate(true, this.settings, this.connections);
+                    this.sendUpdate(true, this.getWebviewSettings(), this.connections);
                     this.fsWatcher = workspace.createFileSystemWatcher(
                         // TODO this should use excludes
                         new vscode.RelativePattern(workspace.workspaceFolders![0], '**/*')
@@ -78,6 +84,12 @@ export class Visualization {
                     vscode.env.clipboard.writeText(this.getUri(message.file).fsPath)
                 } else if (message.type == "copy-relative-path") {
                     vscode.env.clipboard.writeText(message.file)
+                } else if (message.type == "tooltip-request") {
+                    this.webview!.postMessage({
+                        type: "tooltip-set",
+                        id: message.id,
+                        content: this.settings.connectionDefaults.tooltip(message.conn) || "",
+                    });
                 }
             },
             undefined,
@@ -126,7 +138,7 @@ export class Visualization {
         `;
     }
 
-    private async sendUpdate(getCodebase: boolean, settings?: VisualizationSettings, connections?: Connection[]) {
+    private async sendUpdate(getCodebase: boolean, settings?: WebviewVisualizationSettings, connections?: Connection[]) {
         let codebase = undefined;
         if (getCodebase) {
             codebase = await fileHelper.getWorkspaceFileTree();

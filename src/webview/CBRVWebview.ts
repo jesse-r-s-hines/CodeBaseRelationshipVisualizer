@@ -11,7 +11,7 @@ import * as d3 from 'd3';
 const d3ContextMenu = require("d3-context-menu")
 import "d3-context-menu/css/d3-context-menu.css" // manually require the CSS
 
-import tippy, {followCursor}from 'tippy.js';
+import tippy, {followCursor, Instance as Tippy} from 'tippy.js';
 import 'tippy.js/dist/tippy.css'; // optional for styling
 
 import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedConnection,
@@ -389,7 +389,19 @@ export default class CBRVWebview {
                 .attr("marker-start", ({conn}) =>
                     this.settings.directed && conn.bidirectional ? `url(#${uniqId(conn.color)})` : null
                 )
-                .attr("d", ({path}) => path);
+                .attr("d", ({path}) => path)
+                .attr("data-tooltip-loaded", false) // clear this on update
+                .each(({id, conn}, i, nodes) => tippy(nodes[i] as Element, {
+                    content: "",
+                    allowHTML: true,
+                    delay: [250, 0], // [show, hide]
+                    followCursor: true,
+                    onShow: (instance) => {
+                        const loaded = nodes[i].getAttribute("data-tooltip-loaded") == "true"
+                        if (!loaded) this.emit("tooltip-request", {id, conn})
+                        if (!loaded || !instance.props.content) return false // disabled or waiting until load
+                    }
+                }));
     }
 
     /**
@@ -821,5 +833,18 @@ export default class CBRVWebview {
                 action: (d: Node) => this.emit("copy-relative-path", {file: this.filePath(d)})
             }
         ].filter(item => item)
+    }
+
+    setTooltip(id: string, content: string) {
+        this.connectionSelection
+            ?.filter((connPath) => connPath.id == id)
+            .each((d, i, node) => { // there'll only be one
+                const tooltip = (node[i] as any)._tippy as Tippy
+                node[i].setAttribute("data-tooltip-loaded", "true")
+                tooltip.setContent(content || "");
+                if (content) {
+                    tooltip.show()
+                }
+            })
     }
 }

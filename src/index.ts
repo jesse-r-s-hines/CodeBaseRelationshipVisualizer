@@ -21,6 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
                 showOnHover: false,
                 connectionDefaults: {
                     color: 'green',
+                    tooltip: (conn) => conn.color,
                 },
                 mergeRules: true,
             }, links);

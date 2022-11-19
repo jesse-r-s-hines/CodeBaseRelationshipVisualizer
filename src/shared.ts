@@ -62,6 +62,9 @@ export interface Directory extends BaseFile {
     /** CSS color string */
     color?: string
 
+    /** String to show as tooltip */
+    tooltip?: string
+
     /**
      * Other freeform properties can be defined on the `Connection` and referenced in custom callbacks or `MergeRules`
      */
@@ -111,6 +114,13 @@ export interface VisualizationSettings {
 
         /** Default CSS color string for connections. Can be overridden per connection via `Connection.color` */
         color?: string
+
+        /**
+         * A function to return a HTML tooltip string for each connection. If the function returns falsy, no tooltip
+         * will shown. Default is to return. Default is to use `connection.tooltip` or no tooltip if not present and to
+         * join unique tooltips with <br> when merging.
+         */
+        tooltip?: ((conn: MergedConnection) => string)
     }
 
     /**
@@ -149,8 +159,20 @@ export interface VisualizationSettings {
 }
 
 // TODO Maybe make this with DeepRequired, thought that causes some issues with MergeRules
-export interface WebviewVisualizationSettings {
+// TODO refactor the repetition here
+export interface NormalizedVisualizationSettings {
     title: string
+    directed: boolean
+    showOnHover: "in"|"out"|"both"|false
+    connectionDefaults: {
+        width: number
+        color: string
+        tooltip: (conn: MergedConnection) => string|false|undefined
+    }
+    mergeRules: MergeRules|false
+}
+
+export interface WebviewVisualizationSettings {
     directed: boolean
     showOnHover: "in"|"out"|"both"|false
     connectionDefaults: {
@@ -185,6 +207,7 @@ export interface MergedConnection {
 
     width: number
     color: string
+    tooltip?: string
 
     /**
     * The original connections that were merged.
@@ -202,6 +225,8 @@ export interface NormalizedConnection {
     to?: NormalizedEndpoint
     width?: number
     color?: string
+    tooltip?: string
+    [key: string]: any
 }
 
 export type NormalizedEndpoint = { file: string, line?: number }
@@ -213,8 +238,9 @@ export type MergeRules = {
 
     width?: SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule | AddRule | ValueRule
     color?: SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule | ValueRule
+    tooltip?: SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule | ValueRule
 } | {
-    [key: string]: SameRule | IgnoreRule
+    [key: string]: DefaultMergeRule
 }
 
 // TODO duplicate types
@@ -237,7 +263,7 @@ export type DefaultMergeRule = SameRule | IgnoreRule | LeastRule | GreatestRule 
 
 // messages for communication between the webview and VSCode
 export type CBRVMessage = ReadyMessage|SetMessage|OpenMessage|RevealInExplorerMessage|CopyPathMessage|
-                          CopyRelativePathMessage
+                          CopyRelativePathMessage|TooltipRequestMessage|TooltipSetMessage
 export type ReadyMessage = { type: "ready" }
 export type SetMessage = {
     type: "set",
@@ -249,3 +275,5 @@ export type OpenMessage = { type: "open", file: string }
 export type RevealInExplorerMessage = { type: "reveal-in-explorer", file: string }
 export type CopyPathMessage = { type: "copy-path", file: string }
 export type CopyRelativePathMessage = {type: "copy-relative-path", file: string }
+export type TooltipRequestMessage = { type: "tooltip-request", id: string, conn: MergedConnection }
+export type TooltipSetMessage = { type: "tooltip-set", id: string, content: string }
