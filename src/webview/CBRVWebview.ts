@@ -142,7 +142,6 @@ export default class CBRVWebview {
         [this.width, this.height] = getRect(this.diagram.node()!);
 
         tippy.setDefaultProps({
-            followCursor: true,
             plugins: [followCursor],
         });
 
@@ -270,6 +269,7 @@ export default class CBRVWebview {
                     files.each((d, i, nodes) => tippy(nodes[i], {
                         content: this.filePath(d),
                         delay: [1000, 0], // [show, hide]
+                        followCursor: true,
                     }))
                     directories
                         .filter(d => d.depth > 0)
@@ -277,6 +277,7 @@ export default class CBRVWebview {
                         .each((d, i, nodes) => tippy(nodes[i], {
                             content: this.filePath(d),
                             delay: [1000, 0], // [show, hide]
+                            followCursor: true,
                         }))
 
                     return all;
