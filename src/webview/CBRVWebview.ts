@@ -250,15 +250,15 @@ export default class CBRVWebview {
                             .classed("hover-in", toggle)
                     }
                     
-                    // Add hover event listeners.
+                    // Add event listeners.
                     all
-                        .on("mouseover", (event, node) => setHoverClasses(node, true))
-                        .on("mouseout", (event, node) => setHoverClasses(node, false))
-                        .on("dblclick", (event, node) => {
-                            if (node.data.type == FileType.Directory) {
-                                this.emit("reveal-in-explorer", {file: this.filePath(node)})
+                        .on("mouseover", (event, d) => setHoverClasses(d, true))
+                        .on("mouseout", (event, d) => setHoverClasses(d, false))
+                        .on("dblclick", (event, d) => {
+                            if (d.data.type == FileType.Directory) {
+                                this.emit("reveal-in-explorer", {file: this.filePath(d)})
                             } else {
-                                this.emit("open", {file: this.filePath(node)})
+                                this.emit("open", {file: this.filePath(d)})
                             }
                         })
                         .on("contextmenu", d3ContextMenu((d: Node) => this.contextMenu(d)))
