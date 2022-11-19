@@ -235,7 +235,8 @@ export type DefaultMergeRule = SameRule | IgnoreRule | LeastRule | GreatestRule 
 
 
 // messages for communication between the webview and VSCode
-export type CBRVMessage = ReadyMessage|SetMessage|OpenMessage|RevealInExplorerMessage|CopyPath|CopyRelativePath
+export type CBRVMessage = ReadyMessage|SetMessage|OpenMessage|RevealInExplorerMessage|CopyPathMessage|
+                          CopyRelativePathMessage
 export type ReadyMessage = { type: "ready" }
 export type SetMessage = {
     type: "set",
@@ -243,7 +244,7 @@ export type SetMessage = {
     codebase?: Directory,
     connections?: Connection[],
 }
-export type OpenMessage = {type: "open", file: string }
-export type RevealInExplorerMessage = {type: "reveal-in-explorer", file: string }
-export type CopyPath = {type: "copy-path", file: string }
-export type CopyRelativePath = {type: "copy-relative-path", file: string }
+export type OpenMessage = { type: "open", file: string }
+export type RevealInExplorerMessage = { type: "reveal-in-explorer", file: string }
+export type CopyPathMessage = { type: "copy-path", file: string }
+export type CopyRelativePathMessage = {type: "copy-relative-path", file: string }
