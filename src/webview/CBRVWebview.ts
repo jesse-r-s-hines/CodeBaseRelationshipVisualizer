@@ -365,8 +365,6 @@ export default class CBRVWebview {
                     .append("path")
                         .attr("d", "M 0 0 L 10 5 L 0 10 z")
                         .attr("fill", color => color),
-                update => update,
-                exit => exit.remove(),
             );
 
         this.connectionLayer.selectAll(".connection")
@@ -376,17 +374,15 @@ export default class CBRVWebview {
                     .classed("connection", true)
                     .attr("data-from", ({conn}) => conn.from?.file ?? "")
                     .attr("data-to", ({conn}) => conn.to?.file ?? "")
-                    .attr("data-bidirectional", ({conn}) => conn.bidirectional)
-                    .attr("stroke-width", ({conn}) => conn.width)
-                    .attr("stroke", ({conn}) => conn.color)
-                    .attr("marker-end", ({conn}) => this.settings.directed ? `url(#${uniqId(conn.color)})` : null)
-                    .attr("marker-start", ({conn}) =>
-                        this.settings.directed && conn.bidirectional ? `url(#${uniqId(conn.color)})` : null
-                    )
-                    .attr("d", ({path}) => path),
-                update => update,
-                exit => exit.remove(),
-            );
+            )
+                .attr("data-bidirectional", ({conn}) => conn.bidirectional)
+                .attr("stroke-width", ({conn}) => conn.width)
+                .attr("stroke", ({conn}) => conn.color)
+                .attr("marker-end", ({conn}) => this.settings.directed ? `url(#${uniqId(conn.color)})` : null)
+                .attr("marker-start", ({conn}) =>
+                    this.settings.directed && conn.bidirectional ? `url(#${uniqId(conn.color)})` : null
+                )
+                .attr("d", ({path}) => path);
     }
 
     /**
