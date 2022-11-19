@@ -57,7 +57,7 @@ export class Visualization {
         this.webview.onDidReceiveMessage(
             async (message: CBRVMessage) => {
                 if (message.type == "ready") {
-                    this.send(true, this.settings, this.connections);
+                    this.sendUpdate(true, this.settings, this.connections);
                     this.fsWatcher = workspace.createFileSystemWatcher(
                         // TODO this should use excludes
                         new vscode.RelativePattern(workspace.workspaceFolders![0], '**/*')
@@ -65,9 +65,9 @@ export class Visualization {
 
                     // TODO might have issues with using default excludes?
                     // TODO send only changes? Likely use a merge-throttle pattern to clump multiple changes.
-                    this.fsWatcher.onDidChange(uri => this.send(true));
-                    this.fsWatcher.onDidCreate(uri => this.send(true));
-                    this.fsWatcher.onDidDelete(uri => this.send(true));
+                    this.fsWatcher.onDidChange(uri => this.sendUpdate(true));
+                    this.fsWatcher.onDidCreate(uri => this.sendUpdate(true));
+                    this.fsWatcher.onDidDelete(uri => this.sendUpdate(true));
                     // this.fsWatcher.dispose(); // TODO dispose after usage
                 } else if (message.type == "open") {
                     // NOTE: we could do these and Command URIs inside the webview instead. That might be simpler
@@ -126,7 +126,7 @@ export class Visualization {
         `;
     }
 
-    private async send(getCodebase: boolean, settings?: VisualizationSettings, connections?: Connection[]) {
+    private async sendUpdate(getCodebase: boolean, settings?: VisualizationSettings, connections?: Connection[]) {
         let codebase = undefined;
         if (getCodebase) {
             codebase = await fileHelper.getWorkspaceFileTree();
