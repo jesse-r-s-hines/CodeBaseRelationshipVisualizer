@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { Uri } from "vscode";
 import * as path from 'path';
 import { AnyFile, Directory, FileType } from "./shared";
+import _ from "lodash";
 
 export async function getWorkspaceFileTree(): Promise<Directory | undefined> {
     if (vscode.workspace.workspaceFolders !== undefined) {
@@ -12,19 +13,66 @@ export async function getWorkspaceFileTree(): Promise<Directory | undefined> {
     }
 }
 
-/** Returns a tree of all the files under uri */
-export async function getFileTree(uri: Uri, type?: FileType): Promise<AnyFile> {
+/**
+ * Returns a tree of all the files under uri
+ * Children of each directory will be sorted name.
+ */
+ export async function getFileTree(uri: Uri, type?: FileType): Promise<AnyFile> {
     type = type ?? (await vscode.workspace.fs.stat(uri)).type;
     const name = path.basename(uri.fsPath);
     if (type == FileType.Directory) {
         const files = await vscode.workspace.fs.readDirectory(uri);
         const children = await Promise.all(files.map(([name, type]) => getFileTree(Uri.joinPath(uri, name), type)));
-        return { type, name, children: children };
+        return { type, name, children: _.sortBy(children, f => f.name) };
     } else if (type == FileType.File) {
         return { type, name, size: Math.max((await vscode.workspace.fs.stat(uri)).size, 1) };
     } else {
         throw new Error("Other file types not supported"); // TODO: handle symlinks and other special files
     }
+}
+
+/**
+ * Takes a list of Uri and converts it into a file tree starting at base. Uris should be absolute.
+ * Children of each directory will be sorted name.
+ */
+export async function listToFileTree(base: Uri, uris: Uri[]): Promise<Directory> {
+    // query all the stat data asynchronously
+    const flat: [string, AnyFile][] = await Promise.all(uris.map(async uri => {
+        const stat = await vscode.workspace.fs.stat(uri);
+        if (stat.type == FileType.Directory) {
+            return [uri.fsPath, { type: stat.type, name: path.basename(uri.fsPath), children: [] }];
+        } else if (stat.type == FileType.File) {
+            return [uri.fsPath, { type: stat.type, name: path.basename(uri.fsPath), size: Math.max(stat.size, 1)}];
+        } else {
+            throw new Error("Other filetypes not supported") // TODO
+        }
+    }))
+
+    const addChild = (dir: Directory, f: AnyFile) => // insert in sorted order
+        dir.children.splice(_.sortedIndexBy(dir.children, f, c => c.name), 0, f)
+
+    const tree: Directory = { type: FileType.Directory, name: path.basename(base.fsPath), children: [] }
+
+    for (let [filePath, file] of flat) {
+        const parts = path.relative(base.fsPath, filePath).split(path.sep)
+        let dir = tree
+        for (let part of parts.slice(0, -1)) {
+            let found = dir.children.find(f => f.name == part)
+            if (found == undefined) {
+                found = { type: FileType.Directory, name: part,  children: [] }
+                addChild(dir, found)
+            }
+            if (found.type != FileType.Directory) {
+                // this shouldn't be possible except with maybe a race condition on changing a fplder to a file
+                throw new Error(`Conflict on file ${filePath}`)
+            } else {
+                dir = found
+            }
+        }
+        addChild(dir, file)
+    }
+
+    return tree
 }
 
 /** Returns the set of the paths of all files under base, relative to base. Folders will not be in the set. */
