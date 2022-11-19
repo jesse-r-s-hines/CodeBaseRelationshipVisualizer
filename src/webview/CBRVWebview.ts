@@ -210,7 +210,8 @@ export default class CBRVWebview {
                         .attr("id", d => uniqId(this.filePath(d)));
 
                     // Add a tooltip
-                    all.append("title")
+                    all.filter(d => d.depth > 0)
+                        .append("title")
                         .text(d => this.filePath(d));
 
                     const files = all.filter(d => d.data.type == FileType.File);
