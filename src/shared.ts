@@ -229,9 +229,10 @@ export type MostCommonRule = SimpleMergeRule<'mostCommon'>;
 export type GroupRule = SimpleMergeRule<'group'>;
 export type AddRule = SimpleMergeRule<"add"> | {rule: "add", max: number}
 export type ValueRule = {rule: "value", value: any}
+export type JoinRule = SimpleMergeRule<"join"> | {rule: "join", sep: string};
 
 export type DefaultMergeRule = SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule |
-                               GroupRule | AddRule | ValueRule
+                               GroupRule | AddRule | ValueRule | JoinRule
 
 
 // messages for communication between the webview and VSCode

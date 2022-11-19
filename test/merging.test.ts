@@ -245,6 +245,14 @@ describe("Test merging.ts", () => {
         expect(mergeByRules([{a: 1}], rules)).to.eql([{a: [1]}])
         expect(mergeByRules([{a: 1}, {}, {a: null}], rules)).to.eql([{a: [1, null]}])
         expect(mergeByRules([{}], rules)).to.eql([{a: []}])
+
+        rules = {a: 'join'}
+        expect(mergeByRules([{a: "A"}, {}, {a: "C"}], rules)).to.eql([{a: "A<br/>C"}])
+        expect(mergeByRules([{a: "A"}], rules)).to.eql([{a: "A"}])
+        expect(mergeByRules([{}], rules)).to.eql([{a: ""}])
+
+        rules = {a: {rule: 'join', sep: "-"}}
+        expect(mergeByRules([{a: "A"}, {a: "B"}, {a: "C"}], rules)).to.eql([{a: "A-B-C"}])
     })
 
 

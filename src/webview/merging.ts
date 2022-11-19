@@ -15,9 +15,10 @@ export type MostCommonRule = SimpleMergeRule<'mostCommon'>;
 export type GroupRule = SimpleMergeRule<'group'>;
 export type AddRule = SimpleMergeRule<"add"> | {rule: "add", max: number}
 export type ValueRule = {rule: "value", value: any}
+export type JoinRule = SimpleMergeRule<"join"> | {rule: "join", sep: string};
 
 export type DefaultMergeRule = SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule |
-                               GroupRule | AddRule | ValueRule
+                               GroupRule | AddRule | ValueRule | JoinRule
 
 const defined = (i: any) => i !== undefined
 
@@ -38,6 +39,7 @@ const defaultMergers: Record<string, (items: any[], rule: any) => any> = {
         return items.length <= 1 ? items[0] : rule.value; // may return undefined
     },
     group: items => items.filter(defined),
+    join: (items, rule) => items.filter(defined).join(rule.sep ?? "<br/>")
 }
 
 /** Normalize and validate rules */
