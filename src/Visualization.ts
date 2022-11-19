@@ -132,6 +132,16 @@ export class Visualization {
                 <link rel="stylesheet" href="${stylesUri}">
             </head>
             <body>
+                <div id="filters">
+                    <div class="form-input">
+                        <label for="include">Files to include</label>
+                        <input id="include" title="e.g. *.ts, src/**/include"></input>
+                    </div>
+                    <div class="form-input">
+                        <label for="exclude">File to exclude</label>
+                        <input id="exclude" title="e.g. *.ts, src/**/include"></input>
+                    </div>
+                </div>
                 <svg id="canvas"></svg>
                 <script>var exports = {}</script>
                 <script src="${scriptUri}"></script>
