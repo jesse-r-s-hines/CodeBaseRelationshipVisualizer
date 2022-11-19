@@ -89,11 +89,11 @@ export default class CBRVWebview {
     }
    
     // Parts of the d3 diagram
-    diagram: d3.Selection<SVGSVGElement, unknown, null, undefined>
-    defs: d3.Selection<SVGDefsElement, unknown, null, undefined>
-    zoomWindow: d3.Selection<SVGGElement, unknown, null, undefined>
-    fileLayer: d3.Selection<SVGGElement, unknown, null, undefined>
-    connectionLayer: d3.Selection<SVGGElement, unknown, null, undefined>
+    diagram: d3.Selection<SVGSVGElement, unknown, HTMLElement, undefined>
+    defs: d3.Selection<SVGDefsElement, unknown, HTMLElement, undefined>
+    zoomWindow: d3.Selection<SVGGElement, unknown, HTMLElement, undefined>
+    fileLayer: d3.Selection<SVGGElement, unknown, HTMLElement, undefined>
+    connectionLayer: d3.Selection<SVGGElement, unknown, HTMLElement, undefined>
     connectionSelection?: d3.Selection<SVGPathElement, ConnPath, SVGGElement, unknown>
 
     // Some d3 generation objects
@@ -109,20 +109,22 @@ export default class CBRVWebview {
     pathMap: Map<string, Node> = new Map()
 
     /** Pass the selector for the canvas svg */
-    constructor(diagram: string, settings: WebviewVisualizationSettings, codebase: Directory, connections: Connection[]) {
+    constructor(settings: WebviewVisualizationSettings, codebase: Directory, connections: Connection[]) {
         // filter empty directories
         this.codebase = filterFileTree(codebase, f => !(f.type == FileType.Directory && f.children.length == 0));
         this.settings = settings;
         this.connections = connections;
 
         // Create the SVG
-        this.diagram = d3.select(document.querySelector(diagram) as SVGSVGElement)
+        this.diagram = d3.select<SVGSVGElement, unknown>('#diagram')
             .attr("viewBox", this.getViewbox());
-
         this.defs = this.diagram.append("defs");
-        this.zoomWindow = this.diagram.append("g").classed("zoom-window", true);
-        this.fileLayer = this.zoomWindow.append("g").classed("file-layer", true);
-        this.connectionLayer = this.zoomWindow.append("g").classed("connection-layer", true);
+        this.zoomWindow = this.diagram.append("g")
+            .classed("zoom-window", true);
+        this.fileLayer = this.zoomWindow.append("g")
+            .classed("file-layer", true);
+        this.connectionLayer = this.zoomWindow.append("g")
+            .classed("connection-layer", true);
 
         // Add event listeners
         this.throttledUpdate = _.throttle(() => this.update(), 250, {trailing: true})

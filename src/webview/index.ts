@@ -10,7 +10,7 @@ function main() {
         const message: CBRVMessage = event.data;
         if (message.type == "set") {
             if (!view) {
-                view = new CBRVWebview("#diagram", message.settings!, message.codebase!, message.connections!);
+                view = new CBRVWebview(message.settings!, message.codebase!, message.connections!);
             } else {
                 view.update(message.settings, message.codebase, message.connections);
             }
