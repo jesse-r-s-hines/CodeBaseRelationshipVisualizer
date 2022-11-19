@@ -11,15 +11,6 @@ const workspaceFolder = Uri.file(__dirname.split("/").slice(0, -4).join("/"))
 const samples = Uri.joinPath(workspaceFolder, `/test/sample-codebases`);
 
 describe('Test fileHelper', () => {
-    test('getWorkspaceFileTree', async () => {
-        // Opening files doesn't work reliably, so we are just opening sample-codebases in the launch script.
-        // await vscode.commands.executeCommand("vscode.openFolder", Uri.joinPath(samples, "minimal"));
-
-        const tree = await fileHelper.getWorkspaceFileTree();
-        expect(tree?.name).to.eql("sample-codebases")
-        // we'll test the content in getFileTree directly
-    });
-
     test('getFileTree', async () => {
         const tree = await fileHelper.getFileTree(Uri.joinPath(samples, "minimal"));
         expect(tree).to.eql({
