@@ -2,6 +2,7 @@ import { expect } from 'chai';
 import { describe, test } from "mocha"
 import { AnyFile, FileType } from '../src/shared';
 import * as util from '../src/util';
+import _ from "lodash";
 
 describe("Test utils.ts", () => {
     it('test getExtension', () => {
@@ -60,6 +61,26 @@ describe("Test utils.ts", () => {
             expect(util.filterFileTree(empty, f => false)).to.eql(empty);
             expect(util.filterFileTree(file, f => true)).to.eql(file);
             expect(util.filterFileTree(file, f => false)).to.eql(file);
+        })
+
+        it("paths", () => {
+            let paths: string[] = [];
+            const result = util.filterFileTree(tree, (f, path) => {
+                paths.push(path);
+                return true;
+            });
+            paths = _.sortBy(paths)
+            
+            expect(paths).to.eql([
+                "b",
+                "b/c",
+                "b/d",
+                "e",
+                "f",
+            ]);
+
+
+            expect(util.filterFileTree(tree, f => false)).to.eql({name: "a", type: FileType.Directory, children: []});
         })
     });
 

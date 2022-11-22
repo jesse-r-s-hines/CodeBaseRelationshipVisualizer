@@ -12,10 +12,23 @@ export function getExtension(filename: string): string {
 
 /**
  * Filters a tree structure. Can't remove the root node.
+ * Pass a condition predicate, which will be passed the file object, and a string path relative to root.
  */
-export function filterFileTree<T extends AnyFile>(root: T, condition: (node: AnyFile) => boolean): T {
+export function filterFileTree<T extends AnyFile>(
+    root: T,
+    condition: (node: AnyFile, path: string) => boolean,
+    path = ""
+): T {
+    // Can't use path module in webview. TODO consider how we're handling windows paths.
+    const joinPath = (path: string, c: AnyFile) => path ? `${path}/${c.name}` : c.name;
+
     if (root.type == FileType.Directory) {
-        return { ...root, children: root.children.filter(condition).map(child => filterFileTree(child, condition)) };
+        return {
+            ...root,
+            children: root.children
+                .filter(child => condition(child, joinPath(path, child)))
+                .map(child => filterFileTree(child, condition, joinPath(path, child)))
+        };
     } else {
         return root;
     }
