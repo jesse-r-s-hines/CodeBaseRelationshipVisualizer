@@ -361,7 +361,7 @@ export default class CBRVWebview {
             });
 
         // Store a map of paths to nodes for future use in connections
-        this.pathMap = new Map(); // TODO refactor this
+        this.pathMap = new Map();
         packLayout.each((d) => {
             // get d or the first ancestor that is visible
             const firstVisible = d.ancestors().find(p => !p.parent || !this.shouldHideContents(p.parent))!;
@@ -433,15 +433,16 @@ export default class CBRVWebview {
      */
     mergeConnections(connections: Connection[]): MergedConnection[] {
         // Each keyFunc will split up connections in to smaller groups
-        const raised = _(connections).map((conn) => {
-            const normConn = this.normalizeConn(conn)
-            // TODO handle missing files
-            const [from, to] = [normConn.from, normConn.to].map(
-                f => f ? this.filePath(this.pathMap.get(f.file)!) : undefined
-            )
-            const raised = this.normalizeConn({ from, to })
-            return {conn: normConn, raised}
-        })
+        const raised = _(connections)
+            .map(conn => this.normalizeConn(conn))
+            .filter(conn => [conn.from, conn.to].every(e => !e || !!this.pathMap.get(e.file)))
+            .map(conn => {
+                const [from, to] = [conn.from, conn.to].map(
+                    e => e ? this.filePath(this.pathMap.get(e.file)!) : undefined
+                );
+                const raised = this.normalizeConn({ from, to });
+                return {conn: conn, raised};
+            });
 
         if (this.settings.mergeRules) {
             return raised

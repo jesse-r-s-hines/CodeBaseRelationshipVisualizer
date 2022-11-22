@@ -165,13 +165,6 @@ export class Visualization {
             codebase = await fileHelper.getFilteredFileTree(this.base, this.include, this.exclude)
         }
 
-        console.log("sendUpdate", {
-            type: "set",
-            settings: settings,
-            codebase: codebase,
-            connections: connections,
-        })
-
         this.webview!.postMessage({
             type: "set",
             settings: settings,
