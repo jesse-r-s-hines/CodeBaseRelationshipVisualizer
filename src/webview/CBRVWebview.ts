@@ -34,7 +34,9 @@ type ConnEnd = {
     theta?: number, // Angle from from.target to to.target
 }
 type IncompleteConnEnd = OptionalKeys<ConnEnd, "anchor"|"anchorId">
-
+// Shortcut for d3.Selection
+type Selection<GElement extends d3.BaseType = HTMLElement, Datum = unknown> =
+    d3.Selection<GElement, Datum, d3.BaseType, undefined>
 /**
  * This is the class that renders the actual diagram.
  */
@@ -89,15 +91,15 @@ export default class CBRVWebview {
     }
    
     // Parts of the d3 diagram
-    diagram: d3.Selection<SVGSVGElement, unknown, HTMLElement, undefined>
-    defs: d3.Selection<SVGDefsElement, unknown, HTMLElement, undefined>
-    zoomWindow: d3.Selection<SVGGElement, unknown, HTMLElement, undefined>
-    fileLayer: d3.Selection<SVGGElement, unknown, HTMLElement, undefined>
-    connectionLayer: d3.Selection<SVGGElement, unknown, HTMLElement, undefined>
-    connectionSelection?: d3.Selection<SVGPathElement, ConnPath, SVGGElement, unknown>
+    diagram: Selection<SVGSVGElement>
+    defs: Selection<SVGDefsElement>
+    zoomWindow: Selection<SVGGElement>
+    fileLayer: Selection<SVGGElement>
+    connectionLayer: Selection<SVGGElement>
+    connectionSelection?: Selection<SVGPathElement, ConnPath>
 
-    includeInput: d3.Selection<HTMLInputElement, unknown, HTMLElement, undefined>
-    excludeInput: d3.Selection<HTMLInputElement, unknown, HTMLElement, undefined>
+    includeInput: Selection<HTMLInputElement>
+    excludeInput: Selection<HTMLInputElement>
 
     // Some d3 generation objects
     // See https://observablehq.com/@d3/spline-editor to compare curves
