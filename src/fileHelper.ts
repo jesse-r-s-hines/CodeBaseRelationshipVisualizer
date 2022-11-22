@@ -24,9 +24,14 @@ export async function getFileTree(uri: Uri, type?: FileType): Promise<AnyFile> {
 
 /** Gets a file tree from base with similar semantics as the built-in VSCode search interface. */
 export async function getFilteredFileTree(base: Uri, include?: string, exclude?: string) {
-    // TODO this means you can't use {} in the globs
+    // TODO this means you can't use {} in the globals since you can't nest {}
     // also you can't pass a whole folder as part of include/exclude either.
     // Exceptions?
+    // See: https://stackoverflow.com/questions/38063144/can-you-pass-multiple-glob-strings-to-vscode-findfiles-api
+    // https://github.com/Microsoft/vscode/issues/32761
+    // https://github.com/microsoft/vscode/commit/97fc799b6f5e87e8a808a802c3a341c75d4fc180
+    // vscode/src/vs/workbench/services/search/common/queryBuilder.ts
+
     const parseGlob = (glob: string) => {
         glob = `{${glob.split(",").map(g => g.trim()).join(",")}}`
         return new vscode.RelativePattern(base, glob)
