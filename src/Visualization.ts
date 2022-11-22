@@ -150,6 +150,10 @@ export class Visualization {
                         <label for="exclude">File to exclude</label>
                         <input id="exclude" title="e.g. *.ts, src/**/include"></input>
                     </div>
+                    <div class="form-input">
+                        <label for="hide-unconnected">Hide Unconnected</label>
+                        <input id="hide-unconnected" type="checkbox"></input>
+                    </div>
                 </div>
                 <svg id="diagram"></svg>
                 <script>var exports = {}</script>

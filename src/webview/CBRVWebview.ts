@@ -100,6 +100,7 @@ export default class CBRVWebview {
 
     includeInput: Selection<HTMLInputElement>
     excludeInput: Selection<HTMLInputElement>
+    hideUnconnectedInput: Selection<HTMLInputElement>
 
     // Some d3 generation objects
     // See https://observablehq.com/@d3/spline-editor to compare curves
@@ -113,10 +114,12 @@ export default class CBRVWebview {
     /** Maps file paths to their rendered circle (or first visible circle if they are hidden) */
     pathMap: Map<string, Node> = new Map()
 
+    // TODO maybe move this (and width/height/etc.) into a React-style "state" object and make update use it.
+    hideUnconnected = false
+
     /** Pass the selector for the canvas svg */
     constructor(settings: WebviewVisualizationSettings, codebase: Directory, connections: Connection[]) {
-        // filter empty directories
-        this.codebase = filterFileTree(codebase, f => !(f.type == FileType.Directory && f.children.length == 0));
+        this.codebase = codebase;
         this.settings = settings;
         this.connections = connections;
 
@@ -155,7 +158,7 @@ export default class CBRVWebview {
 
         this.includeInput = d3.select<HTMLInputElement, unknown>("#include")
         this.excludeInput = d3.select<HTMLInputElement, unknown>("#exclude")
-
+        this.hideUnconnectedInput = d3.select<HTMLInputElement, unknown>("#hide-unconnected")
 
         const updateFilters = () => this.emit('filter', {
             include: this.includeInput.property('value'),
@@ -163,6 +166,10 @@ export default class CBRVWebview {
         })
         this.includeInput.on('change', updateFilters)
         this.excludeInput.on('change', updateFilters)
+        this.hideUnconnectedInput.on('change', () => {
+            this.hideUnconnected = this.hideUnconnectedInput.property('checked')
+            this.update(this.settings, this.codebase, this.connections); // force re-render
+        })
 
         this.update(this.settings, this.codebase, this.connections);
     }
@@ -200,8 +207,11 @@ export default class CBRVWebview {
         if (codebase) {
             this.codebase = codebase;
         }
+        const filteredCodebase = this.filteredCodebase();
 
-        const root = d3.hierarchy<AnyFile>(this.codebase, f => f.type == FileType.Directory ? f.children : undefined);
+        const root = d3.hierarchy<AnyFile>(filteredCodebase,
+            f => f.type == FileType.Directory ? f.children : undefined
+        );
 
         root.sum(d => { // Compute size of files and folders.
             if (d.type == FileType.File) {
@@ -369,6 +379,33 @@ export default class CBRVWebview {
             const firstVisible = d.ancestors().find(p => !p.parent || !this.shouldHideContents(p.parent))!;
             this.pathMap.set(this.filePath(d), firstVisible);
         });
+    }
+
+    filteredCodebase() {
+        let filtered: Directory;
+
+        if (this.hideUnconnected) {
+            const connected = new Set(_(this.connections)
+                .flatMap(conn => {
+                    const normConn = this.normalizeConn(conn);
+                    return [normConn.from?.file, normConn.to?.file].filter(e => e) as string[];
+                })
+                .uniq().value()
+            );
+
+            filtered = filterFileTree(this.codebase,
+                (f, path) => f.type == FileType.Directory || connected.has(path)
+            );
+        } else {
+            filtered = this.codebase;
+        }
+
+        // filter out empty folders (including those empty because of unconnected filter)
+        filtered = filterFileTree(filtered,
+            f => !(f.type == FileType.Directory && f.children.length == 0) // filter empty directories
+        );
+
+        return filtered;
     }
 
     updateConnections(connections?: Connection[]) {
