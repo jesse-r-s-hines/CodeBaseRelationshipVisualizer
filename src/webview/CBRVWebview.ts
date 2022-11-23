@@ -187,16 +187,17 @@ export default class CBRVWebview {
         this.codebase = codebase ?? this.codebase;
         this.connections = connections ?? this.connections;
 
-        this.updateMisc(); // this is cheap and influenced by multiple things so always update it.
-
         if (settings) {
-            this.settings = settings;
             this.updateCodebase(true);
             this.updateConnections();
         } else {
             this.updateCodebase(!!codebase);
             this.updateConnections();
         }
+
+        // this is cheap and influenced by multiple things so always update it.
+        // And update it last so it can use connectionSelection
+        this.updateMisc();
     }
 
     /** Update the layout/inputs/etc. */
@@ -211,6 +212,12 @@ export default class CBRVWebview {
             .attr("data-show-on-hover", !!showOnHover)
             .attr("data-show-on-hover-in", showOnHover == "in" || showAll)
             .attr("data-show-on-hover-out", showOnHover == "out" || showAll)
+
+        // Hide hidUnconnectedInput if no connections. Use the selection rather than the connection list so the input
+        // will be hidden if all connections are to missing/excluded files.
+        const hasConnections = !!this.connectionSelection?.size();
+        const inputDiv = d3.select(this.hideUnconnectedInput.node()!.parentElement);
+        inputDiv.style("display", hasConnections ? 'inherit' : 'none');
     }
 
     updateCodebase(fullRerender = false) {
