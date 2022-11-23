@@ -65,10 +65,10 @@ export async function listToFileTree(base: Uri, uris: Uri[]): Promise<Directory>
 
     const tree: Directory = { type: FileType.Directory, name: path.basename(base.fsPath), children: [] };
 
-    for (let [filePath, file] of flat) {
+    for (const [filePath, file] of flat) {
         const parts = path.relative(base.fsPath, filePath).split(path.sep);
         let dir = tree;
-        for (let part of parts.slice(0, -1)) {
+        for (const part of parts.slice(0, -1)) {
             let found = dir.children.find(f => f.name == part);
             if (found == undefined) {
                 found = { type: FileType.Directory, name: part,  children: [] };

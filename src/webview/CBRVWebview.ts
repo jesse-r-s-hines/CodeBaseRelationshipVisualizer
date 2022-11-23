@@ -446,7 +446,7 @@ export default class CBRVWebview {
         const paths = this.calculatePaths(merged);
 
         // If directed == false, we don't need any markers
-        let markers = this.settings.directed ? _(merged).map(c => c.color).uniq().value() : [];
+        const markers = this.settings.directed ? _(merged).map(c => c.color).uniq().value() : [];
 
         this.defs.selectAll("marker.arrow")
             .data(markers, color => color as string)
@@ -620,7 +620,7 @@ export default class CBRVWebview {
             // to a number that is divisible by 4 so we get nice angles.
             const numAnchors = Math.max(geo.snap((2*Math.PI*targetR) / this.s.conn.anchorSpacing, 4), 4);
             const deltaTheta = (2*Math.PI) / numAnchors;
-            let anchorPoints: IncompleteConnEnd[][] = _.range(numAnchors).map(i => []);
+            const anchorPoints: IncompleteConnEnd[][] = _.range(numAnchors).map(i => []);
 
             const hasArrow = ({conn, end}: IncompleteConnEnd) =>
                 this.settings.directed && (end == "to" || conn.bidirectional);
@@ -655,7 +655,7 @@ export default class CBRVWebview {
                     } else { // conflict on second choice
                         anchorPoints[index2] = [connEnd];
 
-                        for (let connEnd of connEnds2) {
+                        for (const connEnd of connEnds2) {
                             anchorConn(connEnd); // may need to resolve conflicts recursively
                         }
                     }
@@ -734,7 +734,7 @@ export default class CBRVWebview {
         const dist = geo.distance(from.anchor, to.anchor);
         const even = (numDups % 2 == 0);
 
-        let controls: Point[] = [];
+        const controls: Point[] = [];
 
         if (conn.from && conn.to) { // connection from file to file
             // calculate control points such that the bezier curve will be perpendicular to the
@@ -770,7 +770,7 @@ export default class CBRVWebview {
             // Vector in direction of line between from and to
             const vec = [to.anchor[0] - from.anchor[0], to.anchor[1] - from.anchor[1]];
             // calculate the perpendicular unit vector (perp vectors have dot product of 0)
-            let perpVec = geo.unitVector([1, -vec[0] / vec[1]]);
+            const perpVec = geo.unitVector([1, -vec[0] / vec[1]]);
 
             const dist = this.s.conn.dupConnPadding * dupOffset;
             const control: Point = [

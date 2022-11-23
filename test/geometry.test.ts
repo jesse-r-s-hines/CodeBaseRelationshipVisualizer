@@ -24,7 +24,7 @@ describe("Test geometry.ts", () => {
     });
 
     it('isOnBorder', () => {
-        let border: Box = [1, 2, 5, 6]; // [x, y, width, height]
+        const border: Box = [1, 2, 5, 6]; // [x, y, width, height]
 
         // basic
         expect(geo.isOnBorder([1, 2], border)).to.be.true;
@@ -35,7 +35,7 @@ describe("Test geometry.ts", () => {
     });
 
     it('closestPointOnBorder', () => {
-        let border: Box = [1, 2, 5, 6]; // [x, y, width, height]
+        const border: Box = [1, 2, 5, 6]; // [x, y, width, height]
 
         // corners
         expect(geo.closestPointOnBorder([1, 2], border)).to.eql([1, 2]);
@@ -62,7 +62,7 @@ describe("Test geometry.ts", () => {
         expect(geo.closestPointOnBorder([5, 7], border)).to.eql([6, 7]);
         expect(geo.closestPointOnBorder([2, 7], border)).to.eql([1, 7]);
 
-        let square: Box = [-2, -2, 4, 4]; // [x, y, width, height]
+        const square: Box = [-2, -2, 4, 4]; // [x, y, width, height]
         expect(geo.closestPointOnBorder([-1, -1.5], square)).to.eql([-1, -2]);
         // dead center (doesn't matter which side really)
         expect(geo.closestPointOnBorder([0, 0], square)).to.eql([-2, 0]);
@@ -71,7 +71,7 @@ describe("Test geometry.ts", () => {
     });
 
     it('moveAlongBorder', () => {
-        let border: Box = [1, 2, 5, 6]; // [x, y, width, height]
+        const border: Box = [1, 2, 5, 6]; // [x, y, width, height]
 
         // basic
         expect(geo.moveAlongBorder([1, 5], 1, border)).to.eql([1, 6]);

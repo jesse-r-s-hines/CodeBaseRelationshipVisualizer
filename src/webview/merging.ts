@@ -47,14 +47,14 @@ function normalizeRules(rules: MergeRules, mergers: Mergers) {
     const normalizedRules = _.mapValues(rules, rule => typeof rule == "string" ? {rule: rule} : rule);
 
     // check rules are all known
-    for (let rule of Object.values(normalizedRules))
+    for (const rule of Object.values(normalizedRules))
         if (!(rule.rule in mergers)) throw Error(`Unknown rule "${rule.rule}"`);
 
     // Check that there's no rules accessing the same paths or parts of the same paths
     const paths = Object.keys(normalizedRules);
     for (let i1 = 0; i1 < paths.length; i1++) {
         for (let i2 = i1 + 1; i2 < paths.length; i2++) {
-            let [short, long] = _.sortBy([paths[i1], paths[i2]].map(_.toPath), p => p.length);
+            const [short, long] = _.sortBy([paths[i1], paths[i2]].map(_.toPath), p => p.length);
             if (isEqual(short, long.slice(0, short.length))) {
                 throw Error(`Duplicate rules for the same key "${paths[i1]}", "${paths[i2]}"`);
             }
