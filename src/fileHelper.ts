@@ -33,11 +33,11 @@ export async function getFilteredFileTree(base: Uri, include?: string, exclude?:
     // vscode/src/vs/workbench/services/search/common/queryBuilder.ts
 
     const parseGlob = (glob: string) => {
-        glob = `{${glob.split(",").map(g => g.trim()).join(",")}}`
-        return new vscode.RelativePattern(base, glob)
-    }
+        glob = `{${glob.split(",").map(g => g.trim()).join(",")}}`;
+        return new vscode.RelativePattern(base, glob);
+    };
 
-    const includePattern = parseGlob(include?.trim() ? include : '**/*')
+    const includePattern = parseGlob(include?.trim() ? include : '**/*');
     const excludePattern = exclude?.trim() ? parseGlob(exclude) : undefined;
     const fileList = await vscode.workspace.findFiles(includePattern, excludePattern);
     return listToFileTree(base, fileList);
@@ -56,35 +56,35 @@ export async function listToFileTree(base: Uri, uris: Uri[]): Promise<Directory>
         } else if (stat.type == FileType.File) {
             return [uri.fsPath, { type: stat.type, name: path.basename(uri.fsPath), size: Math.max(stat.size, 1)}];
         } else {
-            throw new Error("Other filetypes not supported") // TODO
+            throw new Error("Other filetypes not supported"); // TODO
         }
-    }))
+    }));
 
     const addChild = (dir: Directory, f: AnyFile) => // insert in sorted order
-        dir.children.splice(_.sortedIndexBy(dir.children, f, c => c.name), 0, f)
+        dir.children.splice(_.sortedIndexBy(dir.children, f, c => c.name), 0, f);
 
-    const tree: Directory = { type: FileType.Directory, name: path.basename(base.fsPath), children: [] }
+    const tree: Directory = { type: FileType.Directory, name: path.basename(base.fsPath), children: [] };
 
     for (let [filePath, file] of flat) {
-        const parts = path.relative(base.fsPath, filePath).split(path.sep)
-        let dir = tree
+        const parts = path.relative(base.fsPath, filePath).split(path.sep);
+        let dir = tree;
         for (let part of parts.slice(0, -1)) {
-            let found = dir.children.find(f => f.name == part)
+            let found = dir.children.find(f => f.name == part);
             if (found == undefined) {
-                found = { type: FileType.Directory, name: part,  children: [] }
-                addChild(dir, found)
+                found = { type: FileType.Directory, name: part,  children: [] };
+                addChild(dir, found);
             }
             if (found.type != FileType.Directory) {
                 // this shouldn't be possible except with maybe a race condition on changing a fplder to a file
-                throw new Error(`Conflict on file ${filePath}`)
+                throw new Error(`Conflict on file ${filePath}`);
             } else {
-                dir = found
+                dir = found;
             }
         }
-        addChild(dir, file)
+        addChild(dir, file);
     }
 
-    return tree
+    return tree;
 }
 
 /** Returns the set of the paths of all files under base, relative to base. Folders will not be in the set. */

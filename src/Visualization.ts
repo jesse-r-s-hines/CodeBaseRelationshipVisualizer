@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import { workspace } from "vscode"
+import { workspace } from "vscode";
 import { Uri, Webview, FileSystemWatcher } from 'vscode';
 import { Connection, VisualizationSettings, WebviewVisualizationSettings, CBRVMessage, NormalizedVisualizationSettings } from "./shared";
 import * as fileHelper from "./fileHelper";
-import _ from 'lodash'
+import _ from 'lodash';
 
 /**
  * Handles the visualization, allowing you to update the visualization.
@@ -48,20 +48,20 @@ export class Visualization {
         this.base = workspace.workspaceFolders![0].uri;
 
         this.context = context;
-        settings = _.cloneDeep(settings)
+        settings = _.cloneDeep(settings);
         if (settings.mergeRules === true) {
-            settings.mergeRules = {} // just use all the defaults
+            settings.mergeRules = {}; // just use all the defaults
         }
         if (settings.showOnHover === true) {
-            settings.showOnHover = "both"
+            settings.showOnHover = "both";
         }
 
-        this.settings = _.merge({}, Visualization.defaultSettings, settings)
+        this.settings = _.merge({}, Visualization.defaultSettings, settings);
         this.connections = [...connections];
     }
 
     getWebviewSettings(): WebviewVisualizationSettings {
-        return _.omit(this.settings, ["title", "connectionDefaults.tooltip"]) as WebviewVisualizationSettings
+        return _.omit(this.settings, ["title", "connectionDefaults.tooltip"]) as WebviewVisualizationSettings;
     }
 
     async launch() {
@@ -88,13 +88,13 @@ export class Visualization {
                     this.sendUpdate(true);
                 } else if (message.type == "open") {
                     // NOTE: we could do these and Command URIs inside the webview instead. That might be simpler
-                    await vscode.commands.executeCommand("vscode.open", this.getUri(message.file))
+                    await vscode.commands.executeCommand("vscode.open", this.getUri(message.file));
                 } else if (message.type == "reveal-in-explorer") {
-                    await vscode.commands.executeCommand("revealInExplorer", this.getUri(message.file))
+                    await vscode.commands.executeCommand("revealInExplorer", this.getUri(message.file));
                 } else if (message.type == "copy-path") {
-                    vscode.env.clipboard.writeText(this.getUri(message.file).fsPath)
+                    vscode.env.clipboard.writeText(this.getUri(message.file).fsPath);
                 } else if (message.type == "copy-relative-path") {
-                    vscode.env.clipboard.writeText(message.file)
+                    vscode.env.clipboard.writeText(message.file);
                 } else if (message.type == "tooltip-request") {
                     this.webview!.postMessage({
                         type: "tooltip-set",
@@ -166,7 +166,7 @@ export class Visualization {
     private async sendUpdate(getCodebase: boolean, settings?: WebviewVisualizationSettings, connections?: Connection[]) {
         let codebase = undefined;
         if (getCodebase) {
-            codebase = await fileHelper.getFilteredFileTree(this.base, this.include, this.exclude)
+            codebase = await fileHelper.getFilteredFileTree(this.base, this.include, this.exclude);
         }
 
         this.webview!.postMessage({
@@ -178,7 +178,7 @@ export class Visualization {
     }
 
     private getUri(file: string): Uri {
-        return vscode.Uri.file(`${this.base.fsPath}/${file}`)
+        return vscode.Uri.file(`${this.base.fsPath}/${file}`);
     }
 }
 

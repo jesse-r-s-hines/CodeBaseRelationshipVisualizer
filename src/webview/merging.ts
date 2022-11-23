@@ -1,5 +1,5 @@
 import _, { isEqual } from "lodash";
-import { normalizedJSONStringify as normJSON } from "../util"
+import { normalizedJSONStringify as normJSON } from "../util";
 
 export type MergeRule<Name extends string = string> = {rule: Name, [key: string]: any} | string
 export type SimpleMergeRule<Name extends string = string> = {rule: Name} | string
@@ -20,7 +20,7 @@ export type JoinRule = SimpleMergeRule<"join"> | {rule: "join", sep: string};
 export type DefaultMergeRule = SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule |
                                GroupRule | AddRule | ValueRule | JoinRule
 
-const defined = (i: any) => i !== undefined
+const defined = (i: any) => i !== undefined;
 
 const defaultMergers: Record<string, (items: any[], rule: any) => any> = {
     same: items => items[0], // we know all values are the same
@@ -31,8 +31,8 @@ const defaultMergers: Record<string, (items: any[], rule: any) => any> = {
     leastCommon: items => _(items).filter(defined).groupBy(normJSON).values().minBy(a => a.length)?.[0],
     mostCommon: items => _(items).filter(defined).groupBy(normJSON).values().maxBy(a => a.length)?.[0],
     add: (items, rule) => {
-        const sum = _(items).sum()
-        return (rule.max !== undefined && sum !== undefined) ? _.min([sum, rule.max]) : sum
+        const sum = _(items).sum();
+        return (rule.max !== undefined && sum !== undefined) ? _.min([sum, rule.max]) : sum;
     },
     value: (items, rule) => {
         items = items.filter(defined);
@@ -40,7 +40,7 @@ const defaultMergers: Record<string, (items: any[], rule: any) => any> = {
     },
     group: items => items.filter(defined),
     join: (items, rule) => items.filter(defined).join(rule.sep ?? "<br/>")
-}
+};
 
 /** Normalize and validate rules */
 function normalizeRules(rules: MergeRules, mergers: Mergers) {
@@ -48,15 +48,15 @@ function normalizeRules(rules: MergeRules, mergers: Mergers) {
 
     // check rules are all known
     for (let rule of Object.values(normalizedRules))
-        if (!(rule.rule in mergers)) throw Error(`Unknown rule "${rule.rule}"`)
+        if (!(rule.rule in mergers)) throw Error(`Unknown rule "${rule.rule}"`);
 
     // Check that there's no rules accessing the same paths or parts of the same paths
-    const paths = Object.keys(normalizedRules)
+    const paths = Object.keys(normalizedRules);
     for (let i1 = 0; i1 < paths.length; i1++) {
         for (let i2 = i1 + 1; i2 < paths.length; i2++) {
-            let [short, long] = _.sortBy([paths[i1], paths[i2]].map(_.toPath), p => p.length)
+            let [short, long] = _.sortBy([paths[i1], paths[i2]].map(_.toPath), p => p.length);
             if (isEqual(short, long.slice(0, short.length))) {
-                throw Error(`Duplicate rules for the same key "${paths[i1]}", "${paths[i2]}"`)
+                throw Error(`Duplicate rules for the same key "${paths[i1]}", "${paths[i2]}"`);
             }
         }
     }
@@ -75,14 +75,14 @@ export function mergeByRules<T>(
     rules: MergeRules,
     customMergers: Mergers = {},
 ): Record<string, any>[] {
-    const mergers = {...defaultMergers, ...customMergers}
+    const mergers = {...defaultMergers, ...customMergers};
     const normalizedRules = normalizeRules(rules, mergers);
 
-    const groupKeys = _(normalizedRules).pickBy(rule => rule?.rule == "same").keys().value()
+    const groupKeys = _(normalizedRules).pickBy(rule => rule?.rule == "same").keys().value();
     const keyFunc = (item: T) => groupKeys
         // hack to make undefined unique JSONized so missing keys group separately
         .map(key => _.get(item, key) !== undefined ? normJSON(_.get(item, key)) : "undefined")
-        .join(",")
+        .join(",");
 
     return _(items)
         // Group items that don't have conflicts on the "same" rules
@@ -97,8 +97,8 @@ export function mergeByRules<T>(
                         _.set(accum, prop, mergedItem);
                     }
                     return accum;
-                }, {})
-            return mergedObj
+                }, {});
+            return mergedObj;
         })
-        .value()
+        .value();
 }

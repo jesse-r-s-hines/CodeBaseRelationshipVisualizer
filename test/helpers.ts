@@ -1,5 +1,5 @@
 import { Assertion } from 'chai';
-import _ from "lodash"
+import _ from "lodash";
 
 declare global {
     export namespace Chai {

@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { describe, test } from "mocha"
+import { describe, test } from "mocha";
 import { AnyFile, FileType } from '../src/shared';
 import * as util from '../src/util';
 import _ from "lodash";
@@ -35,9 +35,9 @@ describe("Test utils.ts", () => {
                 {name: "e", type: FileType.File, size: 3},
                 {name: "f", type: FileType.Directory, children: []},
             ],
-        }
-        const empty: AnyFile = {name: "empty", type: FileType.Directory, children: []}
-        const file: AnyFile = {name: "empty", type: FileType.File, size: 4}
+        };
+        const empty: AnyFile = {name: "empty", type: FileType.Directory, children: []};
+        const file: AnyFile = {name: "empty", type: FileType.File, size: 4};
     
         it('basic', () => {
             expect(util.filterFileTree(tree, f => true)).to.eql(tree);
@@ -52,8 +52,7 @@ describe("Test utils.ts", () => {
                     },
                 ],
             });
-        
-        })
+        });
     
         it("can't remove root node", () => {
             expect(util.filterFileTree(tree, f => false)).to.eql({name: "a", type: FileType.Directory, children: []});
@@ -61,7 +60,7 @@ describe("Test utils.ts", () => {
             expect(util.filterFileTree(empty, f => false)).to.eql(empty);
             expect(util.filterFileTree(file, f => true)).to.eql(file);
             expect(util.filterFileTree(file, f => false)).to.eql(file);
-        })
+        });
 
         it("paths", () => {
             let paths: string[] = [];
@@ -69,7 +68,7 @@ describe("Test utils.ts", () => {
                 paths.push(path);
                 return true;
             });
-            paths = _.sortBy(paths)
+            paths = _.sortBy(paths);
             
             expect(paths).to.eql([
                 "b",
@@ -81,7 +80,7 @@ describe("Test utils.ts", () => {
 
 
             expect(util.filterFileTree(tree, f => false)).to.eql({name: "a", type: FileType.Directory, children: []});
-        })
+        });
     });
 
 
@@ -118,7 +117,7 @@ describe("Test utils.ts", () => {
 
         expect(util.loopIndex(0, 0)).to.be.NaN;
     });
-})
+});
 
 
 

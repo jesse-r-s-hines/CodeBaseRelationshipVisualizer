@@ -1,4 +1,4 @@
-import _ from "lodash"
+import _ from "lodash";
 
 export type Point = [number, number]
 /** [x, y, width, height] */
@@ -22,13 +22,13 @@ export function extendLine([start, end]: [Point, Point], dist: number): Point {
 
 /** Returns true if point is on the border */
 export function isOnBorder([x, y]: Point, border: Box): boolean {
-    const [left, bottom, width, height] = border
-    const [right, top] = [left + width, bottom + height]
+    const [left, bottom, width, height] = border;
+    const [right, top] = [left + width, bottom + height];
 
     return (
         ((x == left || x == right) && bottom <= y && y <= top) ||
         ((y == bottom || y == top) && left <= x && x <= right)
-    )
+    );
 }
 
 /**
@@ -37,19 +37,19 @@ export function isOnBorder([x, y]: Point, border: Box): boolean {
  * @param border [x, y, width, height]
  */
 export function closestPointOnBorder([x, y]: Point, border: Box): Point {
-    const [bx, by, width, height] = border
-    const [distLeft, distRight, distTop, distBottom] = [x - bx, (bx + width) - x, y - by, (by + height) - y]
-    const min = Math.min(distLeft, distRight, distTop, distBottom)
-    if (min < 0) throw Error(`Point ${JSON.stringify([x, y])} is outside border ${JSON.stringify(border)}`)
+    const [bx, by, width, height] = border;
+    const [distLeft, distRight, distTop, distBottom] = [x - bx, (bx + width) - x, y - by, (by + height) - y];
+    const min = Math.min(distLeft, distRight, distTop, distBottom);
+    if (min < 0) throw Error(`Point ${JSON.stringify([x, y])} is outside border ${JSON.stringify(border)}`);
 
     if (min == distLeft) {
-        return [bx, y]
+        return [bx, y];
     } else if (min == distRight) {
-        return [bx + width, y]
+        return [bx + width, y];
     } else if (min == distTop) {
-        return [x, by]
+        return [x, by];
     } else { // if (min == distBottom)
-        return [x, by + height]
+        return [x, by + height];
     }
 }
 
@@ -58,31 +58,31 @@ export function closestPointOnBorder([x, y]: Point, border: Box): Point {
  * down like in SVG). [x, y] must be on border.
  */
 export function moveAlongBorder([x, y]: Point, dist: number, border: Box): Point {
-    const [left, bottom, width, height] = border
-    const [right, top] = [left + width, bottom + height]
+    const [left, bottom, width, height] = border;
+    const [right, top] = [left + width, bottom + height];
 
     if (!isOnBorder([x, y], border))
-        throw Error(`Point ${JSON.stringify([x, y])} is not on border ${JSON.stringify(border)}`)
+        throw Error(`Point ${JSON.stringify([x, y])} is not on border ${JSON.stringify(border)}`);
 
     while (dist != 0) {
-        let [newX, newY] = [x, y]
+        let [newX, newY] = [x, y];
 
         // no else-if so that corners get checked twice
         if (x == left)
-            newY = _.clamp(y + dist, bottom, top)
+            newY = _.clamp(y + dist, bottom, top);
         if (y == top)
-            newX = _.clamp(x + dist, left, right)
+            newX = _.clamp(x + dist, left, right);
         if (x == right)
-            newY = _.clamp(y - dist, bottom, top)
+            newY = _.clamp(y - dist, bottom, top);
         if (y == bottom)
-            newX = _.clamp(x - dist, left, right)
+            newX = _.clamp(x - dist, left, right);
         
         dist -= Math.sign(dist) * (Math.abs(newX - x) + Math.abs(newY - y));
 
         [x, y] = [newX, newY];
     }
 
-    return [x, y]
+    return [x, y];
 }
 
 /**
@@ -91,7 +91,7 @@ export function moveAlongBorder([x, y]: Point, dist: number, border: Box): Point
  * If delta is 0, will just return x directly without snapping.
  */
 export function snap(x: number, delta: number) {
-    delta = Math.abs(delta)
+    delta = Math.abs(delta);
     return delta != 0 ? delta * Math.round(x / delta) : x;
 }
 
@@ -106,7 +106,7 @@ export function normalizeAngle(angle: number, center: number = 0) {
 
 /** Converts polar coordinates to rectangular */
 export function polarToRect(theta: number, r: number, center: Point = [0, 0]): Point {
-    return [r * Math.cos(theta) + center[0], r * Math.sin(theta) + center[1]]
+    return [r * Math.cos(theta) + center[0], r * Math.sin(theta) + center[1]];
 }
 
 /*
@@ -116,7 +116,7 @@ export function polarToRect(theta: number, r: number, center: Point = [0, 0]): P
  */
 export function snapAngle(angle: number, delta: number, offset: number = 0) {
     angle = normalizeAngle(angle - offset, Math.PI); // [0, 2PI]
-    const snapped = delta * Math.round(angle / delta)
+    const snapped = delta * Math.round(angle / delta);
     return normalizeAngle(snapped + offset, Math.PI);
 }
 
@@ -130,10 +130,10 @@ export function unitVector(vector: number[]): number[] {
 
 /** Returns the midpoint between two points */
 export function midpoint(a: Point, b: Point): Point {
-    return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]
+    return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
 }
 
 /** Returns the slope of the line between two points */
 export function slope(a: Point, b: Point): number {
-    return (b[1] - a[1]) / (b[0] - a[0])
+    return (b[1] - a[1]) / (b[0] - a[0]);
 }

@@ -8,8 +8,8 @@ import * as d3 from 'd3';
 //         - https://github.com/microsoft/vscode/issues/156224
 //         - https://github.com/gitkraken/vscode-gitlens/blob/main/package.json
 // - Or 'vanilla-context-menu' has types
-const d3ContextMenu = require("d3-context-menu")
-import "d3-context-menu/css/d3-context-menu.css" // manually require the CSS
+const d3ContextMenu = require("d3-context-menu");
+import "d3-context-menu/css/d3-context-menu.css"; // manually require the CSS
 
 import tippy, {followCursor, Instance as Tippy} from 'tippy.js';
 import 'tippy.js/dist/tippy.css'; // optional for styling
@@ -139,10 +139,10 @@ export default class CBRVWebview {
             .classed("connection-layer", true);
 
         // Add event listeners
-        this.throttledUpdate = _.throttle(() => this.update(), 250, {trailing: true})
+        this.throttledUpdate = _.throttle(() => this.update(), 250, {trailing: true});
 
         const [x, y, width, height] = this.getViewbox();
-        const extent: [Point, Point] = [[x, y], [x + width, y + height]]
+        const extent: [Point, Point] = [[x, y], [x + width, y + height]];
         const zoom = d3.zoom()
             .on('zoom', (e) => this.onZoom(e))
             .extent(extent)
@@ -165,7 +165,7 @@ export default class CBRVWebview {
                     zoom.scaleBy(this.diagram, key == '=' ? amount : 1/amount);
                     event.stopPropagation(); // prevent VSCode from zooming the interface
                 }
-            })
+            });
 
         d3.select(window).on('resize', (e) => this.onResize(e));
 
@@ -175,20 +175,20 @@ export default class CBRVWebview {
             plugins: [followCursor],
         });
 
-        this.includeInput = d3.select<HTMLInputElement, unknown>("#include")
-        this.excludeInput = d3.select<HTMLInputElement, unknown>("#exclude")
-        this.hideUnconnectedInput = d3.select<HTMLInputElement, unknown>("#hide-unconnected")
+        this.includeInput = d3.select<HTMLInputElement, unknown>("#include");
+        this.excludeInput = d3.select<HTMLInputElement, unknown>("#exclude");
+        this.hideUnconnectedInput = d3.select<HTMLInputElement, unknown>("#hide-unconnected");
 
         const updateFilters = () => this.emit('filter', {
             include: this.includeInput.property('value'),
             exclude: this.excludeInput.property('value'),
-        })
-        this.includeInput.on('change', updateFilters)
-        this.excludeInput.on('change', updateFilters)
+        });
+        this.includeInput.on('change', updateFilters);
+        this.excludeInput.on('change', updateFilters);
         this.hideUnconnectedInput.on('change', () => {
-            this.hideUnconnected = this.hideUnconnectedInput.property('checked')
+            this.hideUnconnected = this.hideUnconnectedInput.property('checked');
             this.update(this.settings, this.codebase, this.connections); // force re-render
-        })
+        });
 
         this.update(this.settings, this.codebase, this.connections);
     }
@@ -196,7 +196,7 @@ export default class CBRVWebview {
     getViewbox(): Box {
         const { top, right, bottom, left } = this.s.margin;
         // use negatives to add margin since pack() starts at 0 0. Viewbox is [minX, minY, width, height]
-        return [ -left, -top, left + this.s.diagramSize + right, top + this.s.diagramSize + bottom]
+        return [ -left, -top, left + this.s.diagramSize + right, top + this.s.diagramSize + bottom];
     }
 
     throttledUpdate: () => void
@@ -230,7 +230,7 @@ export default class CBRVWebview {
         this.diagram
             .attr("data-show-on-hover", !!showOnHover)
             .attr("data-show-on-hover-in", showOnHover == "in" || showAll)
-            .attr("data-show-on-hover-out", showOnHover == "out" || showAll)
+            .attr("data-show-on-hover-out", showOnHover == "out" || showAll);
 
         // Hide hidUnconnectedInput if no connections. Use the selection rather than the connection list so the input
         // will be hidden if all connections are to missing/excluded files.
@@ -248,11 +248,11 @@ export default class CBRVWebview {
 
         root.sum(d => { // Compute size of files and folders.
             if (d.type == FileType.File) {
-                return _.clamp(d.size, this.s.file.minSize, this.s.file.maxSize)
+                return _.clamp(d.size, this.s.file.minSize, this.s.file.maxSize);
             } else { // only give empty folders a size (empty folders are normally filtered, but root can be empty)
-                return d.children.length == 0 ? 1 : 0 
+                return d.children.length == 0 ? 1 : 0 ;
             }
-        })
+        });
 
         // Sort by descending size for layout purposes
         root.sort((a, b) => d3.descending(a.value, b.value));
@@ -312,20 +312,20 @@ export default class CBRVWebview {
   
 
                     const setHoverClasses = (node: Node, toggle: boolean) => {
-                        const file = this.filePath(node)
+                        const file = this.filePath(node);
                         // add hover classes to connected connections. CSS will hide/show connections
                         this.connectionSelection // selection will be set once we render connections
                             ?.filter(({conn}) =>
                                 conn.from?.file == file || (conn.bidirectional && conn.to?.file == file)
                             )
-                            .classed("hover-in", toggle)
+                            .classed("hover-in", toggle);
 
                         this.connectionSelection
                             ?.filter(({conn}) =>
                                 conn.to?.file == file || (conn.bidirectional && conn.from?.file == file)
                             )
-                            .classed("hover-in", toggle)
-                    }
+                            .classed("hover-in", toggle);
+                    };
                     
                     // Add event listeners.
                     all
@@ -333,18 +333,18 @@ export default class CBRVWebview {
                         .on("mouseout", (event, d) => setHoverClasses(d, false))
                         .on("dblclick", (event, d) => {
                             if (d.data.type == FileType.Directory) {
-                                this.emit("reveal-in-explorer", {file: this.filePath(d)})
+                                this.emit("reveal-in-explorer", {file: this.filePath(d)});
                             } else {
-                                this.emit("open", {file: this.filePath(d)})
+                                this.emit("open", {file: this.filePath(d)});
                             }
                         })
-                        .on("contextmenu", d3ContextMenu((d: Node) => this.contextMenu(d)))
+                        .on("contextmenu", d3ContextMenu((d: Node) => this.contextMenu(d)));
 
                     files.each((d, i, nodes) => tippy(nodes[i], {
                         content: this.filePath(d),
                         delay: [1000, 0], // [show, hide]
                         followCursor: true,
-                    }))
+                    }));
                     directories
                         .filter(d => d.depth > 0)
                         .select<SVGElement>(".label")
@@ -352,7 +352,7 @@ export default class CBRVWebview {
                             content: this.filePath(d),
                             delay: [1000, 0], // [show, hide]
                             followCursor: true,
-                        }))
+                        }));
 
                     return all;
                 },
@@ -360,7 +360,7 @@ export default class CBRVWebview {
                     return update.classed("new", false);
                 },
                 exit => exit.remove(),
-            )
+            );
 
         all
             .classed("contents-hidden", d => this.shouldHideContents(d)) // TODO make this show an elipsis or something
@@ -446,7 +446,7 @@ export default class CBRVWebview {
         const paths = this.calculatePaths(merged);
 
         // If directed == false, we don't need any markers
-        let markers = this.settings.directed ? _(merged).map(c => c.color).uniq().value() : []
+        let markers = this.settings.directed ? _(merged).map(c => c.color).uniq().value() : [];
 
         this.defs.selectAll("marker.arrow")
             .data(markers, color => color as string)
@@ -488,9 +488,9 @@ export default class CBRVWebview {
                     delay: [250, 0], // [show, hide]
                     followCursor: true,
                     onShow: (instance) => {
-                        const loaded = nodes[i].getAttribute("data-tooltip-loaded") == "true"
-                        if (!loaded) this.emit("tooltip-request", {id, conn})
-                        if (!loaded || !instance.props.content) return false // disabled or waiting until load
+                        const loaded = nodes[i].getAttribute("data-tooltip-loaded") == "true";
+                        if (!loaded) this.emit("tooltip-request", {id, conn});
+                        if (!loaded || !instance.props.content) return false; // disabled or waiting until load
                     }
                 }));
     }
@@ -527,21 +527,21 @@ export default class CBRVWebview {
                         // We'll group these into arrays for use later
                         from: raised.from, to: raised.to, // override conn.from/to with raised
                         connections: conn,
-                    }))
+                    }));
 
                     return mergeByRules(obj, {
                         ...this.settings.mergeRules,
                         from: "group", to: "group", connections: "group",
-                    })
+                    });
                 })
                 .map<MergedConnection>(obj => {
                     return {
                         ..._.omit(obj, ["file", "line", "direction"]),
                         from: obj.from[0], to: obj.to[0],
                         bidirectional: _(obj.from).some(from => isEqual(from, obj.to[0])),
-                    } as MergedConnection
+                    } as MergedConnection;
                 })
-                .value()
+                .value();
         } else { // no merging
             return raised
                 .map(({conn, raised}) => ({
@@ -551,13 +551,13 @@ export default class CBRVWebview {
                     bidirectional: false,
                     connections: [conn],
                 }))
-                .value()
+                .value();
         }
     }
 
     /** Calculate the paths for each connection. */
     calculatePaths(connections: MergedConnection[]): ConnPath[] {
-        const viewbox = this.getViewbox()
+        const viewbox = this.getViewbox();
 
         // split out each "end" of the connections and calculate angles and target coords
         const ends = _(connections)
@@ -566,15 +566,15 @@ export default class CBRVWebview {
                     .map(e => e ? this.pathMap.get(e.file)! : undefined)
                     .map((node, i, arr) => {
                         if (node) {
-                            return { target: [node.x, node.y] as Point, r: node.r }
+                            return { target: [node.x, node.y] as Point, r: node.r };
                         } else {
-                            const other = arr[+!i]! // hack to get other node in the array
-                            return { target: geo.closestPointOnBorder([other.x, other.y], viewbox) }
+                            const other = arr[+!i]!; // hack to get other node in the array
+                            return { target: geo.closestPointOnBorder([other.x, other.y], viewbox) };
                         }
-                    })
+                    });
                 
-                let fromTheta: number|undefined
-                let toTheta: number|undefined
+                let fromTheta: number|undefined;
+                let toTheta: number|undefined;
                 if (conn.from?.file != conn.to?.file) { // theta is meaningless for self loops
                     fromTheta = Math.atan2(to.target[1] - from.target[1], to.target[0] - from.target[0]);
                     // The other angle is just 180 deg around (saves us calculating atan2 again)
@@ -584,14 +584,14 @@ export default class CBRVWebview {
                 return [
                     {conn, end: "from", ...from, theta: fromTheta},
                     {conn, end: "to", ...to, theta: toTheta},
-                ]
+                ];
             })
-            .value()
+            .value();
 
         _(ends)
             // group all ends that connect to each file
             .groupBy(({conn, end}) => conn[end]?.file ?? '')
-            .forEach(ends => this.anchorEnds(ends)) // anchor ends to actual coords
+            .forEach(ends => this.anchorEnds(ends)); // anchor ends to actual coords
 
         return _(ends as ConnEnd[]) // we've completed the ConnEnds now
             .chunk(2) // combine from/to back together
@@ -604,7 +604,7 @@ export default class CBRVWebview {
                     path: this.calculatePath(from, to, pairs.length, i), // calculate paths with control points etc.
                 }))
             )
-            .value()
+            .value();
     }
 
     /**
@@ -623,7 +623,7 @@ export default class CBRVWebview {
             let anchorPoints: IncompleteConnEnd[][] = _.range(numAnchors).map(i => []);
 
             const hasArrow = ({conn, end}: IncompleteConnEnd) =>
-                this.settings.directed && (end == "to" || conn.bidirectional)
+                this.settings.directed && (end == "to" || conn.bidirectional);
     
             // assign to an anchor point and update the actual rendered point. Makes sure that connections going
             // opposite directions don't go to the same anchor point.
@@ -660,7 +660,7 @@ export default class CBRVWebview {
                         }
                     }
                 }
-            }
+            };
 
             // should be called after all regular files are placed
             const anchorSelfLoop = (from: IncompleteConnEnd, to: IncompleteConnEnd) => {
@@ -669,7 +669,7 @@ export default class CBRVWebview {
                 // try to find two consecutive empty slots
                 let toAnchor = anchorPoints.findIndex(
                     (a, i, arr) => arr[loopIndex(i - 1, len)].length == 0 && a.length == 0
-                )
+                );
                 
                 // second best, find one empty even (to avoid arrow conflicts) slot for "to"
                 if (toAnchor < 0) {
@@ -682,24 +682,24 @@ export default class CBRVWebview {
                         .filter((p, i) => i % 2 == 0)
                         .minBy(anchor => // count number of self loops
                             _(anchor).sumBy(({conn}) => +(conn.from?.file == conn.to?.file))
-                        )!
-                    toAnchor = anchorPoints.findIndex(v => v == min)
+                        )!;
+                    toAnchor = anchorPoints.findIndex(v => v == min);
                 }
 
                 const fromAnchor = loopIndex(toAnchor - 1, len);
 
-                anchorPoints[fromAnchor].push(from)
-                anchorPoints[toAnchor].push(to)
-            }
+                anchorPoints[fromAnchor].push(from);
+                anchorPoints[toAnchor].push(to);
+            };
 
             const [selfLoops, regular] = _(ends)
                 .partition(({conn}) => conn.from?.file == conn.to?.file)
-                .value()
+                .value();
 
-            regular.forEach(connEnd => anchorConn(connEnd))
+            regular.forEach(connEnd => anchorConn(connEnd));
 
             // group and partition keep order, so we can just chunk to combine ends back together
-            _(selfLoops).chunk(2).forEach(([from, to]) => anchorSelfLoop(from, to))
+            _(selfLoops).chunk(2).forEach(([from, to]) => anchorSelfLoop(from, to));
 
             // assign actual targets
             anchorPoints.forEach((ends, anchorI) => {
@@ -707,15 +707,15 @@ export default class CBRVWebview {
                     // NOTE: Mutating end
                     end.anchor = geo.polarToRect(deltaTheta * anchorI, targetR, target);
                     end.anchorId = JSON.stringify([file, anchorI]);
-                })
-            })
+                });
+            });
         } else { // out-of-screen connection
             ends.forEach(end => {
                 // NOTE: Mutating end
                 end.anchor = end.target; // anchor is just the same as target, which is closestPointOnBorder
                 // use the file of the end that is connected to a real file as the anchorId
                 end.anchorId = JSON.stringify(["", end.conn[end.end == "from" ? "to" : "from"]!.file]);
-            })
+            });
         }
     }
 
@@ -732,14 +732,14 @@ export default class CBRVWebview {
     calculateRegularPath(from: ConnEnd, to: ConnEnd, numDups: number, index: number): string {
         const conn = from.conn; // from/to should be same conn
         const dist = geo.distance(from.anchor, to.anchor);
-        const even = (numDups % 2 == 0)
+        const even = (numDups % 2 == 0);
 
         let controls: Point[] = [];
 
         if (conn.from && conn.to) { // connection from file to file
             // calculate control points such that the bezier curve will be perpendicular to the
             // circle by extending the line from the center of the circle to the anchor point.
-            const offset = dist * this.s.conn.controlOffset
+            const offset = dist * this.s.conn.controlOffset;
             const control1 = geo.extendLine([from.target, from.anchor], offset);
             const control2 = geo.extendLine([to.target, to.anchor], offset);
             controls.push(control1, control2);
@@ -756,7 +756,7 @@ export default class CBRVWebview {
         // dupOffset will be symmetrically distributed around 0 so control points are symmetrical, e.g.
         // 3 conns -> -1, 0, 1
         // 4 conns -> -2, -1, 1, 2 (skipping 0 to make it symmetrical)
-        let dupOffset = -Math.floor(numDups / 2) + index
+        let dupOffset = -Math.floor(numDups / 2) + index;
         if (even && dupOffset >= 0) {
             dupOffset += 1;
         }
@@ -776,7 +776,7 @@ export default class CBRVWebview {
             const control: Point = [
                 midpoint[0] + perpVec[0] * dist,
                 midpoint[1] + perpVec[1] * dist
-            ]
+            ];
 
             controls.splice(1, 0, control); // insert in middle.
         }
@@ -792,14 +792,14 @@ export default class CBRVWebview {
         // Calculate the angle between from/to.anchor and the center of the file circle. Different
         // than from.theta, which is between two targets (and isn't on self loops anyways).
         const fileCenter = from.target; // these are both the same
-        const [[fromX, fromY], [toX, toY]] = [from.anchor, to.anchor]
+        const [[fromX, fromY], [toX, toY]] = [from.anchor, to.anchor];
 
         const fromTheta = Math.atan2(fromY - fileCenter[1], fromX - fileCenter[0]);
         const toTheta = Math.atan2(toY - fileCenter[1], toX - fileCenter[0]);
         // Calculate the angle between from and to
-        let middleTheta = (fromTheta + toTheta) / 2
+        let middleTheta = (fromTheta + toTheta) / 2;
         if (Math.abs(fromTheta - toTheta) > Math.PI) { // bisect gets the "larger" angle
-            middleTheta = middleTheta + Math.PI // need to rotate around 180
+            middleTheta = middleTheta + Math.PI; // need to rotate around 180
         }
 
         // Calculate the third point on the arc, that will be selfLoopDistance past the edge of the
@@ -821,7 +821,7 @@ export default class CBRVWebview {
         const arcCenter: Point = [ // solve the two equations for their intersection
             (fromX * m1 - fromY - midX * m2 + midY) / (m1 - m2),
             (midY * m1 - m2 * (m1 * (midX - fromX) + fromY)) / (m1 - m2),
-        ]
+        ];
 
         const arcR = geo.distance(arcCenter, farPoint);
 
@@ -847,7 +847,7 @@ export default class CBRVWebview {
     }
 
     filePath(d: Node): string {
-        const ancestors = d.ancestors().reverse().slice(1).map(d => d.data.name)
+        const ancestors = d.ancestors().reverse().slice(1).map(d => d.data.name);
         // Root dir will be "/". Since these aren't absolute paths and all other paths don't start with /, "" would be
         // more natural, but "" is already used for "out-of-screen" targets. root won't show up in any connections 
         // or tooltips anyway, so this is only internal.
@@ -856,20 +856,20 @@ export default class CBRVWebview {
 
     normalizeConn(conn: Connection): NormalizedConnection {
         if (!conn.from && !conn.to) {
-            throw Error("Connections must have at least one of from or to defined")
+            throw Error("Connections must have at least one of from or to defined");
         }
         return { // TODO normalize file paths as well
             ...conn,
             from: (typeof conn.from == 'string') ? {file: conn.from} : conn.from,
             to: (typeof conn.to == 'string') ? {file: conn.to} : conn.to,
-        }
+        };
     }
 
     connKey(conn: NormalizedConnection, options: {lines?: boolean, ordered?: boolean} = {}): string {
-        options = {lines: true, ordered: true, ...options}
-        let key = [conn?.from, conn?.to].map(e => e ? `${e.file}:${options.lines && e.line ? e.line : ''}` : '')
+        options = {lines: true, ordered: true, ...options};
+        let key = [conn?.from, conn?.to].map(e => e ? `${e.file}:${options.lines && e.line ? e.line : ''}` : '');
         if (!options.ordered) {
-            key = key.sort()
+            key = key.sort();
         }
         return JSON.stringify(key);
     }
@@ -903,7 +903,7 @@ export default class CBRVWebview {
     }
 
     emit(event: string, data: any) {
-        this.diagram.node()!.dispatchEvent(new CustomEvent(`cbrv:${event}`, {detail: data}))
+        this.diagram.node()!.dispatchEvent(new CustomEvent(`cbrv:${event}`, {detail: data}));
     }
 
     contextMenu(d: Node) {
@@ -924,19 +924,19 @@ export default class CBRVWebview {
                 title: 'Copy Relative Path',
                 action: (d: Node) => this.emit("copy-relative-path", {file: this.filePath(d)})
             }
-        ].filter(item => item)
+        ].filter(item => item);
     }
 
     setTooltip(id: string, content: string) {
         this.connectionSelection
             ?.filter((connPath) => connPath.id == id)
             .each((d, i, node) => { // there'll only be one
-                const tooltip = (node[i] as any)._tippy as Tippy
-                node[i].setAttribute("data-tooltip-loaded", "true")
+                const tooltip = (node[i] as any)._tippy as Tippy;
+                node[i].setAttribute("data-tooltip-loaded", "true");
                 tooltip.setContent(content || "");
                 if (content) {
-                    tooltip.show()
+                    tooltip.show();
                 }
-            })
+            });
     }
 }

@@ -1,19 +1,19 @@
 import { expect } from 'chai';
-import { describe, test } from "mocha"
+import { describe, test } from "mocha";
 import * as vscode from 'vscode';
-import { Uri } from 'vscode'
-import * as fs from 'fs'
+import { Uri } from 'vscode';
+import * as fs from 'fs';
 
-import { FileType } from '../../src/shared'
-import * as fileHelper from '../../src/fileHelper'
+import { FileType } from '../../src/shared';
+import * as fileHelper from '../../src/fileHelper';
 
 // I can't find a built-in way to get workspaceFolder. __dirname is .../CBRV/dist/test/test/integration
-const workspaceFolder = Uri.file(__dirname.split("/").slice(0, -4).join("/"))
+const workspaceFolder = Uri.file(__dirname.split("/").slice(0, -4).join("/"));
 const samples = Uri.joinPath(workspaceFolder, '/test/sample-codebases');
-const minimal = Uri.joinPath(samples, 'minimal')
-const empty = Uri.joinPath(samples, 'empty')
+const minimal = Uri.joinPath(samples, 'minimal');
+const empty = Uri.joinPath(samples, 'empty');
 if (!fs.existsSync(empty.fsPath)) {
-    fs.mkdirSync(empty.fsPath) // git can't track an empty dir
+    fs.mkdirSync(empty.fsPath); // git can't track an empty dir
 }
 
 const minimal_contents = {
@@ -40,7 +40,7 @@ const minimal_contents = {
             ],
         }
     ]
-}
+};
 
 
 describe('Test fileHelper', () => {
@@ -53,18 +53,18 @@ describe('Test fileHelper', () => {
     });
 
     test('listToFileTree', async () => {
-        const includePattern = new vscode.RelativePattern(minimal, '**/*')
-        let fileList = await vscode.workspace.findFiles(includePattern)
-        let tree = await fileHelper.listToFileTree(minimal, fileList)
+        const includePattern = new vscode.RelativePattern(minimal, '**/*');
+        let fileList = await vscode.workspace.findFiles(includePattern);
+        let tree = await fileHelper.listToFileTree(minimal, fileList);
         expect(tree).to.eql(minimal_contents);
 
-        tree = await fileHelper.listToFileTree(empty, [])
+        tree = await fileHelper.listToFileTree(empty, []);
         expect(tree).to.eql({type: FileType.Directory, name: "empty", children: []});
 
         fileList = [
             Uri.joinPath(minimal, 'A')
-        ]
-        tree = await fileHelper.listToFileTree(minimal, fileList)
+        ];
+        tree = await fileHelper.listToFileTree(minimal, fileList);
         expect(tree).to.eql({
             type: FileType.Directory,
             name: "minimal",
@@ -73,8 +73,8 @@ describe('Test fileHelper', () => {
 
         fileList = [
             Uri.joinPath(minimal, 'A/E.txt')
-        ]
-        tree = await fileHelper.listToFileTree(minimal, fileList)
+        ];
+        tree = await fileHelper.listToFileTree(minimal, fileList);
         expect(tree).to.eql({
             type: FileType.Directory,
             name: "minimal",
@@ -87,13 +87,13 @@ describe('Test fileHelper', () => {
     });
 
     test('getFilteredFileTree', async () => {
-        let tree = await fileHelper.getFilteredFileTree(minimal, '**/*')
+        let tree = await fileHelper.getFilteredFileTree(minimal, '**/*');
         expect(tree).to.eql(minimal_contents);
 
-        tree = await fileHelper.getFilteredFileTree(minimal, '**/*', ' ') // should be trimmed and ignored
+        tree = await fileHelper.getFilteredFileTree(minimal, '**/*', ' '); // should be trimmed and ignored
         expect(tree).to.eql(minimal_contents);
 
-        tree = await fileHelper.getFilteredFileTree(minimal, 'A/*')
+        tree = await fileHelper.getFilteredFileTree(minimal, 'A/*');
         expect(tree).to.eql({
             "name": "minimal",
             "type": FileType.Directory,
@@ -128,7 +128,7 @@ describe('Test fileHelper', () => {
         //     ]
         // });
 
-        tree = await fileHelper.getFilteredFileTree(minimal, '**/*', 'A, *.txt')
+        tree = await fileHelper.getFilteredFileTree(minimal, '**/*', 'A, *.txt');
         expect(tree).to.eql({
             "name": "minimal",
             "type": FileType.Directory,

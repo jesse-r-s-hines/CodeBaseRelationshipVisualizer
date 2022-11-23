@@ -5,7 +5,7 @@ import { FileType, AnyFile } from "./shared";
  * Hidden files count as having no extension.
  */
 export function getExtension(filename: string): string {
-    filename = filename.split("/").at(-1)! // remove any path
+    filename = filename.split("/").at(-1)!; // remove any path
     const dotPos = filename.lastIndexOf(".");
     return dotPos > 0 ? filename.slice(dotPos + 1) : "";
 }
@@ -40,13 +40,13 @@ export function filterFileTree<T extends AnyFile>(
 export function normalizedJSONStringify(val: any) {
     const replacer = (key: string, val: any) => {
         if (typeof val == 'object' && val !== null && !Array.isArray(val)) {
-            return Object.keys(val).sort().reduce<Record<string, any>>((o, k) => { o[k] = val[k]; return o }, {});
+            return Object.keys(val).sort().reduce<Record<string, any>>((o, k) => { o[k] = val[k]; return o; }, {});
         } else {
             return val;
         }
-    }
+    };
 
-    return JSON.stringify(val, replacer)
+    return JSON.stringify(val, replacer);
 }
 
 /**

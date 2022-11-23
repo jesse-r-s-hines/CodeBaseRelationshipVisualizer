@@ -1,17 +1,17 @@
 import { expect } from 'chai';
-import { describe, test } from "mocha"
-import "./helpers" // add custom assertions
+import { describe, test } from "mocha";
+import "./helpers"; // add custom assertions
 import * as geo from '../src/webview/geometry';
 import { Point, Box } from '../src/webview/geometry';
 
 
 describe("Test geometry.ts", () => {
     it('distance', () => {
-        expect(geo.distance([1, 2], [3, 4])).to.be.closeTo(2.828, 0.0005)
-        expect(geo.distance([3, 4], [1, 2])).to.be.closeTo(2.828, 0.0005)
-        expect(geo.distance([0, 0], [1, 0])).to.eql(1)
-        expect(geo.distance([0, 0], [0, 0])).to.eql(0)
-    })
+        expect(geo.distance([1, 2], [3, 4])).to.be.closeTo(2.828, 0.0005);
+        expect(geo.distance([3, 4], [1, 2])).to.be.closeTo(2.828, 0.0005);
+        expect(geo.distance([0, 0], [1, 0])).to.eql(1);
+        expect(geo.distance([0, 0], [0, 0])).to.eql(0);
+    });
 
     it('extendLine', () => {
         expect(geo.extendLine([[0, 0], [0, 2]], 1)).to.eql([0, 3]);
@@ -21,10 +21,10 @@ describe("Test geometry.ts", () => {
 
         expect(geo.extendLine([[0, 0], [0, 2]], -2)).to.eql([0, 0]);
         expect(geo.extendLine([[0, 0], [0, 2]], -3)).to.eql([0, -1]);
-    })
+    });
 
     it('isOnBorder', () => {
-        let border: Box = [1, 2, 5, 6] // [x, y, width, height]
+        let border: Box = [1, 2, 5, 6]; // [x, y, width, height]
 
         // basic
         expect(geo.isOnBorder([1, 2], border)).to.be.true;
@@ -32,10 +32,10 @@ describe("Test geometry.ts", () => {
         expect(geo.isOnBorder([5, 8], border)).to.be.true;
         expect(geo.isOnBorder([0, 0], border)).to.be.false;
         expect(geo.isOnBorder([3, 3], border)).to.be.false;
-    })
+    });
 
     it('closestPointOnBorder', () => {
-        let border: Box = [1, 2, 5, 6] // [x, y, width, height]
+        let border: Box = [1, 2, 5, 6]; // [x, y, width, height]
 
         // corners
         expect(geo.closestPointOnBorder([1, 2], border)).to.eql([1, 2]);
@@ -62,16 +62,16 @@ describe("Test geometry.ts", () => {
         expect(geo.closestPointOnBorder([5, 7], border)).to.eql([6, 7]);
         expect(geo.closestPointOnBorder([2, 7], border)).to.eql([1, 7]);
 
-        let square: Box = [-2, -2, 4, 4] // [x, y, width, height]
+        let square: Box = [-2, -2, 4, 4]; // [x, y, width, height]
         expect(geo.closestPointOnBorder([-1, -1.5], square)).to.eql([-1, -2]);
         // dead center (doesn't matter which side really)
         expect(geo.closestPointOnBorder([0, 0], square)).to.eql([-2, 0]);
 
-        expect(() => geo.closestPointOnBorder([0, 0], border)).to.throw("Point [0,0] is outside border [1,2,5,6]")
-    })
+        expect(() => geo.closestPointOnBorder([0, 0], border)).to.throw("Point [0,0] is outside border [1,2,5,6]");
+    });
 
     it('moveAlongBorder', () => {
-        let border: Box = [1, 2, 5, 6] // [x, y, width, height]
+        let border: Box = [1, 2, 5, 6]; // [x, y, width, height]
 
         // basic
         expect(geo.moveAlongBorder([1, 5], 1, border)).to.eql([1, 6]);
@@ -122,7 +122,7 @@ describe("Test geometry.ts", () => {
         expect(() => geo.moveAlongBorder([0, 0], 1, border)).to.throw("Point [0,0] is not on border [1,2,5,6]");
         expect(() => geo.moveAlongBorder([10, 10], 1, border)).to.throw("Point [10,10] is not on border [1,2,5,6]");
         expect(() => geo.moveAlongBorder([1, 10], 1, border)).to.throw("Point [1,10] is not on border [1,2,5,6]");
-    })
+    });
 
     it('snap', () => {
         expect(geo.snap(7, 3)).to.eql(6);
@@ -137,7 +137,7 @@ describe("Test geometry.ts", () => {
         expect(geo.snap(17, 1)).to.eql(17);
         expect(geo.snap(17.3, 1)).to.eql(17);
         expect(geo.snap(10.3, 0)).to.eql(10.3);
-    })
+    });
 
     it('normalizeAngle', () => {
         // default center 0 to get [-PI, PI)
@@ -163,7 +163,7 @@ describe("Test geometry.ts", () => {
         expect(geo.normalizeAngle(-3*Math.PI, Math.PI)).to.eql(Math.PI);
         expect(geo.normalizeAngle(3.3*Math.PI, Math.PI)).to.eql(1.3 * Math.PI);
         expect(geo.normalizeAngle(7.3*Math.PI, Math.PI)).to.be.closeTo(1.3 * Math.PI, 1e-6);
-    })
+    });
 
     it('polarToRect', () => {
         expect(geo.polarToRect(Math.PI/2, 4)).to.be.deepCloseTo([0, 4]);
@@ -179,7 +179,7 @@ describe("Test geometry.ts", () => {
 
         expect(geo.polarToRect(0, 0)).to.deepCloseTo([0, 0]);
         expect(geo.polarToRect(0, 0, [1, 1])).to.deepCloseTo([1, 1]);
-    })
+    });
 
     it('snapAngle', () => {
         expect(geo.snapAngle(0, Math.PI/2)).to.be.closeTo(0, 1e-8);
@@ -192,7 +192,7 @@ describe("Test geometry.ts", () => {
         // offset
         expect(geo.snapAngle(0.01, Math.PI/4, Math.PI/8)).to.be.closeTo(Math.PI/8, 1e-8);
         expect(geo.snapAngle(2.01*Math.PI, Math.PI/4, Math.PI/8)).to.be.closeTo(Math.PI/8, 1e-8);
-    })
+    });
 
     it('unitVector', () => {
         expect(geo.unitVector([0, 1])).to.eql([0, 1]);
@@ -204,7 +204,7 @@ describe("Test geometry.ts", () => {
         expect(geo.unitVector([6])).to.eql([1]);
 
         expect(geo.unitVector([0, 0])).to.eql([NaN, NaN]);
-    })
+    });
 
     it('midpoint', () => {
         expect(geo.midpoint([0, 1], [0, 3])).to.eql([0, 2]);
@@ -213,7 +213,7 @@ describe("Test geometry.ts", () => {
         expect(geo.midpoint([1, 1], [7, 4])).to.eql([4, 2.5]);
         expect(geo.midpoint([1, 1], [1, 1])).to.eql([1, 1]);
         expect(geo.midpoint([0, 0], [0, 0])).to.eql([0, 0]);
-    })
+    });
 
     it('slope', () => {
         expect(geo.slope([0, 0], [1, 1])).to.eql(1);
@@ -225,5 +225,5 @@ describe("Test geometry.ts", () => {
 
         expect(geo.slope([0, 0], [1, 0])).to.eql(0);
         expect(geo.slope([0, 0], [0, 1])).to.eql(Infinity);
-    })
-})
+    });
+});
