@@ -87,11 +87,15 @@ export default class CBRVWebview {
             hideContentsR: 16,
             /** Radius when a directory's or file's labels will be hidden (in px) */
             hideLabelsR: 20,
+            /** Amount pressing an arrow key will pan in viewbox units */
+            panKeyAmount: 50, 
+            /** Amount pressing Ctrl-+/- will scale*/
+            zoomKeyAmount: 1.5, 
         },
     }
    
     // Parts of the d3 diagram
-    diagram: Selection<SVGSVGElement>
+    diagram: Selection<Element>
     defs: Selection<SVGDefsElement>
     zoomWindow: Selection<SVGGElement>
     fileLayer: Selection<SVGGElement>
@@ -124,7 +128,7 @@ export default class CBRVWebview {
         this.connections = connections;
 
         // Create the SVG
-        this.diagram = d3.select<SVGSVGElement, unknown>('#diagram')
+        this.diagram = d3.select<Element, unknown>('#diagram')
             .attr("viewBox", this.getViewbox());
         this.defs = this.diagram.append("defs");
         this.zoomWindow = this.diagram.append("g")
@@ -144,9 +148,24 @@ export default class CBRVWebview {
             .extent(extent)
             .scaleExtent([1, Infinity])
             .translateExtent(extent);
+
         this.diagram
             .call(zoom as any)
-            .on("dblclick.zoom", null); // double-click zoom interferes with clicking on files and folders
+            .on("dblclick.zoom", null) // double-click zoom interferes with clicking on files and folders
+            .attr("tabindex", 0) // make svg focusable so it can receive keydown events
+            .on("keydown", event => {
+                const key = event.key;
+                if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(key)) {
+                    const dx = key == "ArrowLeft" ? -1 : (key == "ArrowRight" ? +1 : 0);
+                    const dy = key == "ArrowUp" ? -1 : (key == "ArrowDown" ? +1 : 0);
+                    const amount = this.s.zoom.panKeyAmount / this.transform.k;
+                    zoom.translateBy(this.diagram as any, dx * amount, dy * amount);
+                } else if (event.ctrlKey && ['-', '='].includes(key)) {
+                    const amount = this.s.zoom.zoomKeyAmount;
+                    zoom.scaleBy(this.diagram, key == '=' ? amount : 1/amount);
+                    event.stopPropagation(); // prevent VSCode from zooming the interface
+                }
+            })
 
         d3.select(window).on('resize', (e) => this.onResize(e));
 

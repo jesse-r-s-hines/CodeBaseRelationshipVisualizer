@@ -19,7 +19,7 @@ body {
 }
 
 /* Adding a tooltip makes an svg element "selectable" and show a border on click, disable that. */
-#diagram *:focus {
+#diagram:focus, #diagram *:focus {
     outline: none;
 }
 
