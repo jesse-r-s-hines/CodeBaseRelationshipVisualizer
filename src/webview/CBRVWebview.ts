@@ -183,30 +183,37 @@ export default class CBRVWebview {
     throttledUpdate: () => void
 
     update(settings?: WebviewVisualizationSettings, codebase?: Directory, connections?: Connection[]) {
+        this.settings = settings ?? this.settings;
+        this.codebase = codebase ?? this.codebase;
+        this.connections = connections ?? this.connections;
+
+        this.updateMisc(); // this is cheap and influenced by multiple things so always update it.
+
         if (settings) {
             this.settings = settings;
-
-            // if not directed, show all connections regardless of direction specified. 
-            const showAll = settings.showOnHover == "both" || (settings.showOnHover && !this.settings.directed)
-
-            // add some settings as data attributes for CSS access
-            this.diagram
-                .attr("data-show-on-hover", !!settings.showOnHover)
-                .attr("data-show-on-hover-in", settings.showOnHover == "in" || showAll)
-                .attr("data-show-on-hover-out", settings.showOnHover == "out" || showAll)
-
-            this.updateCodebase(codebase ?? this.codebase); // force rerender
-            this.updateConnections(connections ?? this.connections);
+            this.updateCodebase(true);
+            this.updateConnections();
         } else {
-            this.updateCodebase(codebase);
-            this.updateConnections(connections);
+            this.updateCodebase(!!codebase);
+            this.updateConnections();
         }
     }
 
-    updateCodebase(codebase?: Directory) {
-        if (codebase) {
-            this.codebase = codebase;
-        }
+    /** Update the layout/inputs/etc. */
+    updateMisc() {
+        const {showOnHover, directed} = this.settings;
+
+        // if not directed, show all connections regardless of direction specified.
+        const showAll = showOnHover == "both" || (showOnHover && !directed);
+
+        // add some settings as data attributes for CSS access
+        this.diagram
+            .attr("data-show-on-hover", !!showOnHover)
+            .attr("data-show-on-hover-in", showOnHover == "in" || showAll)
+            .attr("data-show-on-hover-out", showOnHover == "out" || showAll)
+    }
+
+    updateCodebase(fullRerender = false) {
         const filteredCodebase = this.filteredCodebase();
 
         const root = d3.hierarchy<AnyFile>(filteredCodebase,
@@ -334,7 +341,7 @@ export default class CBRVWebview {
             .classed("labels-hidden", d => this.shouldHideLabels(d));
 
         // we only need to recalculate these for new elements unless the file structure changed (not just zoom)
-        const changed = codebase ? all : all.filter(".new");
+        const changed = fullRerender ? all : all.filter(".new");
         
         changed.attr("transform", d => `translate(${d.x},${d.y})`);
 
@@ -408,11 +415,7 @@ export default class CBRVWebview {
         return filtered;
     }
 
-    updateConnections(connections?: Connection[]) {
-        if (connections) {
-            this.connections = connections;
-        }
-
+    updateConnections() {
         const merged = this.mergeConnections(this.connections);
         const paths = this.calculatePaths(merged);
 
