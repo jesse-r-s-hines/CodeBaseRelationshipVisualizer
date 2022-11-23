@@ -38,9 +38,15 @@ body {
     fill: var(--vscode-editor-foreground);
 }
 
-.directory.contents-hidden path.circle {
+.directory .contents-hidden-label {
+    display: none;
+    /* Ellipsis is at the bottom of a font line, so move baseline up so its in the middle */
+    dominant-baseline: alphabetic;
     fill: white;
-    fill-opacity: 1.0;
+}
+
+.directory.contents-hidden .contents-hidden-label {
+    display: inherit;
 }
 
 .directory.labels-hidden .label, .directory.labels-hidden .label-background, .file.labels-hidden .label {

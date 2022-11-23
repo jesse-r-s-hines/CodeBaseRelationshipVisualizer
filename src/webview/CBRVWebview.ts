@@ -87,6 +87,8 @@ export default class CBRVWebview {
             hideContentsR: 16,
             /** Radius when a directory's or file's labels will be hidden (in px) */
             hideLabelsR: 20,
+            /** Font size of the contents hidden ellipsis */
+            ellipsisSize: 60,
             /** Amount pressing an arrow key will pan in viewbox units */
             panKeyAmount: 50, 
             /** Amount pressing Ctrl-+/- will scale*/
@@ -310,6 +312,13 @@ export default class CBRVWebview {
                             .attr("startOffset", "50%")
                             .attr("font-size", d => Math.max(this.s.label.fontMax - d.depth, this.s.label.fontMin));
   
+                    directories.append("text")
+                        .append("tspan")
+                            .classed("contents-hidden-label", true)
+                            .attr("x", 0)
+                            .attr("y", 0)
+                            .attr("font-size", this.s.zoom.ellipsisSize)
+                            .text("...");
 
                     const setHoverClasses = (node: Node, toggle: boolean) => {
                         const file = this.filePath(node);
