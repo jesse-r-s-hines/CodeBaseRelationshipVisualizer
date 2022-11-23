@@ -2,7 +2,7 @@ import { Assertion } from 'chai';
 import _ from "lodash";
 
 declare global {
-    export namespace Chai {
+    export namespace Chai { // eslint-disable-line
         interface Assertion {
             deepCloseTo(expected: any, epsilon?: number): Promise<void>;
         }

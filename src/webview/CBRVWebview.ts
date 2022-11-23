@@ -8,7 +8,7 @@ import * as d3 from 'd3';
 //         - https://github.com/microsoft/vscode/issues/156224
 //         - https://github.com/gitkraken/vscode-gitlens/blob/main/package.json
 // - Or 'vanilla-context-menu' has types
-const d3ContextMenu = require("d3-context-menu");
+const d3ContextMenu = require("d3-context-menu"); // eslint-disable-line
 import "d3-context-menu/css/d3-context-menu.css"; // manually require the CSS
 
 import tippy, {followCursor, Instance as Tippy} from 'tippy.js';
