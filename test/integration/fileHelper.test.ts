@@ -59,11 +59,25 @@ const symlinkContents = {
         },
         {name: "B.md", type: FileType.File, size: 841},
         {
+            name: "external",
+            type: FileType.SymbolicLink,
+            linkedType: FileType.Directory,
+            link: "../minimal/deoxyribonucleicAcid/",
+            resolved: Uri.joinPath(samples, "minimal/deoxyribonucleicAcid").fsPath,
+        },
+        {
             name: "external.md",
             type: FileType.SymbolicLink,
             linkedType: FileType.File,
             link: "../minimal/D.md",
             resolved: Uri.joinPath(samples, "minimal/D.md").fsPath, // full path since external
+        },
+        {
+            name: "externalNested.txt",
+            type: FileType.SymbolicLink,
+            linkedType: FileType.File,
+            link: "../minimal/deoxyribonucleicAcid/I",
+            resolved: Uri.joinPath(samples, "minimal/deoxyribonucleicAcid/I").fsPath, // full path since external
         },
         {
             name: "link",
@@ -297,4 +311,12 @@ describe('Test fileHelper', () => {
             ]
         });
     });
+
+    // test('inlineExternalSymlinks', async () => {
+    //     let tree = await fileHelper.inlineExternalSymlinks(await fileHelper.getFileTree(minimal));
+    //     expect(tree).to.eql(minimalContents); // does nothing
+
+    //     tree = await fileHelper.inlineExternalSymlinks(await fileHelper.getFileTree(symlinks));
+    //     expect(tree).to.eql(minimalContents);
+    // });
 });
