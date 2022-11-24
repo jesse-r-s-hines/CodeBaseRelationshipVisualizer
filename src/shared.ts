@@ -14,7 +14,7 @@ export enum FileType {
 /**
  * An abstract representation of files and directories that can be sent to the webview.
  */
-export type AnyFile = File | Directory
+export type AnyFile = File | Directory | SymbolicLink
 
 interface BaseFile {
     name: string
@@ -28,6 +28,18 @@ export interface File extends BaseFile {
 export interface Directory extends BaseFile {
     type: FileType.Directory
     children: AnyFile[]
+}
+
+/**
+ * Note that while VSCode handles SymbolicLink types as a bitmask with File or Directory, I'm spliting the bitmask into
+ * separate fields to make it easier to work with and do type inference in the Visualization.
+ */
+export interface SymbolicLink extends BaseFile {
+    type: FileType.SymbolicLink
+    linkedType: FileType
+    link: string
+    resolved: string // resolved path relative to your codebase, or full path if external.
+    content?: AnyFile // optionally may contain the file info of the linked file.
 }
 
 /**
