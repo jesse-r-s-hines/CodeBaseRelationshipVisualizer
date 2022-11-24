@@ -20,7 +20,7 @@ if (!fs.existsSync(empty.fsPath)) {
     fs.mkdirSync(empty.fsPath); // git can't track an empty dir
 }
 
-const minimalContents = {
+const minimalContents: Directory = {
     name: "minimal",
     type: FileType.Directory,
     children: [
@@ -46,7 +46,7 @@ const minimalContents = {
     ]
 };
 
-const symlinkContents = {
+const symlinkContents: Directory = {
     name: "symlinks",
     type: FileType.Directory,
     children: [
@@ -67,6 +67,13 @@ const symlinkContents = {
         },
         {
             name: "external.md",
+            type: FileType.SymbolicLink,
+            linkedType: FileType.File,
+            link: "../minimal/D.md",
+            resolved: Uri.joinPath(samples, "minimal/D.md").fsPath, // full path since external
+        },
+        {
+            name: "external2.md",
             type: FileType.SymbolicLink,
             linkedType: FileType.File,
             link: "../minimal/D.md",
@@ -175,7 +182,7 @@ describe('Test fileHelper', () => {
 
         fileList = await vscode.workspace.findFiles(new vscode.RelativePattern(symlinks, '**/*'));
         const expected = _.cloneDeep(symlinkContents);
-        const loop = expected.children.find(c => c.name == "loop")!;
+        const loop = expected.children.find(c => c.name == "loop")! as Directory;
         loop.children = loop.children!.filter(c => c.name != "loop"); // findFiles doesn't traverse the loop
         tree = await fileHelper.listToFileTree(symlinks, fileList);
         expect(tree).to.eql(expected);
