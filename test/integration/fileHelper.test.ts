@@ -16,7 +16,7 @@ if (!fs.existsSync(empty.fsPath)) {
     fs.mkdirSync(empty.fsPath); // git can't track an empty dir
 }
 
-const minimal_contents = {
+const minimalContents = {
     name: "minimal",
     type: FileType.Directory,
     children: [
@@ -46,7 +46,7 @@ const minimal_contents = {
 describe('Test fileHelper', () => {
     test('getFileTree', async () => {
         let tree = await fileHelper.getFileTree(minimal);
-        expect(tree).to.eql(minimal_contents);
+        expect(tree).to.eql(minimalContents);
 
         tree = await fileHelper.getFileTree(Uri.joinPath(samples, "empty"));
         expect(tree).to.eql({type: FileType.Directory, name: "empty", children: []});
@@ -56,7 +56,7 @@ describe('Test fileHelper', () => {
         const includePattern = new vscode.RelativePattern(minimal, '**/*');
         let fileList = await vscode.workspace.findFiles(includePattern);
         let tree = await fileHelper.listToFileTree(minimal, fileList);
-        expect(tree).to.eql(minimal_contents);
+        expect(tree).to.eql(minimalContents);
 
         tree = await fileHelper.listToFileTree(empty, []);
         expect(tree).to.eql({type: FileType.Directory, name: "empty", children: []});
@@ -88,10 +88,10 @@ describe('Test fileHelper', () => {
 
     test('getFilteredFileTree', async () => {
         let tree = await fileHelper.getFilteredFileTree(minimal, '**/*');
-        expect(tree).to.eql(minimal_contents);
+        expect(tree).to.eql(minimalContents);
 
         tree = await fileHelper.getFilteredFileTree(minimal, '**/*', ' '); // should be trimmed and ignored
-        expect(tree).to.eql(minimal_contents);
+        expect(tree).to.eql(minimalContents);
 
         tree = await fileHelper.getFilteredFileTree(minimal, 'A/*');
         expect(tree).to.eql({
