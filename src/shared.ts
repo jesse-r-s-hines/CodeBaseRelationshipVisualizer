@@ -36,7 +36,7 @@ export interface Directory extends BaseFile {
  */
 export interface SymbolicLink extends BaseFile {
     type: FileType.SymbolicLink
-    linkedType: FileType
+    linkedType: FileType.Directory|FileType.File
     link: string
     resolved: string // resolved path relative to your codebase, or full path if external.
     content?: AnyFile // optionally may contain the file info of the linked file.
