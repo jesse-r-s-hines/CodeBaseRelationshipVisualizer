@@ -179,14 +179,4 @@ describe('Test fileHelper', () => {
         //     ]
         // });
     });
-
-    test('getPathSet', async () => {
-        const tree = await fileHelper.getPathSet(minimal);
-        expect(tree).to.eql(new Set([
-            "A/E.txt", "A/F.txt", "A/G.md",
-            "C.txt", "D.md",
-            "Supercalifragilisticexpialidocious.py",
-            "deoxyribonucleicAcid/I",
-        ]));
-    });
 });

@@ -1,11 +1,10 @@
 import * as vscode from 'vscode';
-import { workspace, Uri, Webview, FileType } from 'vscode';
+import { workspace, Uri, RelativePattern } from 'vscode';
 import * as path from 'path';
 import { AnyFile, Connection } from "./shared";
 import { Visualization } from "./Visualization";
 import { TextDecoder } from 'text-encoding';
 import fs = vscode.workspace.fs
-import { getPathSet } from './fileHelper';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log("CodeBase Relationship Visualizer active");
@@ -34,7 +33,9 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 async function getHyperlinks(codebase: Uri, linkBase: string): Promise<Connection[]> {
-    const pathSet = await getPathSet(codebase);
+    // get a flat list of all files
+    const uris = (await workspace.findFiles(new RelativePattern(codebase, '**/*')));
+    const pathSet = new Set(uris.map(uri => path.relative(codebase.fsPath, uri.fsPath)));
     const connections: Connection[] = [];
 
     for (const path of pathSet) {
