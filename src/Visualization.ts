@@ -11,9 +11,9 @@ import _ from 'lodash';
 export class Visualization {
     private context: vscode.ExtensionContext;
     private settings: NormalizedVisualizationSettings
+    private codebase: Uri
     private connections: Connection[]
 
-    private base: Uri
     private webview?: vscode.Webview
     private fsWatcher?: FileSystemWatcher
 
@@ -42,11 +42,9 @@ export class Visualization {
     constructor(
         context: vscode.ExtensionContext,
         settings: VisualizationSettings = {},
+        codebase: Uri,
         connections: Iterable<Connection> = []
     ) {
-        if (!workspace.workspaceFolders?.[0]) throw new Error("No workspace to visualize");
-        this.base = workspace.workspaceFolders![0].uri;
-
         this.context = context;
         settings = _.cloneDeep(settings);
         if (settings.mergeRules === true) {
@@ -57,6 +55,7 @@ export class Visualization {
         }
 
         this.settings = _.merge({}, Visualization.defaultSettings, settings);
+        this.codebase = codebase;
         this.connections = [...connections];
     }
 
@@ -73,7 +72,7 @@ export class Visualization {
                     this.sendUpdate(true, this.getWebviewSettings(), this.connections);
                     this.fsWatcher = workspace.createFileSystemWatcher(
                         // TODO this should use excludes
-                        new vscode.RelativePattern(this.base, '**/*')
+                        new vscode.RelativePattern(this.codebase, '**/*')
                     );
 
                     // TODO might have issues with using default excludes?
@@ -166,7 +165,7 @@ export class Visualization {
     private async sendUpdate(getCodebase: boolean, settings?: WebviewVisualizationSettings, connections?: Connection[]) {
         let codebase = undefined;
         if (getCodebase) {
-            codebase = await fileHelper.getFilteredFileTree(this.base, this.include, this.exclude);
+            codebase = await fileHelper.getFilteredFileTree(this.codebase, this.include, this.exclude);
         }
 
         this.webview!.postMessage({
@@ -178,7 +177,7 @@ export class Visualization {
     }
 
     private getUri(file: string): Uri {
-        return vscode.Uri.file(`${this.base.fsPath}/${file}`);
+        return vscode.Uri.file(`${this.codebase.fsPath}/${file}`);
     }
 }
 

@@ -23,7 +23,7 @@ export function activate(context: vscode.ExtensionContext) {
                     tooltip: (conn) => conn.color,
                 },
                 mergeRules: true,
-            }, links);
+            }, codebase, links);
             await visualization.launch();
         }),
     );
