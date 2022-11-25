@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { workspace } from "vscode";
-import { Uri, Webview, FileSystemWatcher } from 'vscode';
+import { Uri, Webview, WebviewPanel, FileSystemWatcher } from 'vscode';
 import { Connection, NormalizedConnection, VisualizationSettings } from "./publicTypes";
 import { WebviewVisualizationSettings, CBRVMessage } from "./privateTypes";
 
@@ -17,7 +17,7 @@ export class Visualization {
     private codebase: Uri
     private connections: Connection[]
 
-    private webview?: vscode.Webview
+    private webviewPanel?: WebviewPanel
     private fsWatcher?: FileSystemWatcher
 
     private include = "**/*"
@@ -62,14 +62,10 @@ export class Visualization {
         this.connections = [...connections];
     }
 
-    getWebviewSettings(): WebviewVisualizationSettings {
-        return _.omit(this.settings, ["title", "connectionDefaults.tooltip"]) as WebviewVisualizationSettings;
-    }
-
     async launch() {
-        this.webview = this.createWebview();
+        this.webviewPanel = this.createWebviewPanel();
 
-        this.webview.onDidReceiveMessage(
+        this.webviewPanel.webview.onDidReceiveMessage(
             async (message: CBRVMessage) => {
                 if (message.type == "ready") {
                     this.sendUpdate(true, this.getWebviewSettings(), this.connections);
@@ -98,7 +94,7 @@ export class Visualization {
                 } else if (message.type == "copy-relative-path") {
                     vscode.env.clipboard.writeText(message.file);
                 } else if (message.type == "tooltip-request") {
-                    this.webview!.postMessage({
+                    this.send({
                         type: "tooltip-set",
                         id: message.id,
                         content: this.settings.connectionDefaults.tooltip(message.conn) || "",
@@ -110,7 +106,11 @@ export class Visualization {
         );
     }
 
-    private createWebview(): Webview {
+    private getWebviewSettings(): WebviewVisualizationSettings {
+        return _.omit(this.settings, ["title", "connectionDefaults.tooltip"]) as WebviewVisualizationSettings;
+    }
+
+    private createWebviewPanel(): WebviewPanel {
         // Create and show panel
         const panel = vscode.window.createWebviewPanel(
             'codeBaseRelationshipVisualizer',
@@ -125,7 +125,7 @@ export class Visualization {
 
         panel.webview.html = this.getWebviewContent(panel.webview);
 
-        return panel.webview;
+        return panel;
     }
 
     private getWebviewContent(webview: Webview): string {
@@ -181,12 +181,16 @@ export class Visualization {
             };
         });
     
-        this.webview!.postMessage({
+        await this.send({
             type: "set",
             settings: settings,
             codebase: codebase,
             connections: normConns,
         });
+    }
+    
+    private async send(message: CBRVMessage) {
+        await this.webviewPanel!.webview.postMessage(message);
     }
 
     private getUri(file: string): Uri {
