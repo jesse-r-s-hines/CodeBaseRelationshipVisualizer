@@ -14,7 +14,7 @@ import "d3-context-menu/css/d3-context-menu.css"; // manually require the CSS
 import tippy, {followCursor, Instance as Tippy} from 'tippy.js';
 import 'tippy.js/dist/tippy.css'; // optional for styling
 
-import { FileType, Directory, AnyFile, Connection, NormalizedConnection, MergedConnection,
+import { FileType, Directory, SymbolicLink, AnyFile, Connection, NormalizedConnection, MergedConnection,
          WebviewVisualizationSettings } from '../shared';
 import { getExtension, filterFileTree, loopIndex, OptionalKeys } from '../util';
 import * as geo from './geometry';
@@ -140,6 +140,19 @@ export default class CBRVWebview {
         this.connectionLayer = this.zoomWindow.append("g")
             .classed("connection-layer", true);
 
+        // SVG taken from Font Awesome 6.2.1 (https://fontawesome.com) "fa-share" icon, with some positioning tweaks
+        this.defs.html(`
+            <svg id="symlink-icon" viewBox="0 -480 512 448">
+                <path d="
+                    M 307 -34.8 c -11.5 -5.1 -19 -16.6 -19 -29.2 v -64 H 176 C 78.8 -128 0 -206.8 0 -304 C 0 -417.3 81.5
+                    -467.9 100.2 -478.1 c 2.5 -1.4 5.3 -1.9 8.1 -1.9 c 10.9 0 19.7 8.9 19.7 19.7 c 0 7.5 -4.3 14.4 -9.8
+                    19.5 C 108.8 -431.9 96 -414.4 96 -384 c 0 53 43 96 96 96 h 96 v -64 c 0 -12.6 7.4 -24.1 19 -29.2 s
+                    25 -3 34.4 5.4 l 160 144 c 6.7 6.1 10.6 14.7 10.6 23.8 s -3.8 17.7 -10.6 23.8 l -160 144 c -9.4 8.5
+                    -22.9 10.6 -34.4 5.4 z
+                "/>
+            </svg>
+        `);
+
         // Add event listeners
         this.throttledUpdate = _.throttle(() => this.update(), 250, {trailing: true});
 
@@ -251,8 +264,12 @@ export default class CBRVWebview {
         root.sum(d => { // Compute size of files and folders.
             if (d.type == FileType.File) {
                 return _.clamp(d.size, this.s.file.minSize, this.s.file.maxSize);
-            } else { // only give empty folders a size (empty folders are normally filtered, but root can be empty)
-                return d.children.length == 0 ? 1 : 0 ;
+            } else if (d.type == FileType.Directory) {    // only give empty folders a size. Empty folders are normally
+                return d.children.length == 0 ? 1 : 0 ;   // filtered, but root can be empty.
+            } else if (d.type == FileType.SymbolicLink) {
+                return this.s.file.minSize; // render all symbolic links as the minimum size.
+            } else {
+                throw new Error(`Unknown type`);
             }
         });
 
@@ -265,9 +282,11 @@ export default class CBRVWebview {
             .padding(this.s.file.padding)(root);
 
         const colorScale = this.getColorScale(packLayout);
-        // Calculate unique key for each data. Use `type:path/to/file` so that changing file <-> directory is treated as
-        // creating a new node rather than update the existing one, which simplifies the logic.
+        // Calculate unique key for each data. Use `type:path/to/file` so that types is treated as creating a new node
+        // rather than update the existing one, which simplifies the logic.
         const keyFunc = (d: Node) => `${d.data.type}:${this.filePath(d)}`;
+        const nodeIsOrLinksToType = (d: Node, type: FileType.File|FileType.Directory) =>
+            (d.data.type == type || (d.data.type == FileType.SymbolicLink && d.data.linkedType == type));
 
         const data = packLayout.descendants().filter(d => !d.parent || !this.shouldHideContents(d.parent));
 
@@ -277,8 +296,9 @@ export default class CBRVWebview {
                 enter => {
                     const all = enter.append('g')
                         .attr('data-file', d => this.filePath(d))
-                        .classed("file", d => d.data.type == FileType.File)
-                        .classed("directory", d => d.data.type == FileType.Directory)
+                        .classed("file", d => nodeIsOrLinksToType(d, FileType.File))
+                        .classed("directory", d => nodeIsOrLinksToType(d, FileType.Directory))
+                        .classed("symlink", d => d.data.type == FileType.SymbolicLink)
                         .classed("new", true); // We'll use this to reselect newly added nodes later.
 
                     // Draw the circles for each file and directory. Use path instead of circle so we can use textPath
@@ -287,16 +307,18 @@ export default class CBRVWebview {
                         .classed("circle", true)
                         .attr("id", d => uniqId(this.filePath(d)));
 
-                    const files = all.filter(d => d.data.type == FileType.File);
-                    const directories = all.filter(d => d.data.type == FileType.Directory);
+                    const files = all.filter(d => nodeIsOrLinksToType(d, FileType.File));
+                    const directories = all.filter(d => nodeIsOrLinksToType(d, FileType.Directory));
+                    const symlinks = all.filter(d => d.data.type == FileType.SymbolicLink); // overlaps files/directories
 
                     // Add labels
-                    files.append("text")
-                        .append("tspan")
-                            .classed("label", true)
-                            .attr("x", 0)
-                            .attr("y", 0)
-                            .attr("font-size", d => Math.max(this.s.label.fontMax - d.depth, this.s.label.fontMin));
+                    files.filter(d => d.data.type != FileType.SymbolicLink)
+                        .append("text")
+                            .append("tspan")
+                                .classed("label", true)
+                                .attr("x", 0)
+                                .attr("y", 0)
+                                .attr("font-size", d => Math.max(this.s.label.fontMax - d.depth, this.s.label.fontMin));
 
                     // Add a folder name at the top. Add a "background" path behind the text to contrast with the circle
                     // outline. We'll set the path in update after we've created the label so we can get the computed
@@ -319,6 +341,19 @@ export default class CBRVWebview {
                             .attr("y", 0)
                             .attr("font-size", this.s.zoom.ellipsisSize)
                             .text("...");
+
+                    const iconSize = this.s.file.minSize * 1.5;
+                    symlinks.append("use")
+                            .classed("symlink-icon", true)
+                            .attr("href", "#symlink-icon")
+                            .attr("x", -iconSize/2) // offset to be centered
+                            .attr("y", -iconSize/2)
+                            .attr("width", iconSize) // minSize is radius
+                            .attr("height", iconSize)
+                            .style("fill", d => {
+                                const isDir = nodeIsOrLinksToType(d, FileType.Directory);
+                                return `var(--vscode-editor-${isDir ? 'foreground' : 'background'})`;
+                            });
 
                     const setHoverClasses = (node: Node, toggle: boolean) => {
                         const file = this.filePath(node);
