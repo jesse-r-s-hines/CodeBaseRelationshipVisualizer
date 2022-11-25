@@ -22,6 +22,7 @@ export class Visualization {
 
     private include = "**/*"
     private exclude = ""
+    private files: Uri[] = [];
 
     private static readonly defaultSettings: DeepRequired<VisualizationSettings> = {
         title: 'CodeBase Relationship Visualizer',
@@ -185,7 +186,8 @@ export class Visualization {
     private async sendUpdate(getCodebase: boolean, settings?: WebviewVisualizationSettings, connections?: Connection[]) {
         let codebase = undefined;
         if (getCodebase) {
-            codebase = await fileHelper.getFilteredFileTree(this.codebase, this.include, this.exclude);
+            this.files = await fileHelper.getFilteredFileList(this.codebase, this.include, this.exclude);
+            codebase = await fileHelper.listToFileTree(this.codebase, this.files);
         }
         const normConns: NormalizedConnection[]|undefined = connections?.map(conn => {
             if (!conn.from && !conn.to) {
