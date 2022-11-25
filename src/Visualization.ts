@@ -5,7 +5,7 @@ import { Connection, NormalizedConnection, VisualizationSettings } from "./publi
 import { WebviewVisualizationSettings, CBRVMessage, Directory } from "./privateTypes";
 
 import { DeepRequired } from "ts-essentials";
-import _ from 'lodash';
+import _, { isEqual, cloneDeep } from 'lodash';
 import * as fileHelper from "./fileHelper";
 
 /**
@@ -13,6 +13,7 @@ import * as fileHelper from "./fileHelper";
  */
 export class Visualization {
     private context: vscode.ExtensionContext;
+    private originalSettings: VisualizationSettings;
     private settings: DeepRequired<VisualizationSettings>
     private codebase: Uri
     private connections: Connection[]
@@ -47,20 +48,13 @@ export class Visualization {
         context: vscode.ExtensionContext,
         codebase: Uri,
         settings: VisualizationSettings = {},
-        connections: Iterable<Connection> = []
+        connections: Connection[] = []
     ) {
         this.context = context;
-        settings = _.cloneDeep(settings);
-        if (settings.mergeRules === true) {
-            settings.mergeRules = {}; // just use all the defaults
-        }
-        if (settings.showOnHover === true) {
-            settings.showOnHover = "both";
-        }
-
-        this.settings = _.merge({}, Visualization.defaultSettings, settings);
+        this.originalSettings = this.settings = settings as any; // just to silence typescript "not initialized" errors
+        this.updateSettings(settings); // sets originalSettings and settings
         this.codebase = codebase;
-        this.connections = [...connections];
+        this.connections = connections;
     }
 
     /**
@@ -75,6 +69,54 @@ export class Visualization {
     }
     dispose(): any {
         return this.webviewPanel!.dispose();
+    }
+
+    /**
+     * Used to update the visualization. Update the state in the callback and the visualization will update after
+     * calling the callback.
+     */
+    update(func: (state: InstanceType<typeof Visualization.VisualizationState>) => void): void {
+        const state = new Visualization.VisualizationState(this);
+        func(state); // user can mutate settings and connections in here
+        
+        const send = {settings: false, connections: false};
+
+        if (!isEqual(this.originalSettings, state.settings)) {
+            send.settings = true;
+            this.updateSettings(state.settings);
+        }
+
+        if (!isEqual(this.connections, state.connections)) {
+            send.connections = true;
+            this.connections = state.connections;
+        }
+
+        this.sendUpdate(send);
+    }
+
+    /** A mutable "view" on a Visualization */
+    static VisualizationState = class {
+        private visualization: Visualization
+
+        settings: VisualizationSettings
+        connections: Connection[]
+        
+        constructor(visualization: Visualization) {
+            this.visualization = visualization;
+            this.settings = cloneDeep(this.visualization.originalSettings);
+            this.connections = cloneDeep(this.visualization.connections);
+        }
+
+        /**
+        * Get a list of all the files included by the current include/exclude settings.
+        */
+        get files(): Uri[] { return this.visualization.files; }
+
+        // /** TODO
+        // * Return connections that are connected to the given file. Optionally
+        // * specify the direction the are going relative to the file.
+        // */
+        // getConnected(file: Uri, direction?: Direction): Connection[]
     }
 
     async launch() {
@@ -122,6 +164,23 @@ export class Visualization {
             undefined,
             this.context.subscriptions
         );
+    }
+
+    private updateSettings(settings: VisualizationSettings) {
+        this.originalSettings = settings;
+        settings = cloneDeep(settings);
+        if (settings.mergeRules === true) {
+            settings.mergeRules = {}; // just use all the defaults
+        }
+        if (settings.showOnHover === true) {
+            settings.showOnHover = "both";
+        }
+
+        this.settings = _.merge({}, Visualization.defaultSettings, settings);
+
+        if (this.webviewPanel) {
+            this.webviewPanel.title == this.settings.title;
+        }
     }
 
     private createWebviewPanel(): WebviewPanel {
@@ -216,5 +275,6 @@ export class Visualization {
         return vscode.Uri.file(`${this.codebase.fsPath}/${file}`);
     }
 }
+
 
 

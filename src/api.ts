@@ -35,7 +35,7 @@ export class API {
      */
     async create(
         settings: VisualizationSettings,
-        connections?: Iterable<Connection>
+        connections?: Connection[]
     ): Promise<Visualization> {
         const codebase = vscode.workspace.workspaceFolders?.[0]?.uri;
         if (!codebase) {
