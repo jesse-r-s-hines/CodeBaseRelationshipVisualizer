@@ -33,7 +33,7 @@
         "build:extension": "tsc -p ./src",
         "build:webview": "webpack --env dev",
         "lint": "eslint . --ext .ts,.tsx",
-        "watch": "npm-run-all -p watch:*",
+        "watch": "npm-run-all watch:*",
         "watch:extension": "tsc -w -p ./src",
         "watch:webview": "webpack --env dev --watch",
         "test": "npm-run-all test:*",
