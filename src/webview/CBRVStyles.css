@@ -42,7 +42,7 @@ body {
     display: none;
     /* Ellipsis is at the bottom of a font line, so move baseline up so its in the middle */
     dominant-baseline: alphabetic;
-    fill: white;
+    fill: var(--vscode-editor-foreground);
 }
 
 .directory.contents-hidden .contents-hidden-label {
