@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import { workspace, Uri, RelativePattern } from 'vscode';
 import * as path from 'path';
-import { Connection, VisualizationSettings } from "./publicTypes";
-import { API } from "./api";
+import { API, VisualizationSettings, Connection } from "./api";
 import { TextDecoder } from 'text-encoding';
 import fs = vscode.workspace.fs
 

@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 import { Visualization } from './Visualization';
-import { VisualizationSettings, Connection } from './publicTypes';
+import { VisualizationSettings, Connection, Endpoint, NormalizedConnection, NormalizedEndpoint, MergedConnection,
+         MergeRules } from "./publicTypes";
+import { SameRule, IgnoreRule, LeastRule, GreatestRule, LeastCommonRule, MostCommonRule, GroupRule, AddRule, ValueRule,
+         JoinRule, BuiltinMergeRule } from "./mergingTypes";
 
 /**
  * The CodeBase Relationship Visualization API
@@ -41,3 +44,11 @@ export class API {
         return new Visualization(this.context, settings, codebase, connections);
     }
 }
+
+// Re-export public types
+export {
+    type Visualization,
+    VisualizationSettings, Connection, Endpoint, NormalizedConnection, NormalizedEndpoint, MergedConnection, MergeRules,
+    SameRule, IgnoreRule, LeastRule, GreatestRule, LeastCommonRule, MostCommonRule, GroupRule, AddRule, ValueRule,
+    JoinRule, BuiltinMergeRule,
+};
