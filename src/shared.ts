@@ -1,98 +1,11 @@
 /** Contains interfaces and classes that are used both inside and outside the webview */
 
-/**
- * Just an alias for VSCode's FileType enum.
- * I've redeclared it from scratch here so that it can be used inside the webview (vscode isn't available there)
- */
-export enum FileType {
-    Unknown = 0,
-    File = 1,
-    Directory = 2,
-    SymbolicLink = 64
-}
-
-/**
- * An abstract representation of files and directories that can be sent to the webview.
- */
-export type AnyFile = File | Directory | SymbolicLink
-
-interface BaseFile {
-    name: string
-}
-
-export interface File extends BaseFile {
-    type: FileType.File
-    size: number
-}
-
-export interface Directory extends BaseFile {
-    type: FileType.Directory
-    children: AnyFile[]
-}
-
-/**
- * Note that while VSCode handles SymbolicLink types as a bitmask with File or Directory, I'm spliting the bitmask into
- * separate fields to make it easier to work with and do type inference in the Visualization.
- */
-export interface SymbolicLink extends BaseFile {
-    type: FileType.SymbolicLink
-    linkedType: FileType.Directory|FileType.File
-    link: string
-    resolved: string // resolved path relative to your codebase, or full path if external.
-}
-
-/**
- * Represents a connection or relationship between files. A `Connection` connects two file:line locations in the
- * workspace. `Connections` will be rendered as a line or arrow in the visualization. `line` is optional, in which case
- * the `Connection` will just connect the files and can be passed just the file `Uri`. `Connections` can be between two
- * different files, different lines in the same file, or even connect a file to itself. `Connections` can only connect
- * files, not folders. If `from` or `to` is undefined, the connection will start or end "outside" the visualization.
- * 
- * E.g.
- * ```ts
- * {
- *   from: {file: Uri.file("main.py"), line: 10},
- *   to: {file: Uri.file("tutorial.py"), line: 3}
- * }
- * ```
- * or
- * ```ts
- * {
- *   from: Uri.file("main.py"),
- *   to: Uri.file("tutorial.py")
- * }
- * ```
- */
- export interface Connection {
-    from?: Endpoint
-    to?: Endpoint
-
-    /** Width of the SVG path */
-    width?: number
-
-    /** CSS color string */
-    color?: string
-
-    /** String to show as tooltip */
-    tooltip?: string
-
-    /**
-     * Other freeform properties can be defined on the `Connection` and referenced in custom callbacks or `MergeRules`
-     */
-    [key: string]: any // TODO maybe narrow this to JSON serializable
-}
-
-/**
- * Represents one endpoint of a `Connection`. Can be a path to the file or an object containing a path and an optional
- * line number.
- * TODO: maybe use Uri instead, or update Docs
- */
-export type Endpoint = string | { file: string, line?: number }
+/** ====== These types will be re-exported in public api ====== */
 
 /**
  * Settings and configuration for a Visualization.
  */
-export interface VisualizationSettings {
+ export interface VisualizationSettings {
     /**
      * Title for the internal webview. See https://code.visualstudio.com/api/references/vscode-api#WebviewPanel
      */
@@ -169,22 +82,71 @@ export interface VisualizationSettings {
     mergeRules?: MergeRules|boolean
 }
 
-export interface WebviewVisualizationSettings {
-    directed: boolean
-    showOnHover: "in"|"out"|"both"|false
-    connectionDefaults: {
-        width: number
-        color: string
-    }
-    mergeRules: MergeRules|false
+/**
+ * Represents a connection or relationship between files. A `Connection` connects two file:line locations in the
+ * workspace. `Connections` will be rendered as a line or arrow in the visualization. `line` is optional, in which case
+ * the `Connection` will just connect the files and can be passed just the file `Uri`. `Connections` can be between two
+ * different files, different lines in the same file, or even connect a file to itself. `Connections` can only connect
+ * files, not folders. If `from` or `to` is undefined, the connection will start or end "outside" the visualization.
+ * 
+ * E.g.
+ * ```ts
+ * {
+ *   from: {file: Uri.file("main.py"), line: 10},
+ *   to: {file: Uri.file("tutorial.py"), line: 3}
+ * }
+ * ```
+ * or
+ * ```ts
+ * {
+ *   from: Uri.file("main.py"),
+ *   to: Uri.file("tutorial.py")
+ * }
+ * ```
+ */
+export interface Connection {
+    from?: Endpoint
+    to?: Endpoint
+
+    /** Width of the SVG path */
+    width?: number
+
+    /** CSS color string */
+    color?: string
+
+    /** String to show as tooltip */
+    tooltip?: string
+
+    /**
+     * Other properties can be defined on the `Connection` and referenced in the tooltip callback or `MergeRules`.
+     */
+    [key: string]: any
 }
+
+/**
+ * Represents one endpoint of a `Connection`. Can be a path to the file or an object containing a path and an optional
+ * line number.
+ * TODO: maybe use Uri instead, or update Docs
+ */
+export type Endpoint = string | { file: string, line?: number }
+
+export interface NormalizedConnection {
+    from?: NormalizedEndpoint
+    to?: NormalizedEndpoint
+    width?: number
+    color?: string
+    tooltip?: string
+    [key: string]: any
+}
+
+export type NormalizedEndpoint = { file: string, line?: number }
 
 /**
  * Represents a merged group of connections, that will be rendered as one
  * line in the visualization. The connections are grouped together based
  * on the merge rules.
  */
-export interface MergedConnection {
+ export interface MergedConnection {
     /**
     * The file/folder the rendered connection will show from. This can be a
     * folder when there are deeply nested files which are hidden until the
@@ -210,23 +172,10 @@ export interface MergedConnection {
     * The original connections that were merged.
     * Will be sorted using the order function if one is given.
     */
-    connections: Connection[]
+    connections: NormalizedConnection[]
 
-    [key: string]: any
-  }
-
-// Internal types
-
-export interface NormalizedConnection {
-    from?: NormalizedEndpoint
-    to?: NormalizedEndpoint
-    width?: number
-    color?: string
-    tooltip?: string
     [key: string]: any
 }
-
-export type NormalizedEndpoint = { file: string, line?: number }
 
 export type MergeRules = {
     file?: SameRule | IgnoreRule
@@ -235,9 +184,9 @@ export type MergeRules = {
 
     width?: SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule | AddRule | ValueRule
     color?: SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule | ValueRule
-    tooltip?: SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule | ValueRule
+    tooltip?: SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule | ValueRule | JoinRule
 } | {
-    [key: string]: DefaultMergeRule
+    [key: string]: BuiltinMergeRule
 }
 
 // TODO duplicate types
@@ -253,10 +202,65 @@ export type GroupRule = SimpleMergeRule<'group'>;
 export type AddRule = SimpleMergeRule<"add"> | {rule: "add", max: number}
 export type ValueRule = {rule: "value", value: any}
 export type JoinRule = SimpleMergeRule<"join"> | {rule: "join", sep: string};
-
-export type DefaultMergeRule = SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule |
+export type BuiltinMergeRule = SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule |
                                GroupRule | AddRule | ValueRule | JoinRule
 
+
+
+/** ====== "Private" types internal to CBRV ====== */
+
+
+/**
+ * Just an alias for VSCode's FileType enum.
+ * I've redeclared it from scratch here so that it can be used inside the webview (vscode isn't available there)
+ */
+export enum FileType {
+    Unknown = 0,
+    File = 1,
+    Directory = 2,
+    SymbolicLink = 64
+}
+
+/**
+ * An abstract representation of files and directories that can be sent to the webview.
+ */
+export type AnyFile = File | Directory | SymbolicLink
+
+interface BaseFile {
+    name: string
+}
+
+export interface File extends BaseFile {
+    type: FileType.File
+    size: number
+}
+
+export interface Directory extends BaseFile {
+    type: FileType.Directory
+    children: AnyFile[]
+}
+
+/**
+ * Note that while VSCode handles SymbolicLink types as a bitmask with File or Directory, I'm spliting the bitmask into
+ * separate fields to make it easier to work with and do type inference in the Visualization.
+ */
+export interface SymbolicLink extends BaseFile {
+    type: FileType.SymbolicLink
+    linkedType: FileType.Directory|FileType.File
+    link: string
+    resolved: string // resolved path relative to your codebase, or full path if external.
+}
+
+
+export interface WebviewVisualizationSettings {
+    directed: boolean
+    showOnHover: "in"|"out"|"both"|false
+    connectionDefaults: {
+        width: number
+        color: string
+    }
+    mergeRules: MergeRules|false
+}
 
 // messages for communication between the webview and VSCode
 export type CBRVMessage = ReadyMessage|SetMessage|OpenMessage|RevealInExplorerMessage|CopyPathMessage|
@@ -266,7 +270,7 @@ export type SetMessage = {
     type: "set",
     settings?: WebviewVisualizationSettings,
     codebase?: Directory,
-    connections?: Connection[],
+    connections?: NormalizedConnection[],
 }
 export type OpenMessage = { type: "open", file: string }
 export type RevealInExplorerMessage = { type: "reveal-in-explorer", file: string }
