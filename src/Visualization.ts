@@ -62,13 +62,30 @@ export class Visualization {
         this.connections = [...connections];
     }
 
+    /**
+     * These properties and methods are just passed through to the internal webview panel.
+     * See https://code.visualstudio.com/api/references/vscode-api#WebviewPanel
+     */
+    get active() { return this.webviewPanel!.active; }
+    get viewColumn() { return this.webviewPanel!.viewColumn; }
+    get visible() { return this.webviewPanel!.visible; }
+    reveal(viewColumn?: vscode.ViewColumn, preserveFocus?: boolean): void {
+        this.webviewPanel!.reveal(viewColumn, preserveFocus);
+    }
+    dispose(): any {
+        return this.webviewPanel!.dispose();
+    }
+
     async launch() {
+        if (this.webviewPanel) {
+            throw new Error("Visualization launched twice");
+        }
         this.webviewPanel = this.createWebviewPanel();
 
         this.webviewPanel.webview.onDidReceiveMessage(
             async (message: CBRVMessage) => {
                 if (message.type == "ready") {
-                    this.sendUpdate(true, this.getWebviewSettings(), this.connections);
+                    await this.sendUpdate(true, this.getWebviewSettings(), this.connections);
                     this.fsWatcher = workspace.createFileSystemWatcher(
                         // TODO this should use excludes
                         new vscode.RelativePattern(this.codebase, '**/*')
@@ -83,7 +100,7 @@ export class Visualization {
                 } else if (message.type == "filter") {
                     this.include = message.include;
                     this.exclude = message.exclude;
-                    this.sendUpdate(true);
+                    await this.sendUpdate(true);
                 } else if (message.type == "open") {
                     // NOTE: we could do these and Command URIs inside the webview instead. That might be simpler
                     await vscode.commands.executeCommand("vscode.open", this.getUri(message.file));
@@ -94,7 +111,7 @@ export class Visualization {
                 } else if (message.type == "copy-relative-path") {
                     vscode.env.clipboard.writeText(message.file);
                 } else if (message.type == "tooltip-request") {
-                    this.send({
+                    await this.send({
                         type: "tooltip-set",
                         id: message.id,
                         content: this.settings.connectionDefaults.tooltip(message.conn) || "",
