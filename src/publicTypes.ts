@@ -170,7 +170,7 @@ export interface MergedConnection {
     * The original connections that were merged.
     * Will be sorted using the order function if one is given.
     */
-    connections: Connection[]
+    connections: NormalizedConnection[]
 
     [key: string]: any
 }
