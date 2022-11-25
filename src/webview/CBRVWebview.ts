@@ -87,8 +87,6 @@ export default class CBRVWebview {
             hideContentsR: 16,
             /** Radius when a directory's or file's labels will be hidden (in px) */
             hideLabelsR: 20,
-            /** Font size of the contents hidden ellipsis */
-            ellipsisSize: 60,
             /** Amount pressing an arrow key will pan in viewbox units */
             panKeyAmount: 50, 
             /** Amount pressing Ctrl-+/- will scale*/
@@ -342,7 +340,7 @@ export default class CBRVWebview {
                             .classed("contents-hidden-label", true)
                             .attr("x", 0)
                             .attr("y", 0)
-                            .attr("font-size", this.s.zoom.ellipsisSize)
+                            .attr("font-size", d => this.calcPixelLength(d.r))
                             .text("...");
 
                     const iconSize = this.s.file.minSize * 1.5;
