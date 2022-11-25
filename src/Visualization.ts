@@ -45,8 +45,8 @@ export class Visualization {
 
     constructor(
         context: vscode.ExtensionContext,
-        settings: VisualizationSettings = {},
         codebase: Uri,
+        settings: VisualizationSettings = {},
         connections: Iterable<Connection> = []
     ) {
         this.context = context;

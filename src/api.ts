@@ -41,7 +41,7 @@ export class API {
         if (!codebase) {
             throw new Error("No workspace to visualize");
         }
-        const vis = new Visualization(this.context, settings, codebase, connections);
+        const vis = new Visualization(this.context, codebase, settings, connections);
         await vis.launch();
         return vis;
     }
