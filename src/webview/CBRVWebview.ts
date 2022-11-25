@@ -903,14 +903,25 @@ export default class CBRVWebview {
 
     /** Returns a function used to compute color from file extension */
     getColorScale(nodes: Node): (d: AnyFile) => string | null {
-        const exts = _(nodes.descendants()) // lodash is lazy
+        const domain = _(nodes.descendants()) // lodash is lazy
             .filter(n => n.data.type != FileType.Directory)
-            .map(n => getExtension(n.data.name))
+            .map(n => getExtension((n.data.type == FileType.SymbolicLink) ? n.data.resolved : n.data.name))
             .uniq()
             .value();
-        // quantize requires > 1, so just set it to 2 if needed. It doesn't matter if there's extra "buckets"
-        const colorScale = d3.scaleOrdinal(exts, d3.quantize(d3.interpolateRainbow, Math.max(exts.length, 2)));
-        return (d: AnyFile) => d.type == FileType.Directory ? null : colorScale(getExtension(d.name));
+        // interpolateRainbow loops around so the first and last entries are the same, so +1 and slice off end to make
+        // all colors unique. Also, quantize requires n > 1, so the +1 also fixes that.
+        const range = d3.quantize(d3.interpolateRainbow, domain.length + 1).slice(0, -1);
+        const colorScale = d3.scaleOrdinal(domain, range);
+
+        return (d: AnyFile) => {
+            if (d.type == FileType.Directory) {
+                return null;
+            } else if (d.type == FileType.SymbolicLink) {
+                return colorScale(getExtension(d.resolved));
+            } else {
+                return colorScale(getExtension(d.name));
+            }
+        };
     }
 
     filePath(d: Node): string {
