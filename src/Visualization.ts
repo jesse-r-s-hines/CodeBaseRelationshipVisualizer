@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { workspace } from "vscode";
 import { Uri, Webview, FileSystemWatcher } from 'vscode';
-import { Connection, VisualizationSettings, WebviewVisualizationSettings, CBRVMessage } from "./shared";
+import { Connection, NormalizedConnection, VisualizationSettings, WebviewVisualizationSettings, CBRVMessage } from "./shared";
 import { DeepRequired } from "ts-essentials";
 import _ from 'lodash';
 import * as fileHelper from "./fileHelper";
@@ -168,12 +168,22 @@ export class Visualization {
         if (getCodebase) {
             codebase = await fileHelper.getFilteredFileTree(this.codebase, this.include, this.exclude);
         }
-
+        const normConns: NormalizedConnection[]|undefined = connections?.map(conn => {
+            if (!conn.from && !conn.to) {
+                throw Error("Connections must have at least one of from or to defined");
+            }
+            return { // TODO normalize file paths as well
+                ...conn,
+                from: (typeof conn.from == 'string') ? {file: conn.from} : conn.from,
+                to: (typeof conn.to == 'string') ? {file: conn.to} : conn.to,
+            };
+        });
+    
         this.webview!.postMessage({
             type: "set",
             settings: settings,
             codebase: codebase,
-            connections: connections,
+            connections: normConns,
         });
     }
 

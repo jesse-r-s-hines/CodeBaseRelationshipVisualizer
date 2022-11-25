@@ -14,7 +14,7 @@ import "d3-context-menu/css/d3-context-menu.css"; // manually require the CSS
 import tippy, {followCursor, Instance as Tippy} from 'tippy.js';
 import 'tippy.js/dist/tippy.css'; // optional for styling
 
-import { FileType, Directory, SymbolicLink, AnyFile, Connection, NormalizedConnection, MergedConnection,
+import { FileType, Directory, SymbolicLink, AnyFile, NormalizedConnection, MergedConnection,
          WebviewVisualizationSettings } from '../shared';
 import { getExtension, filterFileTree, loopIndex, OptionalKeys } from '../util';
 import * as geo from './geometry';
@@ -43,7 +43,7 @@ type Selection<GElement extends d3.BaseType = HTMLElement, Datum = unknown> =
 export default class CBRVWebview {
     settings: WebviewVisualizationSettings
     codebase: Directory
-    connections: Connection[]
+    connections: NormalizedConnection[]
 
     /**
      * Settings and constants for the diagram
@@ -125,7 +125,7 @@ export default class CBRVWebview {
     hideUnconnected = false
 
     /** Pass the selector for the canvas svg */
-    constructor(settings: WebviewVisualizationSettings, codebase: Directory, connections: Connection[]) {
+    constructor(settings: WebviewVisualizationSettings, codebase: Directory, connections: NormalizedConnection[]) {
         this.codebase = codebase;
         this.settings = settings;
         this.connections = connections;
@@ -217,7 +217,7 @@ export default class CBRVWebview {
 
     throttledUpdate: () => void
 
-    update(settings?: WebviewVisualizationSettings, codebase?: Directory, connections?: Connection[]) {
+    update(settings?: WebviewVisualizationSettings, codebase?: Directory, connections?: NormalizedConnection[]) {
         this.settings = settings ?? this.settings;
         this.codebase = codebase ?? this.codebase;
         this.connections = connections ?? this.connections;
@@ -486,10 +486,7 @@ export default class CBRVWebview {
 
         if (this.hideUnconnected) {
             const connected = new Set(_(this.connections)
-                .flatMap(conn => {
-                    const normConn = this.normalizeConn(conn);
-                    return [normConn.from?.file, normConn.to?.file].filter(e => e) as string[];
-                })
+                .flatMap(conn => [conn.from?.file, conn.to?.file].filter(e => e) as string[])
                 .uniq().value()
             );
 
@@ -566,17 +563,17 @@ export default class CBRVWebview {
      * Merge all the connections to combine connections going between the same files after being raised to the first
      * visible file/folder, using mergeRules.
      */
-    mergeConnections(connections: Connection[]): MergedConnection[] {
+    mergeConnections(connections: NormalizedConnection[]): MergedConnection[] {
         // Each keyFunc will split up connections in to smaller groups
         const raised = _(connections)
-            .map(conn => this.normalizeConn(conn))
+            // filter connections to missing files
             .filter(conn => [conn.from, conn.to].every(e => !e || !!this.pathMap.get(e.file)))
-            .map(conn => {
+            .map(conn => { // raise to first visible file
                 const [from, to] = [conn.from, conn.to].map(
-                    e => e ? this.filePath(this.pathMap.get(e.file)!) : undefined
+                    e => e ? {file: this.filePath(this.pathMap.get(e.file)!)} : undefined
                 );
-                const raised = this.normalizeConn({ from, to });
-                return {conn: conn, raised};
+                const raised: NormalizedConnection = {from, to};
+                return {conn, raised};
             });
 
         if (this.settings.mergeRules) {
@@ -932,17 +929,6 @@ export default class CBRVWebview {
         return ancestors.length == 0 ? "/" : ancestors.join("/");
     }
 
-    normalizeConn(conn: Connection): NormalizedConnection {
-        if (!conn.from && !conn.to) {
-            throw Error("Connections must have at least one of from or to defined");
-        }
-        return { // TODO normalize file paths as well
-            ...conn,
-            from: (typeof conn.from == 'string') ? {file: conn.from} : conn.from,
-            to: (typeof conn.to == 'string') ? {file: conn.to} : conn.to,
-        };
-    }
-
     connKey(conn: NormalizedConnection, options: {lines?: boolean, ordered?: boolean} = {}): string {
         options = {lines: true, ordered: true, ...options};
         let key = [conn?.from, conn?.to].map(e => e ? `${e.file}:${options.lines && e.line ? e.line : ''}` : '');
@@ -966,7 +952,7 @@ export default class CBRVWebview {
         return this.calcPixelLength(d.r) <= this.s.zoom.hideLabelsR;
     }
 
-    onZoom(e: d3.D3ZoomEvent<SVGSVGElement, Connection>) {
+    onZoom(e: d3.D3ZoomEvent<SVGSVGElement, NormalizedConnection>) {
         const oldK = this.transform.k;
         this.transform = e.transform;
         this.zoomWindow.attr('transform', this.transform.toString());
