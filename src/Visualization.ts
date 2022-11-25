@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { workspace } from "vscode";
 import { Uri, Webview, WebviewPanel, FileSystemWatcher } from 'vscode';
 import { Connection, NormalizedConnection, VisualizationSettings } from "./publicTypes";
-import { WebviewVisualizationSettings, CBRVMessage } from "./privateTypes";
+import { WebviewVisualizationSettings, CBRVMessage, Directory } from "./privateTypes";
 
 import { DeepRequired } from "ts-essentials";
 import _ from 'lodash';
@@ -86,7 +86,7 @@ export class Visualization {
         this.webviewPanel.webview.onDidReceiveMessage(
             async (message: CBRVMessage) => {
                 if (message.type == "ready") {
-                    await this.sendUpdate(true, this.getWebviewSettings(), this.connections);
+                    await this.sendUpdate({codebase: true, settings: true, connections: true});
                     this.fsWatcher = workspace.createFileSystemWatcher(
                         // TODO this should use excludes
                         new vscode.RelativePattern(this.codebase, '**/*')
@@ -94,14 +94,14 @@ export class Visualization {
 
                     // TODO might have issues with using default excludes?
                     // TODO send only changes? Likely use a merge-throttle pattern to clump multiple changes.
-                    this.fsWatcher.onDidChange(uri => this.sendUpdate(true));
-                    this.fsWatcher.onDidCreate(uri => this.sendUpdate(true));
-                    this.fsWatcher.onDidDelete(uri => this.sendUpdate(true));
+                    this.fsWatcher.onDidChange(uri => this.sendUpdate({codebase: true}));
+                    this.fsWatcher.onDidCreate(uri => this.sendUpdate({codebase: true}));
+                    this.fsWatcher.onDidDelete(uri => this.sendUpdate({codebase: true}));
                     // this.fsWatcher.dispose(); // TODO dispose after usage
                 } else if (message.type == "filter") {
                     this.include = message.include;
                     this.exclude = message.exclude;
-                    await this.sendUpdate(true);
+                    await this.sendUpdate({codebase: true});
                 } else if (message.type == "open") {
                     // NOTE: we could do these and Command URIs inside the webview instead. That might be simpler
                     await vscode.commands.executeCommand("vscode.open", this.getUri(message.file));
@@ -122,10 +122,6 @@ export class Visualization {
             undefined,
             this.context.subscriptions
         );
-    }
-
-    private getWebviewSettings(): WebviewVisualizationSettings {
-        return _.omit(this.settings, ["title", "connectionDefaults.tooltip"]) as WebviewVisualizationSettings;
     }
 
     private createWebviewPanel(): WebviewPanel {
@@ -183,29 +179,33 @@ export class Visualization {
         `;
     }
 
-    private async sendUpdate(getCodebase: boolean, settings?: WebviewVisualizationSettings, connections?: Connection[]) {
-        let codebase = undefined;
-        if (getCodebase) {
+    private async sendUpdate(send: {codebase?: boolean, settings?: boolean, connections?: boolean}) {
+        let codebase: Directory|undefined;
+        if (send.codebase) {
             this.files = await fileHelper.getFilteredFileList(this.codebase, this.include, this.exclude);
             codebase = await fileHelper.listToFileTree(this.codebase, this.files);
         }
-        const normConns: NormalizedConnection[]|undefined = connections?.map(conn => {
-            if (!conn.from && !conn.to) {
-                throw Error("Connections must have at least one of from or to defined");
-            }
-            return { // TODO normalize file paths as well
-                ...conn,
-                from: (typeof conn.from == 'string') ? {file: conn.from} : conn.from,
-                to: (typeof conn.to == 'string') ? {file: conn.to} : conn.to,
-            };
-        });
-    
-        await this.send({
-            type: "set",
-            settings: settings,
-            codebase: codebase,
-            connections: normConns,
-        });
+
+        let settings: WebviewVisualizationSettings|undefined;
+        if (send.settings) {
+            settings = _.omit(this.settings, ["title", "connectionDefaults.tooltip"]) as WebviewVisualizationSettings;
+        }
+
+        let connections: NormalizedConnection[]|undefined;
+        if (send.connections) {
+            connections = this.connections?.map(conn => {
+                if (!conn.from && !conn.to) {
+                    throw Error("Connections must have at least one of from or to defined");
+                }
+                return { // TODO normalize file paths as well
+                    ...conn,
+                    from: (typeof conn.from == 'string') ? {file: conn.from} : conn.from,
+                    to: (typeof conn.to == 'string') ? {file: conn.to} : conn.to,
+                };
+            });
+        }
+
+        await this.send({ type: "set", settings, codebase, connections });
     }
     
     private async send(message: CBRVMessage) {
