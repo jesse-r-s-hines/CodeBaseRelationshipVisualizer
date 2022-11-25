@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
 import { workspace } from "vscode";
 import { Uri, Webview, FileSystemWatcher } from 'vscode';
-import { Connection, NormalizedConnection, VisualizationSettings, WebviewVisualizationSettings, CBRVMessage } from "./shared";
+import { Connection, NormalizedConnection, VisualizationSettings } from "./publicTypes";
+import { WebviewVisualizationSettings, CBRVMessage } from "./privateTypes";
+
 import { DeepRequired } from "ts-essentials";
 import _ from 'lodash';
 import * as fileHelper from "./fileHelper";

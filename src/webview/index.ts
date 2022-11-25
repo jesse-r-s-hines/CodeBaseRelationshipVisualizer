@@ -1,5 +1,5 @@
 import CBRVWebview from "./CBRVWebview";
-import { CBRVMessage } from "../shared";
+import { CBRVMessage } from "../privateTypes";
 const vscode = acquireVsCodeApi();
 
 function main() {

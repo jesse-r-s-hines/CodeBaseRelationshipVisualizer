@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Uri } from "vscode";
 import * as path from 'path';
 import { promises as fsp } from 'fs';
-import { AnyFile, Directory, FileType } from "./shared";
+import { AnyFile, Directory, FileType } from "./privateTypes";
 import _ from "lodash";
 
 

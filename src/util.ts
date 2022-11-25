@@ -1,4 +1,4 @@
-import { FileType, AnyFile } from "./shared";
+import { FileType, AnyFile } from "./privateTypes";
 
 /**
  * Returns the extension from a file name excluding the ".", or "" if there is none.

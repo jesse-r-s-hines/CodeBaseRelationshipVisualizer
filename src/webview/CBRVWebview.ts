@@ -14,8 +14,8 @@ import "d3-context-menu/css/d3-context-menu.css"; // manually require the CSS
 import tippy, {followCursor, Instance as Tippy} from 'tippy.js';
 import 'tippy.js/dist/tippy.css'; // optional for styling
 
-import { FileType, Directory, SymbolicLink, AnyFile, NormalizedConnection, MergedConnection,
-         WebviewVisualizationSettings } from '../shared';
+import { NormalizedConnection, MergedConnection } from '../publicTypes';
+import { AnyFile, FileType, Directory, SymbolicLink, WebviewVisualizationSettings } from '../privateTypes';
 import { getExtension, filterFileTree, loopIndex, OptionalKeys } from '../util';
 import * as geo from './geometry';
 import { Point, Box } from './geometry';

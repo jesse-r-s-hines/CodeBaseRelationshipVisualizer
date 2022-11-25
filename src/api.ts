@@ -1,8 +1,6 @@
-
 import * as vscode from 'vscode';
-import { Uri, ViewColumn } from 'vscode';
 import { Visualization } from './Visualization';
-import { VisualizationSettings, Connection } from './shared';
+import { VisualizationSettings, Connection } from './publicTypes';
 
 /**
  * The CodeBase Relationship Visualization API
