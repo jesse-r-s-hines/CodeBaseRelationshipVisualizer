@@ -1,20 +1,18 @@
 import * as vscode from 'vscode';
 import { workspace, Uri, RelativePattern } from 'vscode';
 import * as path from 'path';
-import { AnyFile, Connection } from "./shared";
-import { Visualization } from "./Visualization";
+import { AnyFile, Connection, VisualizationSettings } from "./shared";
+import { API } from "./api";
 import { TextDecoder } from 'text-encoding';
 import fs = vscode.workspace.fs
 
 export function activate(context: vscode.ExtensionContext) {
     console.log("CodeBase Relationship Visualizer active");
+    const cbrvAPI = new API(context);
 
     context.subscriptions.push(
         vscode.commands.registerCommand('codeBaseRelationshipVisualizer.start', async () => {
-            const codebase = vscode.workspace.workspaceFolders![0]!.uri;
-            const links = await getHyperlinks(codebase, "");
-            // const links = [] as Connection[];
-            const visualization = new Visualization(context, {
+            const settings: VisualizationSettings = {
                 title: "Hyperlink Visualization",
                 directed: true,
                 showOnHover: false,
@@ -23,7 +21,9 @@ export function activate(context: vscode.ExtensionContext) {
                     tooltip: (conn) => conn.color,
                 },
                 mergeRules: true,
-            }, codebase, links);
+            };
+            const connections = await getHyperlinks(vscode.workspace.workspaceFolders![0]!.uri, "");
+            const visualization = cbrvAPI.create(settings, connections);
             await visualization.launch();
         }),
     );
