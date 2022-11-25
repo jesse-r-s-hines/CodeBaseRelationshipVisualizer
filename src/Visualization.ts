@@ -1,16 +1,17 @@
 import * as vscode from 'vscode';
 import { workspace } from "vscode";
 import { Uri, Webview, FileSystemWatcher } from 'vscode';
-import { Connection, VisualizationSettings, WebviewVisualizationSettings, CBRVMessage, NormalizedVisualizationSettings } from "./shared";
-import * as fileHelper from "./fileHelper";
+import { Connection, VisualizationSettings, WebviewVisualizationSettings, CBRVMessage } from "./shared";
+import { DeepRequired } from "ts-essentials";
 import _ from 'lodash';
+import * as fileHelper from "./fileHelper";
 
 /**
  * Handles the visualization, allowing you to update the visualization.
  */
 export class Visualization {
     private context: vscode.ExtensionContext;
-    private settings: NormalizedVisualizationSettings
+    private settings: DeepRequired<VisualizationSettings>
     private codebase: Uri
     private connections: Connection[]
 
@@ -20,7 +21,7 @@ export class Visualization {
     private include = "**/*"
     private exclude = ""
 
-    private static readonly defaultSettings: NormalizedVisualizationSettings = {
+    private static readonly defaultSettings: DeepRequired<VisualizationSettings> = {
         title: 'CodeBase Relationship Visualizer',
         directed: false,
         showOnHover: false,

@@ -131,7 +131,7 @@ export interface VisualizationSettings {
          * will shown. Default is to return. Default is to use `connection.tooltip` or no tooltip if not present and to
          * join unique tooltips with <br> when merging.
          */
-        tooltip?: ((conn: MergedConnection) => string)
+        tooltip?: ((conn: MergedConnection) => string|false|undefined)
     }
 
     /**
@@ -167,20 +167,6 @@ export interface VisualizationSettings {
      *      - `{rule: "value", value: string}`: Show merged connections with a different color than single ones.
      */
     mergeRules?: MergeRules|boolean
-}
-
-// TODO Maybe make this with DeepRequired, thought that causes some issues with MergeRules
-// TODO refactor the repetition here
-export interface NormalizedVisualizationSettings {
-    title: string
-    directed: boolean
-    showOnHover: "in"|"out"|"both"|false
-    connectionDefaults: {
-        width: number
-        color: string
-        tooltip: (conn: MergedConnection) => string|false|undefined
-    }
-    mergeRules: MergeRules|false
 }
 
 export interface WebviewVisualizationSettings {
