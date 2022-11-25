@@ -15,7 +15,7 @@ import { SameRule, IgnoreRule, LeastRule, GreatestRule, LeastCommonRule, MostCom
  * It can be accessed like so:
  *  ```ts
  * let cbrvAPI = extensions.getExtension('CBRV').exports;
- * let visualization = cbrvAPI.create({
+ * let visualization = await cbrvAPI.create({
  *   // ...
  * })
  * ```
@@ -33,15 +33,17 @@ export class API {
      *                    rendered. Defaults to `[]`.
      * @returns The `Visualization` object which can be used to update the visualization.
      */
-    create(
+    async create(
         settings: VisualizationSettings,
         connections?: Iterable<Connection>
-    ): Visualization {
+    ): Promise<Visualization> {
         const codebase = vscode.workspace.workspaceFolders?.[0]?.uri;
         if (!codebase) {
             throw new Error("No workspace to visualize");
         }
-        return new Visualization(this.context, settings, codebase, connections);
+        const vis = new Visualization(this.context, settings, codebase, connections);
+        await vis.launch();
+        return vis;
     }
 }
 

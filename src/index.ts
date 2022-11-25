@@ -22,8 +22,7 @@ export function activate(context: vscode.ExtensionContext) {
                 mergeRules: true,
             };
             const connections = await getHyperlinks(vscode.workspace.workspaceFolders![0]!.uri, "");
-            const visualization = cbrvAPI.create(settings, connections);
-            await visualization.launch();
+            const visualization = await cbrvAPI.create(settings, connections);
         }),
     );
 
