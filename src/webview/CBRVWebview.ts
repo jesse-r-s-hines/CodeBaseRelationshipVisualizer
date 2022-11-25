@@ -102,11 +102,14 @@ export default class CBRVWebview {
     zoomWindow: Selection<SVGGElement>
     fileLayer: Selection<SVGGElement>
     connectionLayer: Selection<SVGGElement>
+    allFilesSelection?: Selection<SVGGElement, Node>
     connectionSelection?: Selection<SVGPathElement, ConnPath>
 
     includeInput: Selection<HTMLInputElement>
     excludeInput: Selection<HTMLInputElement>
     hideUnconnectedInput: Selection<HTMLInputElement>
+
+    zoom: d3.ZoomBehavior<Element, unknown>
 
     // Some d3 generation objects
     // See https://observablehq.com/@d3/spline-editor to compare curves
@@ -158,14 +161,14 @@ export default class CBRVWebview {
 
         const [x, y, width, height] = this.getViewbox();
         const extent: [Point, Point] = [[x, y], [x + width, y + height]];
-        const zoom = d3.zoom()
+        this.zoom = d3.zoom()
             .on('zoom', (e) => this.onZoom(e))
             .extent(extent)
             .scaleExtent([1, Infinity])
             .translateExtent(extent);
 
         this.diagram
-            .call(zoom as any)
+            .call(this.zoom as any)
             .on("dblclick.zoom", null) // double-click zoom interferes with clicking on files and folders
             .attr("tabindex", 0) // make svg focusable so it can receive keydown events
             .on("keydown", event => {
@@ -174,10 +177,10 @@ export default class CBRVWebview {
                     const dx = key == "ArrowLeft" ? -1 : (key == "ArrowRight" ? +1 : 0);
                     const dy = key == "ArrowUp" ? -1 : (key == "ArrowDown" ? +1 : 0);
                     const amount = this.s.zoom.panKeyAmount / this.transform.k;
-                    zoom.translateBy(this.diagram as any, dx * amount, dy * amount);
+                    this.zoom.translateBy(this.diagram, dx * amount, dy * amount);
                 } else if (event.ctrlKey && ['-', '='].includes(key)) {
                     const amount = this.s.zoom.zoomKeyAmount;
-                    zoom.scaleBy(this.diagram, key == '=' ? amount : 1/amount);
+                    this.zoom.scaleBy(this.diagram, key == '=' ? amount : 1/amount);
                     event.stopPropagation(); // prevent VSCode from zooming the interface
                 }
             });
@@ -378,8 +381,28 @@ export default class CBRVWebview {
                         .on("dblclick", (event, d) => {
                             if (d.data.type == FileType.Directory) {
                                 this.emit("reveal-in-explorer", {file: this.filePath(d)});
-                            } else {
+                            } else if (d.data.type == FileType.File) {
                                 this.emit("open", {file: this.filePath(d)});
+                            } else if (d.data.type == FileType.SymbolicLink) {
+                                const jumpTo = this.pathMap.get(d.data.resolved);
+                                if (jumpTo) {
+                                    this.zoom.translateTo(this.diagram, jumpTo.x, jumpTo.y);
+                                    if (2*jumpTo.r * this.transform.k > this.s.diagramSize) {
+                                        this.zoom.scaleTo(this.diagram, this.s.diagramSize / (2*jumpTo.r));
+                                    }
+                                    this.allFilesSelection!
+                                        .filter(d => d == jumpTo)
+                                        .select(".circle") // flash the linked file
+                                            .style("stroke", "cyan")
+                                            .style("stroke-width", d => d.data.type == FileType.Directory ? 1 : 0)
+                                            .transition().duration(1000)
+                                                .style("stroke-width", 5)
+                                            .transition().duration(1000)
+                                                .style("stroke-width", d => d.data.type == FileType.Directory ? 1 : 0)
+                                            .transition().duration(0)
+                                                .style("stroke", null)
+                                                .style("stroke-width", null);
+                                }
                             }
                         })
                         .on("contextmenu", d3ContextMenu((d: Node) => this.contextMenu(d)));
@@ -456,6 +479,8 @@ export default class CBRVWebview {
             const firstVisible = d.ancestors().find(p => !p.parent || !this.shouldHideContents(p.parent))!;
             this.pathMap.set(this.filePath(d), firstVisible);
         });
+
+        this.allFilesSelection = all as Selection<SVGGElement, Node>;
     }
 
     filteredCodebase() {

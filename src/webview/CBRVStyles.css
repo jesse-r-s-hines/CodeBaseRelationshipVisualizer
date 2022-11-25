@@ -29,6 +29,10 @@ body {
     fill-opacity: 0; /* directories are transparent */
 }
 
+.label {
+    user-select: none;
+}
+
 .directory .label-background {
     stroke: var(--vscode-editor-background);
     stroke-width: 6;
