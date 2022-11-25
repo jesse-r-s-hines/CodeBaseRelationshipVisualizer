@@ -188,11 +188,24 @@ describe('Test fileHelper', () => {
         expect(tree).to.eql(expected);
     });
 
-    test('getFilteredFileTree', async () => {
-        let tree = await fileHelper.getFilteredFileTree(minimal, '**/*');
-        expect(tree).to.eql(minimalContents);
+    test('getFilteredFileList and getFilteredFileListTree', async () => {
+        const minimalContentsList = [
+            "A/E.txt",
+            "A/F.txt",
+            "A/G.md",
+            "C.txt",
+            "D.md",
+            "Supercalifragilisticexpialidocious.py",
+            "deoxyribonucleicAcid/I",
+        ].map(u => Uri.joinPath(minimal, u).fsPath);
 
-        tree = await fileHelper.getFilteredFileTree(minimal, '**/*', ' '); // should be trimmed and ignored
+        let list = await fileHelper.getFilteredFileList(minimal, '**/*');
+        expect(list.map(u => u.fsPath)).to.eql(minimalContentsList);
+
+        list = await fileHelper.getFilteredFileList(minimal, '**/*', ' '); // should be trimmed and ignored
+        expect(list.map(u => u.fsPath)).to.eql(minimalContentsList);
+
+        let tree = await fileHelper.getFilteredFileTree(minimal, '**/*');
         expect(tree).to.eql(minimalContents);
 
         tree = await fileHelper.getFilteredFileTree(minimal, 'A/*');
@@ -212,23 +225,7 @@ describe('Test fileHelper', () => {
             ]
         });
 
-        // tree = await fileHelper.getFilteredFileTree(minimal, '**/*', 'A')
-        // expect(tree).to.eql({
-        //     name: "minimal",
-        //     type: FileType.Directory,
-        //     children: [
-        //         {name: "C.txt", size: 1117, type: FileType.File},
-        //         {name: "D.md", size: 841, type: FileType.File},
-        //         {name: "Supercalifragilisticexpialidocious.py", size: 44, type: FileType.File},
-        //         {
-        //             name: "deoxyribonucleicAcid",
-        //             type: FileType.Directory,
-        //             children: [
-        //                 {name: "I", size: 1, type: FileType.File},
-        //             ],
-        //         }
-        //     ]
-        // });
+        tree = await fileHelper.getFilteredFileTree(minimal, '**/*', 'A')
 
         tree = await fileHelper.getFilteredFileTree(minimal, '**/*', 'A, *.txt');
         expect(tree).to.eql({
@@ -247,39 +244,8 @@ describe('Test fileHelper', () => {
             ]
         });
 
-        // tree = await fileHelper.getFilteredFileTree(minimal, 'A/{E,F}.txt')
-        // expect(tree).to.eql({
-        //     name: "minimal",
-        //     type: FileType.Directory,
-        //     children: [
-        //         {
-        //             name: "A",
-        //             type: FileType.Directory,
-        //             children: [
-        //                 {name: "E.txt", size: 1828, type: FileType.File},
-        //                 {name: "F.txt", size: 630, type: FileType.File},
-        //             ],
-        //         },
-        //     ]
-        // });
-
-        // tree = await fileHelper.getFilteredFileTree(minimal, 'A/*.{txt,md}, D.md')
-        // expect(tree).to.eql({
-        //     name: "minimal",
-        //     type: FileType.Directory,
-        //     children: [
-        //         {
-        //             name: "A",
-        //             type: FileType.Directory,
-        //             children: [
-        //                 {name: "E.txt", size: 1828, type: FileType.File},
-        //                 {name: "F.txt", size: 630, type: FileType.File},
-        //                 {name: "G.md", size: 124, type: FileType.File},
-        //             ],
-        //         },
-        //         {name: "D.md", size: 841, type: FileType.File},
-        //     ]
-        // });
+        // tree = await fileHelper.getFilteredFileList(minimal, 'A/{E,F}.txt')
+        // tree = await fileHelper.getFilteredFileList(minimal, 'A/*.{txt,md}, D.md')
 
         tree = await fileHelper.getFilteredFileTree(symlinks, 'A/**');
         expect(tree).to.eql({
@@ -318,12 +284,4 @@ describe('Test fileHelper', () => {
             ]
         });
     });
-
-    // test('inlineExternalSymlinks', async () => {
-    //     let tree = await fileHelper.inlineExternalSymlinks(await fileHelper.getFileTree(minimal));
-    //     expect(tree).to.eql(minimalContents); // does nothing
-
-    //     tree = await fileHelper.inlineExternalSymlinks(await fileHelper.getFileTree(symlinks));
-    //     expect(tree).to.eql(minimalContents);
-    // });
 });

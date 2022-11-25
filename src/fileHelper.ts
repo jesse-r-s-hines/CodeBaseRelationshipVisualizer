@@ -53,8 +53,8 @@ export async function getFileTree(uri: Uri, base?: Uri, type?: FileType): Promis
     }
 }
 
-/** Gets a file tree from base with similar semantics as the built-in VSCode search interface. */
-export async function getFilteredFileTree(base: Uri, include?: string, exclude?: string) {
+/** Gets a list of files under base with similar semantics as the built-in VSCode search interface. */
+export async function getFilteredFileList(base: Uri, include?: string, exclude?: string): Promise<Uri[]> {
     // TODO this means you can't use {} in the globals since you can't nest {}.
     // Also you can't pass a whole folder as part of include/exclude either.
     // Exceptions?
@@ -71,8 +71,14 @@ export async function getFilteredFileTree(base: Uri, include?: string, exclude?:
 
     const includePattern = parseGlob(include?.trim() ? include : '**/*');
     const excludePattern = exclude?.trim() ? parseGlob(exclude) : undefined;
-    const fileList = await vscode.workspace.findFiles(includePattern, excludePattern);
-    return listToFileTree(base, fileList);
+    let fileList = await vscode.workspace.findFiles(includePattern, excludePattern);
+    fileList = _.sortBy(fileList, uri => uri.fsPath);
+    return fileList;
+}
+
+/** Gets a file tree of base with similar semantics as the built-in VSCode search interface. */
+export async function getFilteredFileTree(base: Uri, include?: string, exclude?: string): Promise<AnyFile> {
+    return await listToFileTree(base, await getFilteredFileList(base, include, exclude));
 }
 
 /**
