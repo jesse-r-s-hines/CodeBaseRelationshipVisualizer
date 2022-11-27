@@ -20,7 +20,7 @@ import { getExtension, filterFileTree, loopIndex, OptionalKeys } from '../util';
 import * as geo from './geometry';
 import { Point, Box } from './geometry';
 import { uniqId, ellipsisText, getRect } from './rendering';
-import { mergeByRules } from './merging';
+import { RuleMerger } from './ruleMerger';
 import _, { isEqual } from "lodash";
 
 type Node = d3.HierarchyCircularNode<AnyFile>;
@@ -255,7 +255,7 @@ export default class CBRVWebview {
         inputDiv.style("display", hasConnections ? 'inherit' : 'none');
     }
 
-    updateCodebase(fullRerender = false) {
+    updateCodebase(fullRerender = false) { // rename to filesChanged
         const filteredCodebase = this.filteredCodebase();
 
         const root = d3.hierarchy<AnyFile>(filteredCodebase,
@@ -278,7 +278,7 @@ export default class CBRVWebview {
         root.sort((a, b) => d3.descending(a.value, b.value));
 
         // Use d3 to calculate the circle packing layout
-        const packLayout = d3.pack<AnyFile>()
+        const packLayout = d3.pack<AnyFile>() // pack is slow, maybe cache it? It only needs to change if files actually change. Also would let me move pathMap. Though profiling seems its only a problem first time so maybe not
             .size([this.s.diagramSize, this.s.diagramSize])
             .padding(this.s.file.padding)(root);
 
@@ -340,7 +340,7 @@ export default class CBRVWebview {
                             .classed("contents-hidden-label", true)
                             .attr("x", 0)
                             .attr("y", 0)
-                            .attr("font-size", d => this.calcPixelLength(d.r))
+                            .attr("font-size", d => this.calcPixelLength(d.r)) // wait... scaling is after this...
                             .text("...");
 
                     const iconSize = this.s.file.minSize * 1.5;
@@ -432,7 +432,7 @@ export default class CBRVWebview {
             .classed("labels-hidden", d => this.shouldHideLabels(d));
 
         // we only need to recalculate these for new elements unless the file structure changed (not just zoom)
-        const changed = fullRerender ? all : all.filter(".new");
+        const changed = fullRerender ? all : all.filter(".new"); // hmm. Probably don't need this .new bit. Just make changed "enter" selection
         
         changed.attr("transform", d => `translate(${d.x},${d.y})`);
 
@@ -568,6 +568,11 @@ export default class CBRVWebview {
             });
 
         if (this.settings.mergeRules) {
+            const merger = new RuleMerger({
+                ...this.settings.mergeRules,
+                from: "group", to: "group", connections: "group",
+            });
+
             return raised
                 // top level is from/to after being raised to the first visible files/folders, regardless of merging
                 .groupBy(({raised}) => this.connKey(raised, {lines: false, ordered: false}))
@@ -584,10 +589,7 @@ export default class CBRVWebview {
                         connections: conn,
                     }));
 
-                    return mergeByRules(obj, {
-                        ...this.settings.mergeRules,
-                        from: "group", to: "group", connections: "group",
-                    });
+                    return merger.merge(obj);
                 })
                 .map<MergedConnection>(obj => {
                     return {
