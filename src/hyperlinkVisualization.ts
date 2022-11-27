@@ -31,42 +31,91 @@ export async function visualizeHyperlinkGraph(cbrvAPI: API) {
 
     const codebase = workspace.workspaceFolders![0]!.uri;
     const files = await workspace.findFiles(new RelativePattern(workspace.workspaceFolders![0]!.uri, '**/*'));
-    const connections = await getHyperlinks(codebase, files, "");
+    const connections = await getHyperlinks(codebase, files);
     const visualization = await cbrvAPI.create(settings, connections);
     return visualization;
 }
 
-async function getHyperlinks(codebase: Uri, files: Uri[], base: string): Promise<Connection[]> {
-    const pathSet = new Set(files.map(uri => path.relative(codebase.fsPath, uri.fsPath)));
-    const connections: Connection[] = [];
+const hyperlinkRegex = /\[.*?\]\((.+?)\)|<(.+?)>|(https?:\/\/\S+)/g;
 
-    for (const file of files) {
+async function getHyperlinks(codebase: Uri, files: Uri[]): Promise<Connection[]> {
+    // Convert paths relative to codebase, and sort so we can binary search for files with the same name but different
+    // ext. Among files with the same basename, make sure the files without an ext appear before first.
+    const paths = _(files)
+        .map(uri => path.relative(codebase.fsPath, uri.fsPath))
+        .sortBy(stripExt, path.extname)
+        .value();
+    
+    // Checks if there's a matching path, ignoring extensions. Returns the matching path (with extension) or undefined.
+    const findByName = (p: string): string|undefined => {
+        const basename = stripExt(p);
+
+        const matches = [];
+        let i = _.sortedIndexBy(paths, basename, stripExt);
+        while (i < paths.length && stripExt(paths[i]) == basename) {
+            matches.push(paths[i]);
+            i++;
+        }
+
+        if (matches.length > 0) {
+            return matches.find(m => m === p) ?? matches[0]; // return exact match if there is one, else first
+        } else {
+            return undefined;
+        }
+    };
+
+    /** Best effort to match the link with an actual file */
+    const resolveLink = (file: Uri, link: string): string|undefined => {
+        link = link
+            .split('#')[0] // remove any # url part
+            .trim()
+            .replace(/^https?:\/\//, '') // remove http://
+            .replace("\\", "/") // convert to URL/posix style if we have windows paths for some reason
+            .replace(/(^\/+)|(\/+$)/, '') // trim trailing "/"
+            .trim();
+
+        if (link == "") return undefined;
+
+        // try interpreting as a path relative to this file, e.g. ../image.png
+        let match = findByName(path.resolve(file.fsPath, link));
+        if (match) return match;
+        
+        // check if its an absolute path from some common "base"
+        const guesses = link // try trimming off parts from the beginning until we get a working path
+            .split("/")
+            .map((s, i, arr) => arr.slice(i, undefined).join("/"));
+
+        for (const guess of guesses) {
+            match = findByName(guess);
+            if (match) return match;
+        }
+
+        return undefined;
+    };
+
+    const fileConns: Connection[][] = await Promise.all(files.map(async (file) => {
         const relativePath = path.relative(codebase.fsPath, file.fsPath);
 
         if (relativePath.endsWith(".md")) {
             const contents = (await fs.readFile(file.fsPath)).toString();
-            const regex = /\[.*?\]\((.*?)\)|<(.*?)>|(https?:\/\/\S*)/g;
-            for (const [whole, ...groups] of contents.matchAll(regex)) {
-                // matchAll returns undefined for the unmatched "|" sections
-                let link = groups.filter(u => u !== undefined)[0];
-                link = normalizeLink(link, base);
-                const to = pathSet.has(link) ? link : undefined;
-                connections.push({ from: relativePath, to: to });
-            }
+            const matches = [...contents.matchAll(hyperlinkRegex)];
+            return matches.
+                map(([whole, ...groups]) => {
+                    // matchAll returns undefined for the unmatched "|" sections
+                    const link = groups.filter(u => u !== undefined)[0];
+                    return resolveLink(file, link);
+                })
+                .filter(f => f) // remove undefined links
+                .map(to => ({ from: relativePath, to: to }));
+        } else {
+            return [];
         }
-    }
+    }));
 
-    return connections;
+    return fileConns.flat();
 }
 
-function normalizeLink(link: string, base: string): string {
-    if (!link.endsWith(".md")) {
-        link = `${link}.md`;
-    }
-    if (link.startsWith(base)) {
-        link = link.slice(base.length);
-    }
-    link = link.split('#')[0];
-    link = link.replace(/^(\/)+/g, '');
-    return link;
+function stripExt(p: string) {
+    const parsed = path.parse(p);
+    return path.join(parsed.dir, parsed.name);
 }
