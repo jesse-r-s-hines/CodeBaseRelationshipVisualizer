@@ -15,4 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
             const visualization = await visualizeHyperlinkGraph(cbrvAPI);
         }),
     );
+
+    // TODO: Remove this. Launching automatically for convenience during testing. Also remove "*" activationEvent.
+    vscode.commands.executeCommand('hyperlinkGraphVisualization.start');
 }

@@ -13,6 +13,7 @@
         "Debuggers"
     ],
     "activationEvents": [
+        "*",
         "onCommand:codeBaseRelationshipVisualizer.start",
         "onCommand:hyperlinkGraphVisualization.start",
         "onWebviewPanel:codeBaseRelationshipVisualizer"
