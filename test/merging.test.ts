@@ -13,7 +13,7 @@ describe("Test merging.ts", () => {
     const merge = (items: any[], rules: MergeRules, customMergers?: Mergers) => {
         const merger = new RuleMerger(rules, customMergers);
         return merger.merge(items);
-    }
+    };
 
     it('basic', () => {
         expect(merge(basic, {
