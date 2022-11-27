@@ -13,8 +13,8 @@
         "Debuggers"
     ],
     "activationEvents": [
-        "*",
         "onCommand:codeBaseRelationshipVisualizer.start",
+        "onCommand:hyperlinkGraphVisualization.start",
         "onWebviewPanel:codeBaseRelationshipVisualizer"
     ],
     "contributes": {
@@ -22,6 +22,11 @@
             {
                 "command": "codeBaseRelationshipVisualizer.start",
                 "title": "Visualize your code base",
+                "category": "CodeBase Relationship Visualizer"
+            },
+            {
+                "command": "hyperlinkGraphVisualization.start",
+                "title": "Visualize a hyperlink graph",
                 "category": "CodeBase Relationship Visualizer"
             }
         ]
