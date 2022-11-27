@@ -90,7 +90,7 @@ export async function listToFileTree(base: Uri, uris: Uri[]): Promise<Directory>
     const paths = _(uris)
         .flatMap(uri => {
             const parts = path.relative(base.fsPath, uri.fsPath).split(path.sep);
-            if (parts[0] == '..' || parts[0] == '') {
+            if (parts[0] == '..') {
                 throw new Error(`"${uri.fsPath}" is not under "${base.fsPath}"`);
             }
             return parts.map((s, i, arr) => Uri.joinPath(base, ...arr.slice(0, i + 1)));
