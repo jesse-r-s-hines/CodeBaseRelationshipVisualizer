@@ -81,6 +81,49 @@ describe("Test utils.ts", () => {
 
             expect(util.filterFileTree(tree, f => false)).to.eql({name: "a", type: FileType.Directory, children: []});
         });
+
+        it("execution order", () => {
+            const tree: AnyFile = {
+                name: "A",
+                type: FileType.Directory,
+                children: [
+                    {
+                        name: "B",
+                        type: FileType.Directory,
+                        children: [
+                            {name: "c", type: FileType.File, size: 1},
+                        ],
+                    },
+                    {
+                        name: "C",
+                        type: FileType.Directory,
+                        children: [
+                            {
+                                name: "D",
+                                type: FileType.Directory,
+                                children: [],
+                            },
+                        ],
+                    },
+                ],
+            };
+
+            expect(util.filterFileTree(tree, f => f.type != FileType.Directory || f.children.length > 0)).to.eql({
+                name: "A",
+                type: FileType.Directory,
+                children: [
+                    {
+                        name: "B",
+                        type: FileType.Directory,
+                        children: [
+                            {name: "c", type: FileType.File, size: 1},
+                        ],
+                    },
+                    // both C and D should be filtered because D is empty
+                ],
+            });
+
+        });
     });
 
 
