@@ -4,6 +4,7 @@ import fs = vscode.workspace.fs
 import * as path from 'path';
 import { TextDecoder } from 'text-encoding';
 import { API, VisualizationSettings, Connection } from "./api";
+import _ from 'lodash';
 
 
 export async function visualizeHyperlinkGraph(cbrvAPI: API) {
@@ -12,13 +13,23 @@ export async function visualizeHyperlinkGraph(cbrvAPI: API) {
         directed: true,
         showOnHover: true,
         connectionDefaults: {
-            tooltip: (conn) => `${conn.from?.file} -> ${conn.to?.file}`,
+            tooltip: (conn) => _(conn.connections)
+                .map(c => `"${c.from?.file}" -> "${c.to?.file}"`)
+                .countBy()
+                .map((count, tooltip) => count == 1 ? tooltip : `${tooltip} x${count}`)
+                .sortBy()
+                .join("<br/>")
         },
-        mergeRules: true,
+        mergeRules: {
+            file: "ignore",
+            line: "ignore",
+            direction: "ignore",
+            width: "greatest",
+            color: "mostCommon",
+        },
     };
 
     const connections = await getHyperlinks(workspace.workspaceFolders![0]!.uri, "");
-    console.log("hyperlinkGraphVisualization", workspace.workspaceFolders![0]!.uri, connections);
     const visualization = await cbrvAPI.create(settings, connections);
     return visualization;
 }
@@ -38,7 +49,7 @@ async function getHyperlinks(codebase: Uri, linkBase: string): Promise<Connectio
                 let link = groups.filter(u => u !== undefined)[0]; // matchAll returns undefined for the unmatched "|" sections
                 link = normalizeLink(link, linkBase);
                 const to = pathSet.has(link) ? link : undefined;
-                connections.push({ from: path, to: to, color: ['red', 'blue'][Math.floor(Math.random() * 3)] });
+                connections.push({ from: path, to: to });
             }
         }
     }
