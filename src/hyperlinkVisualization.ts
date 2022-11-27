@@ -29,27 +29,38 @@ export async function visualizeHyperlinkGraph(cbrvAPI: API) {
         },
     };
 
-    const connections = await getHyperlinks(workspace.workspaceFolders![0]!.uri, "");
+    const codebase = workspace.workspaceFolders![0]!.uri;
+    const files = await workspace.findFiles(new RelativePattern(workspace.workspaceFolders![0]!.uri, '**/*'));
+    const connections = await getHyperlinks(codebase, files, "");
     const visualization = await cbrvAPI.create(settings, connections);
     return visualization;
 }
 
-async function getHyperlinks(codebase: Uri, linkBase: string): Promise<Connection[]> {
-    // get a flat list of all files
-    const uris = (await workspace.findFiles(new RelativePattern(codebase, '**/*')));
-    const pathSet = new Set(uris.map(uri => path.relative(codebase.fsPath, uri.fsPath)));
+async function readContents(file: Uri): Promise<string> {
+    try {
+        // TODO surely there's a more idiomatic way to do this?
+        return new TextDecoder().decode(await fs.readFile(file));
+    } catch {
+        return ""; // if anything goes wrong just ignore this file.
+    }
+}
+
+async function getHyperlinks(codebase: Uri, files: Uri[], base: string): Promise<Connection[]> {
+    const pathSet = new Set(files.map(uri => path.relative(codebase.fsPath, uri.fsPath)));
     const connections: Connection[] = [];
 
-    for (const path of pathSet) {
-        if (path.endsWith(".md")) {
-            // TODO surely there's a built in way to do this..., also need to add checks
-            const contents = new TextDecoder().decode(await fs.readFile(Uri.joinPath(codebase, path)));
+    for (const file of files) {
+        const relativePath = path.relative(codebase.fsPath, file.fsPath);
+
+        if (relativePath.endsWith(".md")) {
+            const contents = await readContents(file);
             const regex = /\[.*?\]\((.*?)\)|<(.*?)>|(https?:\/\/\S*)/g;
             for (const [whole, ...groups] of contents.matchAll(regex)) {
-                let link = groups.filter(u => u !== undefined)[0]; // matchAll returns undefined for the unmatched "|" sections
-                link = normalizeLink(link, linkBase);
+                // matchAll returns undefined for the unmatched "|" sections
+                let link = groups.filter(u => u !== undefined)[0];
+                link = normalizeLink(link, base);
                 const to = pathSet.has(link) ? link : undefined;
-                connections.push({ from: path, to: to });
+                connections.push({ from: relativePath, to: to });
             }
         }
     }
