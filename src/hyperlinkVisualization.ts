@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { workspace, Uri, RelativePattern } from 'vscode';
-import fs = vscode.workspace.fs
+import { promises as fs } from 'fs';
 import * as path from 'path';
 import { TextDecoder } from 'text-encoding';
 import { API, VisualizationSettings, Connection } from "./api";
@@ -36,15 +36,6 @@ export async function visualizeHyperlinkGraph(cbrvAPI: API) {
     return visualization;
 }
 
-async function readContents(file: Uri): Promise<string> {
-    try {
-        // TODO surely there's a more idiomatic way to do this?
-        return new TextDecoder().decode(await fs.readFile(file));
-    } catch {
-        return ""; // if anything goes wrong just ignore this file.
-    }
-}
-
 async function getHyperlinks(codebase: Uri, files: Uri[], base: string): Promise<Connection[]> {
     const pathSet = new Set(files.map(uri => path.relative(codebase.fsPath, uri.fsPath)));
     const connections: Connection[] = [];
@@ -53,7 +44,7 @@ async function getHyperlinks(codebase: Uri, files: Uri[], base: string): Promise
         const relativePath = path.relative(codebase.fsPath, file.fsPath);
 
         if (relativePath.endsWith(".md")) {
-            const contents = await readContents(file);
+            const contents = (await fs.readFile(file.fsPath)).toString();
             const regex = /\[.*?\]\((.*?)\)|<(.*?)>|(https?:\/\/\S*)/g;
             for (const [whole, ...groups] of contents.matchAll(regex)) {
                 // matchAll returns undefined for the unmatched "|" sections
