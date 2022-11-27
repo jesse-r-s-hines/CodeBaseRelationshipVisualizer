@@ -358,13 +358,13 @@ describe("Test merging.ts", () => {
             .to.eql([{o: {o2: {o3: [], o4: []}} }]);
 
         expect(() => new RuleMerger({"o.o2.o3": "group", "o.o2": "group"}))
-            .to.throw('Duplicate rules for the same key "o.o2.o3", "o.o2"');
+            .to.throw('Duplicate rules for the same key "o.o2", "o.o2.o3"');
 
         expect(() => new RuleMerger({"o.o2": "group", 'o["o2"]': "group"}))
             .to.throw('Duplicate rules for the same key "o.o2", "o["o2"]"');
 
         expect(() => new RuleMerger({"o.o2.o3": "group", 'o["o2"]': "group"}))
-            .to.throw('Duplicate rules for the same key "o.o2.o3", "o["o2"]"');
+            .to.throw('Duplicate rules for the same key "o["o2"]", "o.o2.o3"');
 
         expect(() => new RuleMerger({"o[0]": "group", "o[0][1]": "group"}))
             .to.throw('Duplicate rules for the same key "o[0]", "o[0][1]"');

@@ -78,12 +78,13 @@ export class RuleMerger {
         });
 
         // Check that there's no rules accessing the same paths or parts of the same paths
-        const paths = Object.keys(normalizedRules);
+        const paths = Object.keys(normalizedRules).map<[string, string[]]>(p => [p, _.toPath(p)]);
         for (let i1 = 0; i1 < paths.length; i1++) {
             for (let i2 = i1 + 1; i2 < paths.length; i2++) {
-                const [short, long] = _.sortBy([paths[i1], paths[i2]].map(_.toPath), p => p.length);
-                if (isEqual(short, long.slice(0, short.length))) {
-                    throw Error(`Duplicate rules for the same key "${paths[i1]}", "${paths[i2]}"`);
+                const [short, long] = _.sortBy([paths[i1], paths[i2]], ([key, path]) => path.length);
+                const [[shortKey, shortPath], [longKey, longPath]] = [short, long];
+                if (isEqual(shortPath, longPath.slice(0, shortPath.length))) {
+                    throw Error(`Duplicate rules for the same key "${shortKey}", "${longKey}"`);
                 }
             }
         }
