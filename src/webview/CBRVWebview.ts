@@ -482,27 +482,18 @@ export default class CBRVWebview {
     }
 
     filteredCodebase() {
-        let filtered: Directory;
-
+        let connected: Set<string> = new Set();
         if (this.hideUnconnected) {
-            const connected = new Set(_(this.connections)
+            connected = new Set(_(this.connections)
                 .flatMap(conn => [conn.from?.file, conn.to?.file].filter(e => e) as string[])
                 .uniq().value()
             );
-
-            filtered = filterFileTree(this.codebase,
-                (f, path) => f.type == FileType.Directory || connected.has(path)
-            );
-        } else {
-            filtered = this.codebase;
         }
 
-        // filter out empty folders (including those empty because of unconnected filter)
-        filtered = filterFileTree(filtered,
-            f => !(f.type == FileType.Directory && f.children.length == 0) // filter empty directories
+        return filterFileTree(this.codebase, (f, path) =>
+            !(this.hideUnconnected && f.type != FileType.Directory && !connected.has(path)) &&
+            !(f.type == FileType.Directory && f.children.length == 0) // filter empty dirs
         );
-
-        return filtered;
     }
 
     updateConnections() {
