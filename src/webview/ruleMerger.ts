@@ -34,24 +34,20 @@ export class RuleMerger {
         join: (items, rule) => items.filter(defined).join(rule.sep ?? "<br/>")
     };
 
-    rules: NormalizedMergeRules
-    mergers: Mergers
+    private rules: NormalizedMergeRules
+    private mergers: Mergers
+    private groupKeys: string[]
 
     constructor(rules: MergeRules, customMergers?: Mergers) {
         this.mergers = {...RuleMerger.defaultMergers, ...customMergers};
         this.rules = RuleMerger.normalizeRules(rules, this.mergers);
+        this.groupKeys = _(this.rules).pickBy(rule => rule?.rule == "same").keys().value();
     }
 
     merge<T>(items: T[]): Record<string, any>[] {
-        const groupKeys = _(this.rules).pickBy(rule => rule?.rule == "same").keys().value();
-        const keyFunc = (item: T) => groupKeys
-            // hack to make undefined unique JSONized so missing keys group separately
-            .map(key => _.get(item, key) !== undefined ? normJSON(_.get(item, key)) : "undefined")
-            .join(",");
-
         return _(items)
             // Group items that don't have conflicts on the "same" rules
-            .groupBy(keyFunc)
+            .groupBy(this.keyFunc)
             // Compute the merged values for each group
             .map(group => {
                 const mergedObj = _(this.rules)
@@ -67,6 +63,11 @@ export class RuleMerger {
             })
             .value();
     }
+
+    private keyFunc = (item: any): string => this.groupKeys
+        // hack to make undefined unique JSONized so missing keys group separately
+        .map(key => _.get(item, key) !== undefined ? normJSON(_.get(item, key)) : "undefined")
+        .join(",");
 
     /** Normalize and validate rules */
     private static normalizeRules(rules: MergeRules, mergers: Mergers): NormalizedMergeRules {
