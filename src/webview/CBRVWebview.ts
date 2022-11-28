@@ -364,7 +364,7 @@ export default class CBRVWebview {
                             ?.filter(({conn}) =>
                                 conn.from?.file == file || (conn.bidirectional && conn.to?.file == file)
                             )
-                            .classed("hover-in", toggle);
+                            .classed("hover-out", toggle);
 
                         this.connectionSelection
                             ?.filter(({conn}) =>
