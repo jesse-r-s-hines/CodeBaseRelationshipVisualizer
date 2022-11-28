@@ -123,6 +123,7 @@ export default class CBRVWebview {
 
     // TODO maybe move this (and width/height/etc.) into a React-style "state" object and make update use it.
     hideUnconnected = false
+    hoverTimerId?: number
 
     /** Pass the selector for the canvas svg */
     constructor(settings: WebviewVisualizationSettings, codebase: Directory, connections: NormalizedConnection[]) {
@@ -424,7 +425,9 @@ export default class CBRVWebview {
                 update => { // TODO transitions
                     return update.classed("new", false);
                 },
-                exit => exit.remove(),
+                exit => exit
+                    .each((d, i, nodes) => (nodes[i] as any)._tippy?.destroy()) // destroy any tippy instances
+                    .remove()
             );
 
         all
@@ -526,7 +529,11 @@ export default class CBRVWebview {
                 enter => enter.append("path")
                     .classed("connection", true)
                     .attr("data-from", ({conn}) => conn.from?.file ?? "")
-                    .attr("data-to", ({conn}) => conn.to?.file ?? "")
+                    .attr("data-to", ({conn}) => conn.to?.file ?? ""),
+                update => update,
+                exit => exit
+                    .each((d, i, nodes) => (nodes[i] as any)._tippy?.destroy()) // destroy any tippy instances
+                    .remove()
             )
                 .attr("data-bidirectional", ({conn}) => conn.bidirectional)
                 .attr("stroke-width", ({conn}) => conn.width)
@@ -536,18 +543,21 @@ export default class CBRVWebview {
                     this.settings.directed && conn.bidirectional ? `url(#${uniqId(conn.color)})` : null
                 )
                 .attr("d", ({path}) => path)
-                .attr("data-tooltip-loaded", false) // clear this on update
-                .each(({id, conn}, i, nodes) => tippy(nodes[i] as Element, {
-                    content: "",
-                    allowHTML: true,
-                    delay: [250, 0], // [show, hide]
-                    followCursor: true,
-                    onShow: (instance) => {
-                        const loaded = nodes[i].getAttribute("data-tooltip-loaded") == "true";
-                        if (!loaded) this.emit("tooltip-request", {id, conn});
-                        if (!loaded || !instance.props.content) return false; // disabled or waiting until load
+                .attr("data-tippy-content", null) // set this on tooltip creation
+                // To avoid creating many tippy instances, create them dynamically on hover over a connection
+                .on("mouseover", (event, {id, conn}) => {
+                    const elem = event.currentTarget as HTMLElement;
+                    clearTimeout(this.hoverTimerId);
+                    if (!elem.hasAttribute("data-tippy-content")) {
+                        this.hoverTimerId = _.delay(() => {
+                            this.emit("tooltip-request", {id, conn}); // will create and trigger the tooltip
+                        }, 250);
                     }
-                }));
+                })
+                .on("mouseout", (event, {id, conn}) => {
+                    clearTimeout(this.hoverTimerId);
+                });
+
     }
 
     /**
@@ -988,11 +998,20 @@ export default class CBRVWebview {
         this.connectionSelection
             ?.filter((connPath) => connPath.id == id)
             .each((d, i, node) => { // there'll only be one
-                const tooltip = (node[i] as any)._tippy as Tippy;
-                node[i].setAttribute("data-tooltip-loaded", "true");
-                tooltip.setContent(content || "");
+                const elem = node[i];
+                let tooltip = (elem as any)._tippy as Tippy|undefined;
+
                 if (content) {
+                    elem.setAttribute("data-tippy-content", content);
+                    tooltip = tooltip ?? tippy(elem, {
+                        allowHTML: true,
+                        delay: [250, 0], // [show, hide]
+                        followCursor: true,
+                    });
                     tooltip.show();
+                } else {
+                    tooltip?.hide();
+                    tooltip?.destroy();
                 }
             });
     }
