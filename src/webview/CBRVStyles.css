@@ -62,24 +62,8 @@ body {
 }
 
 #diagram[data-show-on-hover=true] .connection {
-    visibility: hidden;
+    display: none;
     opacity: 0;
-    transition: opacity 1s, visibility 0s 1s;
-}
-#diagram[data-show-on-hover-in=true] .connection.hover-in {
-    visibility: visible;
-    opacity: 1;
-    transition: opacity 50ms, visibility 0s;
-}
-#diagram[data-show-on-hover-out=true] .connection.hover-out {
-    visibility: visible;
-    opacity: 1;
-    transition: opacity 50ms, visibility 0s;
-}
-#diagram[data-show-on-hover=true] .connection:hover { /* Keep visible you you hover over a connection */
-    visibility: visible;
-    opacity: 1;
-    transition: oopacity 50ms, visibility 0s;
 }
 
 /** Styling for the filter inputs */

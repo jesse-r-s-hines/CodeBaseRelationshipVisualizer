@@ -238,16 +238,9 @@ export default class CBRVWebview {
 
     /** Update the layout/inputs/etc. */
     updateMisc() {
-        const {showOnHover, directed} = this.settings;
-
-        // if not directed, show all connections regardless of direction specified.
-        const showAll = showOnHover == "both" || (showOnHover && !directed);
-
         // add some settings as data attributes for CSS access
         this.diagram
-            .attr("data-show-on-hover", !!showOnHover)
-            .attr("data-show-on-hover-in", showOnHover == "in" || showAll)
-            .attr("data-show-on-hover-out", showOnHover == "out" || showAll);
+            .attr("data-show-on-hover", !!this.settings.showOnHover);
 
         // Hide hidUnconnectedInput if no connections. Use the selection rather than the connection list so the input
         // will be hidden if all connections are to missing/excluded files.
@@ -357,26 +350,31 @@ export default class CBRVWebview {
                                 return `var(--vscode-editor-${isDir ? 'foreground' : 'background'})`;
                             });
 
-                    const setHoverClasses = (node: Node, toggle: boolean) => {
-                        const file = this.filePath(node);
-                        // add hover classes to connected connections. CSS will hide/show connections
-                        this.connectionSelection // selection will be set once we render connections
-                            ?.filter(({conn}) =>
-                                conn.from?.file == file || (conn.bidirectional && conn.to?.file == file)
-                            )
-                            .classed("hover-out", toggle);
+                    const showConnectedConns = (node: Node, toggle: boolean) => {
+                        const {showOnHover, directed} = this.settings;
+                        if (showOnHover) {
+                            // if not directed, show all connections regardless of direction specified.
+                            const showAll = (showOnHover == "both" || (showOnHover && !directed));
+                            const showIn = (showOnHover == "in" || showAll);
+                            const showOut = (showOnHover == "out" || showAll);
+                            const file = this.filePath(node);
 
-                        this.connectionSelection
-                            ?.filter(({conn}) =>
-                                conn.to?.file == file || (conn.bidirectional && conn.from?.file == file)
-                            )
-                            .classed("hover-in", toggle);
+                            // Show/hide connections
+                            const selection = this.connectionSelection!
+                                .filter(({conn}) => {
+                                    const [fromFile, toFile] = [conn.from, conn.to].map(e => e?.file == file);
+                                    return (showOut && (fromFile || (conn.bidirectional && toFile))) ||
+                                           (showIn && (toFile || (conn.bidirectional && fromFile)));
+                                });
+
+                            this.connShowTransition(selection, toggle);
+                        }
                     };
                     
                     // Add event listeners.
                     all
-                        .on("mouseover", (event, d) => setHoverClasses(d, true))
-                        .on("mouseout", (event, d) => setHoverClasses(d, false))
+                        .on("mouseover", (event, d) => showConnectedConns(d, true))
+                        .on("mouseout", (event, d) => showConnectedConns(d, false))
                         .on("dblclick", (event, d) => {
                             if (d.data.type == FileType.Directory) {
                                 this.emit("reveal-in-explorer", {file: this.filePath(d)});
@@ -544,6 +542,9 @@ export default class CBRVWebview {
                 )
                 .attr("d", ({path}) => path)
                 .attr("data-tippy-content", null) // set this on tooltip creation
+                .interrupt() // clear transitions
+                .style("display", null) // unset these to clear any showOnHover transitions
+                .style("opacity", null)
                 // To avoid creating many tippy instances, create them dynamically on hover over a connection
                 .on("mouseover", (event, {id, conn}) => {
                     const elem = event.currentTarget as HTMLElement;
@@ -553,11 +554,12 @@ export default class CBRVWebview {
                             this.emit("tooltip-request", {id, conn}); // will create and trigger the tooltip
                         }, 250);
                     }
+                    this.connShowTransition(d3.select(event.currentTarget), true);
                 })
                 .on("mouseout", (event, {id, conn}) => {
                     clearTimeout(this.hoverTimerId);
+                    this.connShowTransition(d3.select(event.currentTarget), false);
                 });
-
     }
 
     /**
@@ -1014,5 +1016,23 @@ export default class CBRVWebview {
                     tooltip?.destroy();
                 }
             });
+    }
+
+    connShowTransition(selection: Selection<SVGPathElement, ConnPath>, toggle: boolean) {
+        if (this.settings.showOnHover) {
+            selection.classed("hover-show", toggle);
+            if (toggle) {
+                selection
+                    .style("display", "inline")
+                    .transition("conn-fade").duration(50)
+                    .style("opacity", 1);
+            } else {
+                selection
+                    .transition("conn-fade").duration(500)
+                    .style("opacity", 0)
+                    .transition().duration(0)
+                    .style("display", "none");
+            }
+        }
     }
 }
