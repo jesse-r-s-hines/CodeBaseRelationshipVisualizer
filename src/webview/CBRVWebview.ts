@@ -14,7 +14,7 @@ import "d3-context-menu/css/d3-context-menu.css"; // manually require the CSS
 import tippy, {followCursor, Instance as Tippy} from 'tippy.js';
 import 'tippy.js/dist/tippy.css'; // optional for styling
 
-import { NormalizedConnection, MergedConnection } from '../publicTypes';
+import { NormalizedConnection, MergedConnection, NormalizedEndpoint } from '../publicTypes';
 import { AnyFile, FileType, Directory, SymbolicLink, WebviewVisualizationSettings } from '../privateTypes';
 import { getExtension, filterFileTree, loopIndex, OptionalKeys } from '../util';
 import * as geo from './geometry';
@@ -604,10 +604,14 @@ export default class CBRVWebview {
                     return merger.merge(obj);
                 })
                 .map<MergedConnection>(obj => {
+                    const from = obj.from[0];
+                    const to = obj.to[0];
+                    const isSelfLoop = (from?.file === to?.file);
+
                     return {
                         ..._.omit(obj, ["file", "line", "direction"]),
-                        from: obj.from[0], to: obj.to[0],
-                        bidirectional: _(obj.from).some(from => isEqual(from, obj.to[0])),
+                        from, to,
+                        bidirectional: !isSelfLoop && (obj.from.some((e: NormalizedEndpoint) => e?.file === to?.file)),
                     } as MergedConnection;
                 })
                 .value();
