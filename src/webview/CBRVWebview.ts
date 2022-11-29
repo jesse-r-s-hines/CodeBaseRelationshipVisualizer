@@ -29,6 +29,7 @@ type ConnEnd = {
     conn: MergedConnection, end: "from"|"to",
     target: Point, // center of node or position on border of screen this connection logically connects to
     r?: number, // radius of the node (if applicable)
+    hasArrow: boolean, // whether this end of the connection has an arrow marker
     anchor: Point // The point on the circumference or the border where the rendered connection will end
     anchorId: string, // a uniq id for the anchor we connected to
     theta?: number, // Angle from from.target to to.target
@@ -633,6 +634,7 @@ export default class CBRVWebview {
     /** Calculate the paths for each connection. */
     calculatePaths(connections: MergedConnection[]): ConnPath[] {
         const viewbox = this.getViewbox();
+        const directed = this.settings.directed;
 
         // split out each "end" of the connections and calculate angles and target coords
         const ends = _(connections)
@@ -657,8 +659,8 @@ export default class CBRVWebview {
                 }
 
                 return [
-                    {conn, end: "from", ...from, theta: fromTheta},
-                    {conn, end: "to", ...to, theta: toTheta},
+                    {conn, end: "from", ...from, theta: fromTheta, hasArrow: directed && conn.bidirectional},
+                    {conn, end: "to", ...to, theta: toTheta, hasArrow: directed},
                 ];
             })
             .value();
@@ -697,35 +699,29 @@ export default class CBRVWebview {
             const deltaTheta = (2*Math.PI) / numAnchors;
             const anchorPoints: IncompleteConnEnd[][] = _.range(numAnchors).map(i => []);
 
-            const hasArrow = ({conn, end}: IncompleteConnEnd) =>
-                this.settings.directed && (end == "to" || conn.bidirectional);
-    
             // assign to an anchor point and update the actual rendered point. Makes sure that connections going
             // opposite directions don't go to the same anchor point.
             const anchorConn = (connEnd: IncompleteConnEnd) => {
                 const rawTheta = connEnd.theta!; // we know these aren't self loops
 
-                // Check if connection has an arrow to this file
-                const endHasArrow = hasArrow(connEnd);
-                
                 // Snap to angle, round to index to account for any floating point error
                 const theta1 = geo.snapAngle(rawTheta, deltaTheta);
                 const index1 = Math.round(theta1 / deltaTheta);
-                const hasArrow1 = anchorPoints[index1].length ? hasArrow(anchorPoints[index1][0]) : undefined;
+                const hasArrow1 = anchorPoints[index1].length ? anchorPoints[index1][0].hasArrow : undefined;
 
                 // no conflict on first choice
-                if (hasArrow1 == undefined || hasArrow1 == endHasArrow) {
+                if (hasArrow1 == undefined || hasArrow1 == connEnd.hasArrow) {
                     anchorPoints[index1].push(connEnd);
                 } else {
                     // fallback index if conflict. Assign in to even, and out to odd anchors.
                     // May be same as index1
-                    const theta2 = geo.snapAngle(rawTheta, 2 * deltaTheta, endHasArrow ? 0 : deltaTheta);
+                    const theta2 = geo.snapAngle(rawTheta, 2 * deltaTheta, connEnd.hasArrow ? 0 : deltaTheta);
                     const index2 = Math.round(theta2 / deltaTheta);
                     const connEnds2 = anchorPoints[index2];
-                    const hasArrow2 = connEnds2.length ? hasArrow(connEnds2[0]) : undefined;
+                    const hasArrow2 = connEnds2.length ? connEnds2[0].hasArrow : undefined;
 
                     // no conflict on second choice
-                    if (hasArrow2 == undefined || hasArrow2 == endHasArrow) {
+                    if (hasArrow2 == undefined || hasArrow2 == connEnd.hasArrow) {
                         anchorPoints[index2].push(connEnd);
                     } else { // conflict on second choice
                         anchorPoints[index2] = [connEnd];
