@@ -31,11 +31,10 @@ type ConnEnd = { // TODO maybe split this type out into FileConnEnd and OutOfScr
     r?: number, // radius of the node (for file connections)
     hasArrow: boolean, // whether this end of the connection has an arrow marker
     anchorAngle?: number // The angle on the file circle to connect to (for file connections)
-    anchorPoint?: Point // Point on the border to connect to (for out of screen connections)
     anchorId: string, // a uniq id for the anchor we connected to
     theta: number, // Angle from from.target to to.target
 }
-type IncompleteConnEnd = OptionalKeys<ConnEnd, "anchorId"|"anchorAngle"|"anchorPoint">
+type IncompleteConnEnd = OptionalKeys<ConnEnd, "anchorId"|"anchorAngle">
 // Shortcut for d3.Selection
 type Selection<GElement extends d3.BaseType = HTMLElement, Datum = unknown> =
     d3.Selection<GElement, Datum, d3.BaseType, undefined>
@@ -786,7 +785,6 @@ export default class CBRVWebview {
                 // NOTE: Mutating end
                 // use the file of the end that is connected to a real file as the anchorId
                 end.anchorId = JSON.stringify(["", end.conn[end.end == "from" ? "to" : "from"]!.file]);
-                end.anchorPoint = end.target; // anchor is just the same as target, which is closestPointOnBorder
             });
         }
     }
@@ -804,10 +802,15 @@ export default class CBRVWebview {
     calculateRegularPath(from: ConnEnd, to: ConnEnd, numDups: number, index: number): string {
         const conn = from.conn; // from/to should be same conn
         const arrowSize = this.s.conn.arrowSize * conn.width / 2;
-        const [fromAnchor, toAnchor] = [from, to].map(e =>
-            // Use out of border, or calc point on circle, but offset by arrow size so arrow tip just touches circle
-            e.anchorPoint ?? geo.polarToRect(e.anchorAngle!, e.r! + (e.hasArrow ? arrowSize: 0), e.target)
-        );
+        const [bx, by, width, height] = this.getViewbox();
+        const [fromAnchor, toAnchor] = [from, to].map(e => {
+            if (e.anchorAngle) {
+                // calc point on circle, but offset by arrow size so arrow tip just touches circle
+                return geo.polarToRect(e.anchorAngle, e.r! + (e.hasArrow ? arrowSize: 0), e.target)
+            } else { // out of border
+                return e.target;
+            }
+        });
 
         const dist = geo.distance(fromAnchor, toAnchor);
         const even = (numDups % 2 == 0);
