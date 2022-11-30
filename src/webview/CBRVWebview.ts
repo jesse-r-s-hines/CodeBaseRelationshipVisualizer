@@ -857,12 +857,12 @@ export default class CBRVWebview {
 
     calculateSelfLoopPath(from: ConnEnd, to: ConnEnd, numDups: number, index: number): string {
         const dist = geo.distance(from.anchor, to.anchor);
-        // The arc will start at from.anchor, pass point between selfLoopDistance from the edge of
-        // the file circle, and then end at to.anchor
+        // The arc will start at from.anchor, pass through the point between from.anchor and to.anchor and
+        // selfLoopDistance from the edge of the file circle, and then end at to.anchor
 
         // Calculate the angle between from/to.anchor and the center of the file circle. Different
         // than from.theta, which is between two targets (and isn't on self loops anyways).
-        const fileCenter = from.target; // these are both the same
+        const fileCenter = from.target; // from/to are are both the same
         const [[fromX, fromY], [toX, toY]] = [from.anchor, to.anchor];
 
         const fromTheta = Math.atan2(fromY - fileCenter[1], fromX - fileCenter[0]);
@@ -873,14 +873,14 @@ export default class CBRVWebview {
             middleTheta = middleTheta + Math.PI; // need to rotate around 180
         }
 
-        // Calculate the third point on the arc, that will be selfLoopDistance past the edge of the
-        // file circle on the middle angle.
+        // Calculate the third point on the arc, that will be selfLoopDistance past the edge of the file circle on the
+        // middle angle.
         const scaledDupOffset = index * this.s.conn.dupConnPadding;
         const distFromFileCenter = from.r! + this.s.conn.selfLoopSize + scaledDupOffset;
         const farPoint = geo.polarToRect(middleTheta, distFromFileCenter, fileCenter);
 
-        // The center of the arc lies on the line between file center and farPoint and the
-        // perpendicular bisector of the cord between from.target and farPoint
+        // The center of the arc lies on the line between file center and farPoint and the perpendicular bisector of the
+        // cord between from.target and farPoint
         // NOTE: neither slope can be vertical since numAnchors is divisible by 4, so top/bottom/left/right are anchors,
         // and the self loop will always connect to two adjacent anchors meaning it can't cross over the vertical to
         // make m1 vertical, or cross over the horizontal to make m2 vertical
