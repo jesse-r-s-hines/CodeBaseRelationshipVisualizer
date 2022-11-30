@@ -802,13 +802,20 @@ export default class CBRVWebview {
     calculateRegularPath(from: ConnEnd, to: ConnEnd, numDups: number, index: number): string {
         const conn = from.conn; // from/to should be same conn
         const arrowSize = this.s.conn.arrowSize * conn.width / 2;
-        const [bx, by, width, height] = this.getViewbox();
         const [fromAnchor, toAnchor] = [from, to].map(e => {
             if (e.anchorAngle) {
                 // calc point on circle, but offset by arrow size so arrow tip just touches circle
-                return geo.polarToRect(e.anchorAngle, e.r! + (e.hasArrow ? arrowSize: 0), e.target)
+                return geo.polarToRect(e.anchorAngle, e.r! + (e.hasArrow ? arrowSize: 0), e.target);
             } else { // out of border
-                return e.target;
+                if (e.hasArrow) {
+                    // recalculate the closestPointOnBorder, but shift border in by arrowSize so arrow fits.
+                    const [bx, by, bw, bh] = this.getViewbox();
+                    const border: Box = [bx + arrowSize, by + arrowSize, bw - 2 * arrowSize, bh - 2 * arrowSize];
+                    const other = e.end == "from" ? to : from;
+                    return geo.closestPointOnBorder(other.target, border);
+                } else {
+                    return e.target;
+                }
             }
         });
 
@@ -935,7 +942,7 @@ export default class CBRVWebview {
 
         // d3 paths take angles, so its actually easier to just make an svg path string directly
         // Arc path args: A rx ry x-axis-rotation large-arc-flag sweep-flag x y
-        return `M ${fromX} ${fromY} A ${arcR},${arcR} 0 ${large} 1 ${arcEnd[0]},${arcEnd[1]} ${redirection}`
+        return `M ${fromX} ${fromY} A ${arcR},${arcR} 0 ${large} 1 ${arcEnd[0]},${arcEnd[1]} ${redirection}`;
     }
 
     /** Returns a function used to compute color from file extension */
