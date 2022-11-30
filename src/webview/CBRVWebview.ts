@@ -803,7 +803,7 @@ export default class CBRVWebview {
         const conn = from.conn; // from/to should be same conn
         const arrowSize = this.s.conn.arrowSize * conn.width / 2;
         const [fromAnchor, toAnchor] = [from, to].map(e => {
-            if (e.anchorAngle) {
+            if (e.anchorAngle !== undefined) {
                 // calc point on circle, but offset by arrow size so arrow tip just touches circle
                 return geo.polarToRect(e.anchorAngle, e.r! + (e.hasArrow ? arrowSize: 0), e.target);
             } else { // out of border
