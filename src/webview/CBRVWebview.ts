@@ -19,7 +19,7 @@ import { AnyFile, FileType, Directory, SymbolicLink, WebviewVisualizationSetting
 import { getExtension, filterFileTree, loopIndex, OptionalKeys } from '../util';
 import * as geo from './geometry';
 import { Point, Box } from './geometry';
-import { uniqId, ellipsisText, getRect } from './rendering';
+import { ellipsisText, getRect } from './rendering';
 import { RuleMerger } from './ruleMerger';
 import _, { isEqual } from "lodash";
 
@@ -159,7 +159,7 @@ export default class CBRVWebview {
         `);
 
         // Add event listeners
-        this.throttledUpdate = _.throttle(() => this.update(), 250, {trailing: true});
+        this.throttledUpdate = _.throttle(() => this.update(), 150, {trailing: true});
 
         const [x, y, width, height] = this.getViewbox();
         const extent: [Point, Point] = [[x, y], [x + width, y + height]];
@@ -303,7 +303,7 @@ export default class CBRVWebview {
                     // on it for the folder name
                     all.append("path")
                         .classed("circle", true)
-                        .attr("id", d => uniqId(this.filePath(d)));
+                        .attr("id", d => this.filePath(d));
 
                     const files = all.filter(d => nodeIsOrLinksToType(d, FileType.File));
                     const directories = all.filter(d => nodeIsOrLinksToType(d, FileType.Directory));
@@ -328,7 +328,7 @@ export default class CBRVWebview {
                     directories.append("text")
                         .append("textPath")
                             .classed("label", true)
-                            .attr("href", d => `#${uniqId(this.filePath(d))}`)
+                            .attr("href", d => `#${encodeURIComponent(this.filePath(d))}`)
                             .attr("startOffset", "50%")
                             .attr("font-size", d => Math.max(this.s.label.fontMax - d.depth, this.s.label.fontMin));
   
@@ -512,7 +512,7 @@ export default class CBRVWebview {
             .join(
                 enter => enter.append('marker')
                     .classed("arrow", true)
-                    .attr("id", color => uniqId(color))
+                    .attr("id", color => color)
                     .attr("viewBox", "0 0 10 10")
                     .attr("refX", 5)
                     .attr("refY", 5)
@@ -539,9 +539,9 @@ export default class CBRVWebview {
                 .attr("data-bidirectional", ({conn}) => conn.bidirectional)
                 .attr("stroke-width", ({conn}) => conn.width)
                 .attr("stroke", ({conn}) => conn.color)
-                .attr("marker-end", ({conn}) => this.settings.directed ? `url(#${uniqId(conn.color)})` : null)
+                .attr("marker-end", ({conn}) => this.settings.directed ? `url("#${encodeURIComponent(conn.color)}")` : null)
                 .attr("marker-start", ({conn}) =>
-                    this.settings.directed && conn.bidirectional ? `url(#${uniqId(conn.color)})` : null
+                    this.settings.directed && conn.bidirectional ? `url("#${encodeURIComponent(conn.color)}")` : null
                 )
                 .attr("d", ({path}) => path)
                 .attr("data-tippy-content", null) // set this on tooltip creation

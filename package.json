@@ -85,7 +85,6 @@
         "d3-context-menu": "^2.1.0",
         "d3-selection-multi": "^1.0.1",
         "glob": "^8.0.3",
-        "js-sha256": "^0.9.0",
         "lodash": "^4.17.21",
         "text-encoding": "^0.7.0",
         "tippy.js": "^6.3.7",

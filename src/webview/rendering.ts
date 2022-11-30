@@ -1,5 +1,3 @@
-import { sha256 } from 'js-sha256';
-
 /**
  * If el's text is wider than width, cut it and add an ellipsis until if fits. Returns the new text in the node. If
  * the text won't fit at all, sets the text to empty. There are pure CSS ways of doing this, but they don't work in
@@ -40,12 +38,4 @@ export function ellipsisText(el: SVGTextContentElement, width: number, height = 
 export function getRect(el: Element): [number, number] {
     const rect = el.getBoundingClientRect();
     return [rect.width, rect.height];
-}
-
-/**
- * Converts an arbitrary string key into a unique html id containing only alphanumeric characters, Using
- * same key again will return the same id. Optionally add a prefix to the generated id.
- */
-export function uniqId(key: string, prefix = "") {
-    return `${prefix}${sha256(key)}`;
 }
