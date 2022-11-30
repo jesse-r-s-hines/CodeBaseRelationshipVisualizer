@@ -25,16 +25,17 @@ import _, { isEqual } from "lodash";
 
 type Node = d3.HierarchyCircularNode<AnyFile>;
 type ConnPath = {id: string, conn: MergedConnection, path: string}
-type ConnEnd = {
+type ConnEnd = { // TODO maybe split this type out into FileConnEnd and OutOfScreenConnEnd
     conn: MergedConnection, end: "from"|"to",
     target: Point, // center of node or position on border of screen this connection logically connects to
-    r?: number, // radius of the node (if applicable)
+    r?: number, // radius of the node (for file connections)
     hasArrow: boolean, // whether this end of the connection has an arrow marker
-    anchor: Point // The point on the circumference or the border where the rendered connection will end
+    anchorAngle?: number // The angle on the file circle to connect to (for file connections)
+    anchorPoint?: Point // Point on the border to connect to (for out of screen connections)
     anchorId: string, // a uniq id for the anchor we connected to
-    theta?: number, // Angle from from.target to to.target
+    theta: number, // Angle from from.target to to.target
 }
-type IncompleteConnEnd = OptionalKeys<ConnEnd, "anchor"|"anchorId">
+type IncompleteConnEnd = OptionalKeys<ConnEnd, "anchorId"|"anchorAngle"|"anchorPoint">
 // Shortcut for d3.Selection
 type Selection<GElement extends d3.BaseType = HTMLElement, Datum = unknown> =
     d3.Selection<GElement, Datum, d3.BaseType, undefined>
@@ -650,8 +651,8 @@ export default class CBRVWebview {
                         }
                     });
                 
-                let fromTheta: number|undefined;
-                let toTheta: number|undefined;
+                let fromTheta = 0;
+                let toTheta = 0;
                 if (conn.from?.file != conn.to?.file) { // theta is meaningless for self loops
                     fromTheta = Math.atan2(to.target[1] - from.target[1], to.target[0] - from.target[0]);
                     // The other angle is just 180 deg around (saves us calculating atan2 again)
@@ -776,16 +777,16 @@ export default class CBRVWebview {
             anchorPoints.forEach((ends, anchorI) => {
                 ends.forEach(end => {
                     // NOTE: Mutating end
-                    end.anchor = geo.polarToRect(deltaTheta * anchorI, targetR, target);
                     end.anchorId = JSON.stringify([file, anchorI]);
+                    end.anchorAngle = deltaTheta * anchorI;
                 });
             });
         } else { // out-of-screen connection
             ends.forEach(end => {
                 // NOTE: Mutating end
-                end.anchor = end.target; // anchor is just the same as target, which is closestPointOnBorder
                 // use the file of the end that is connected to a real file as the anchorId
                 end.anchorId = JSON.stringify(["", end.conn[end.end == "from" ? "to" : "from"]!.file]);
+                end.anchorPoint = end.target; // anchor is just the same as target, which is closestPointOnBorder
             });
         }
     }
@@ -802,7 +803,13 @@ export default class CBRVWebview {
 
     calculateRegularPath(from: ConnEnd, to: ConnEnd, numDups: number, index: number): string {
         const conn = from.conn; // from/to should be same conn
-        const dist = geo.distance(from.anchor, to.anchor);
+        const arrowSize = this.s.conn.arrowSize * conn.width / 2;
+        const [fromAnchor, toAnchor] = [from, to].map(e =>
+            // Use out of border, or calc point on circle, but offset by arrow size so arrow tip just touches circle
+            e.anchorPoint ?? geo.polarToRect(e.anchorAngle!, e.r! + (e.hasArrow ? arrowSize: 0), e.target)
+        );
+
+        const dist = geo.distance(fromAnchor, toAnchor);
         const even = (numDups % 2 == 0);
 
         const controls: Point[] = [];
@@ -811,15 +818,15 @@ export default class CBRVWebview {
             // calculate control points such that the bezier curve will be perpendicular to the
             // circle by extending the line from the center of the circle to the anchor point.
             const offset = dist * this.s.conn.controlOffset;
-            const control1 = geo.extendLine([from.target, from.anchor], offset);
-            const control2 = geo.extendLine([to.target, to.anchor], offset);
+            const control1 = geo.extendLine([from.target, fromAnchor], offset);
+            const control2 = geo.extendLine([to.target, toAnchor], offset);
             controls.push(control1, control2);
         } else {
             // For out-of-screen conns add controls on a straight line. We could leave these out but
             // but this makes the arrows line up if we have an offset for duplicate conns
             const offset = dist * this.s.conn.outOfScreenControlOffset;
-            const control1 = geo.extendLine([from.anchor, to.anchor], -(dist - offset));
-            const control2 = geo.extendLine([from.anchor, to.anchor], -offset);
+            const control1 = geo.extendLine([fromAnchor, toAnchor], -(dist - offset));
+            const control2 = geo.extendLine([fromAnchor, toAnchor], -offset);
             controls.push(control1, control2);
         }
 
@@ -836,10 +843,10 @@ export default class CBRVWebview {
             // If we have multiple connections between the same two files, calculate another control
             // point based on the index so that the connections don't overlap completely. The
             // control point will be a distance from the line between from and to at the midpoint.
-            const midpoint: Point = geo.midpoint(from.anchor, to.anchor);
+            const midpoint: Point = geo.midpoint(fromAnchor, toAnchor);
 
             // Vector in direction of line between from and to
-            const vec = [to.anchor[0] - from.anchor[0], to.anchor[1] - from.anchor[1]];
+            const vec = [toAnchor[0] - fromAnchor[0], toAnchor[1] - fromAnchor[1]];
             // calculate the perpendicular unit vector (perp vectors have dot product of 0)
             const perpVec = geo.unitVector([1, -vec[0] / vec[1]]);
 
@@ -852,18 +859,20 @@ export default class CBRVWebview {
             controls.splice(1, 0, control); // insert in middle.
         }
 
-        return this.curve([from.anchor, ...controls, to.anchor])!.toString();
+        return this.curve([fromAnchor, ...controls, toAnchor])!.toString();
     }
 
     calculateSelfLoopPath(from: ConnEnd, to: ConnEnd, numDups: number, index: number): string {
-        const dist = geo.distance(from.anchor, to.anchor);
-        // The arc will start at from.anchor, pass through the point between from.anchor and to.anchor and
-        // selfLoopDistance from the edge of the file circle, and then end at to.anchor
+        const [fromAnchor, toAnchor] = [from, to].map(e => geo.polarToRect(e.anchorAngle!, e.r!, e.target));
 
-        // Calculate the angle between from/to.anchor and the center of the file circle. Different
-        // than from.theta, which is between two targets (and isn't on self loops anyways).
+        const dist = geo.distance(fromAnchor, toAnchor);
+        // The arc will start at fromAnchor, pass through the point between fromAnchor and toAnchor and selfLoopDistance
+        // from the edge of the file circle, and then end at toAnchor
+
+        // Calculate the angle between from/toAnchor and the center of the file circle. This is different than
+        // from.theta, which is between two targets (and isn't applicable to self loops anyways).
         const fileCenter = from.target; // from/to are are both the same
-        const [[fromX, fromY], [toX, toY]] = [from.anchor, to.anchor];
+        const [[fromX, fromY], [toX, toY]] = [fromAnchor, toAnchor];
 
         const fromTheta = Math.atan2(fromY - fileCenter[1], fromX - fileCenter[0]);
         const toTheta = Math.atan2(toY - fileCenter[1], toX - fileCenter[0]);
@@ -885,8 +894,8 @@ export default class CBRVWebview {
         // and the self loop will always connect to two adjacent anchors meaning it can't cross over the vertical to
         // make m1 vertical, or cross over the horizontal to make m2 vertical
         const m1 = geo.slope(fileCenter, farPoint);
-        const m2 = -1 / geo.slope(from.anchor, farPoint); // perpendicular slope
-        const [midX, midY] = geo.midpoint(from.anchor, farPoint);
+        const m2 = -1 / geo.slope(fromAnchor, farPoint); // perpendicular slope
+        const [midX, midY] = geo.midpoint(fromAnchor, farPoint);
         const [cx, cy] = fileCenter;
 
         const arcCenter: Point = [ // solve the two equations for their intersection
@@ -900,9 +909,30 @@ export default class CBRVWebview {
         const large = dist < 2 * arcR ? 1 : 0;
         // sweep-flag will always be 1 (positive angle or clockwise) to go outside of the file
 
+        // Move the end of the path back so that the arrow head just touches the file circle
+        let arcEnd: Point;
+        let redirection: string;
+        if (to.hasArrow) {
+            const arrowSize = this.s.conn.arrowSize * to.conn.width / 2;
+
+            // get angle between arcCenter and the to point
+            const baseTheta = Math.atan2(toY - arcCenter[1], toX - arcCenter[0]);
+            // I want the point where the cord between it and the anchor equals the arrow sizes
+            const shiftBackTheta = Math.acos((2 * arcR ** 2 - arrowSize ** 2) / (2 * arcR ** 2)); // use law of cosigns
+            const theta = geo.normalizeAngle(baseTheta - shiftBackTheta);
+
+            arcEnd = geo.polarToRect(theta, arcR, arcCenter);
+            // Add a tiny line at the end so the arrow goes towards the anchor point.
+            const redirectionPoint = geo.extendLine([arcEnd, toAnchor], -geo.distance(arcEnd, toAnchor) + 0.1);
+            redirection = `L ${redirectionPoint[0]},${redirectionPoint[1]}`;
+        } else {
+            arcEnd = toAnchor;
+            redirection = "";
+        }
+
         // d3 paths take angles, so its actually easier to just make an svg path string directly
-        // A rx ry x-axis-rotation large-arc-flag sweep-flag x y
-        return `M ${fromX} ${fromY} A ${arcR},${arcR} 0 ${large} 1 ${toX},${toY}`;
+        // Arc path args: A rx ry x-axis-rotation large-arc-flag sweep-flag x y
+        return `M ${fromX} ${fromY} A ${arcR},${arcR} 0 ${large} 1 ${arcEnd[0]},${arcEnd[1]} ${redirection}`
     }
 
     /** Returns a function used to compute color from file extension */
