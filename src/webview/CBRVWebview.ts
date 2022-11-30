@@ -886,12 +886,12 @@ export default class CBRVWebview {
         // make m1 vertical, or cross over the horizontal to make m2 vertical
         const m1 = geo.slope(fileCenter, farPoint);
         const m2 = -1 / geo.slope(from.anchor, farPoint); // perpendicular slope
-        const midpoint = geo.midpoint(from.anchor, farPoint);
-        const [midX, midY] = midpoint;
+        const [midX, midY] = geo.midpoint(from.anchor, farPoint);
+        const [cx, cy] = fileCenter;
 
         const arcCenter: Point = [ // solve the two equations for their intersection
-            (fromX * m1 - fromY - midX * m2 + midY) / (m1 - m2),
-            (midY * m1 - m2 * (m1 * (midX - fromX) + fromY)) / (m1 - m2),
+            (m1 * cx - m2 * midX + midY - cy) / (m1 - m2),
+            (m1 * midY - m2 * cy - m1 * m2 * (midX - cx)) / (m1 - m2),
         ];
 
         const arcR = geo.distance(arcCenter, farPoint);
