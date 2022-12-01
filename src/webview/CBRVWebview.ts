@@ -590,14 +590,14 @@ export default class CBRVWebview {
 
             return raised
                 // top level is from/to after being raised to the first visible files/folders, regardless of merging
-                .groupBy(({raised}) => this.connKey(raised, {lines: false, ordered: false}))
+                .groupBy(({raised}) => this.connKey(raised, false, false))
                 .flatMap((pairs) => {
                     const obj = pairs.map(({conn, raised}) => ({
                         ...this.settings.connectionDefaults,
                         ...conn,
                         // special props for the special merge rules
-                        file: this.connKey(conn, {lines: false, ordered: false}),
-                        line: this.connKey(conn, {lines: true, ordered: false}),
+                        file: this.connKey(conn, false, false),
+                        line: this.connKey(conn, true, false),
                         direction: (raised.from?.file ?? '') <= (raised.to?.file ?? ''),
                         // We'll group these into arrays for use later
                         from: raised.from, to: raised.to, // override conn.from/to with raised
@@ -976,13 +976,13 @@ export default class CBRVWebview {
         return ancestors.length == 0 ? "/" : ancestors.join("/");
     }
 
-    connKey(conn: NormalizedConnection, options: {lines?: boolean, ordered?: boolean} = {}): string {
-        options = {lines: true, ordered: true, ...options};
-        let key = [conn?.from, conn?.to].map(e => e ? `${e.file}:${options.lines && e.line ? e.line : ''}` : '');
-        if (!options.ordered) {
-            key = key.sort();
+    connKey(conn: NormalizedConnection, lines = true, ordered = true): string {
+        let from = conn.from ? `${conn.from.file}:${lines && conn.from.line ? conn.from.line : ''}` : '';
+        let to = conn.to ? `${conn.to.file}:${lines && conn.to.line ? conn.to.line : ''}` : '';
+        if (!ordered && from > to) {
+            [to, from] = [from, to];
         }
-        return JSON.stringify(key);
+        return JSON.stringify(from) + "," + JSON.stringify(to);
     }
 
     /** Convert svg viewport units to actual rendered pixel length  */
