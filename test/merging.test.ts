@@ -10,8 +10,8 @@ describe("Test merging.ts", () => {
         {a: 4, b: "c", c: [2], d: false},
     ];
 
-    const merge = (items: any[], rules: MergeRules, customMergers?: Mergers) => {
-        const merger = new RuleMerger(rules, customMergers);
+    const merge = (items: any[], rules: MergeRules, customMergers?: Mergers, virtualProps?: Record<string, any>) => {
+        const merger = new RuleMerger(rules, customMergers, virtualProps);
         return merger.merge(items);
     };
 
@@ -368,6 +368,72 @@ describe("Test merging.ts", () => {
 
         expect(() => new RuleMerger({"o[0]": "group", "o[0][1]": "group"}))
             .to.throw('Duplicate rules for the same key "o[0]", "o[0][1]"');
+
+        expect(() => new RuleMerger({"a": "add"}, {}, {a: (o: any) => 1}))
+            .to.throw('Virtual rule "a" can only be "same" or "ignore"');
+    });
+
+    it('virtual props', () => {
+        let data: any[] = [
+            {a: 1, b: "a", d: 1},
+            {a: 1, b: "b", d: 2},
+            {a: 2, b: "b", d: 3},
+        ];
+        
+        expect(merge(data, {
+            a: "add",
+            c: "same",
+        }, {}, {
+            c: "b",
+        })).to.eql([
+            {a: 1},
+            {a: 3},
+        ]);
+
+        expect(merge(data, {
+            a: "add",
+            c: "ignore",
+        }, {}, {
+            c: "b",
+        })).to.eql([
+            {a: 4},
+        ]);
+
+        expect(merge(data, {
+            a: "add",
+            d: "same",
+        }, {}, {
+            d: "b", // overrides d in actual object
+        })).to.eql([
+            {a: 1},
+            {a: 3},
+        ]);
+
+        data = [
+            {a: 1, b: {c: "a"}},
+            {a: 1, b: {c: "b"}},
+            {a: 2, b: {c: "b"}},
+        ];
+
+        expect(merge(data, {
+            a: "add",
+            c: "same",
+        }, {}, {
+            c: "b.c",
+        })).to.eql([
+            {a: 1},
+            {a: 3},
+        ]);
+
+        expect(merge(data, {
+            a: "add",
+            c: "same",
+        }, {}, {
+            c: (o: any) => o.b.c,
+        })).to.eql([
+            {a: 1},
+            {a: 3},
+        ]);
     });
 });
 
