@@ -71,15 +71,8 @@ export class RuleMerger {
 
     /** Normalize and validate rules */
     private static normalizeRules(rules: MergeRules, mergers: Mergers): NormalizedMergeRules {
-        const normalizedRules = _.mapValues(rules, rule => {
-            rule = typeof rule == "string" ? {rule: rule} : rule;
-            if (!(rule.rule in mergers))
-                throw Error(`Unknown rule "${rule.rule}"`);
-            return rule;
-        });
-
         // Check that there's no rules accessing the same paths or parts of the same paths
-        const paths = Object.keys(normalizedRules).map<[string, string[]]>(p => [p, _.toPath(p)]);
+        const paths = Object.keys(rules).map<[string, string[]]>(p => [p, _.toPath(p)]);
         for (let i1 = 0; i1 < paths.length; i1++) {
             for (let i2 = i1 + 1; i2 < paths.length; i2++) {
                 const [short, long] = _.sortBy([paths[i1], paths[i2]], ([key, path]) => path.length);
@@ -90,7 +83,15 @@ export class RuleMerger {
             }
         }
 
-        return normalizedRules;
+        return _(rules)
+            .mapValues(rule => {
+                rule = typeof rule == "string" ? {rule: rule} : rule;
+                if (!(rule.rule in mergers))
+                    throw Error(`Unknown rule "${rule.rule}"`);
+                return rule;
+            })
+            .pickBy(rule => rule.rule !== "ignore") // filter ignore rules since they don't do anything.
+            .value();
     }
 }
 
