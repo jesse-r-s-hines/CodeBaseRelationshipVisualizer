@@ -21,6 +21,8 @@ export class RuleMerger {
     static defaultMergers: Record<string, (items: any[], rule: any) => any> = {
         same: items => items[0], // we know all values are the same
         ignore: items => undefined, // will be omitted
+        first: items => items[0], // we know all values are the same
+        last: items => items.at(-1), // we know all values are the same
         least: items => _(items).min(),
         greatest: items => _(items).max(),
         // find the most/least common defined item. Ignore undefined items.

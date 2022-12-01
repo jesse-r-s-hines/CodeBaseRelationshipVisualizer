@@ -258,6 +258,12 @@ describe("Test merging.ts", () => {
 
         merger = new RuleMerger({a: {rule: 'join', sep: "-"}});
         expect(merger.merge([{a: "A"}, {a: "B"}, {a: "C"}])).to.eql([{a: "A-B-C"}]);
+
+        merger = new RuleMerger({a: 'first'});
+        expect(merger.merge([{a: "A"}, {a: "B"}, {a: "C"}])).to.eql([{a: "A"}]);
+
+        merger = new RuleMerger({a: 'last'});
+        expect(merger.merge([{a: "A"}, {a: "B"}, {a: "C"}])).to.eql([{a: "C"}]);
     });
 
     it('same on missing', () => {

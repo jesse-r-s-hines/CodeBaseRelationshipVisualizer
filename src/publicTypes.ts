@@ -182,9 +182,9 @@ export type MergeRules = {
     line?: SameRule | IgnoreRule
     direction?: SameRule | IgnoreRule
 
-    width?: SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule | AddRule | ValueRule
-    color?: SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule | ValueRule
-    tooltip?: SameRule | IgnoreRule | LeastRule | GreatestRule | LeastCommonRule | MostCommonRule | ValueRule | JoinRule
+    width?: BuiltinMergeRule
+    color?: BuiltinMergeRule
+    tooltip?: BuiltinMergeRule
 } | {
     [key: string]: BuiltinMergeRule
 }
