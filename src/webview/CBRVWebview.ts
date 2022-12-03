@@ -515,22 +515,29 @@ export default class CBRVWebview {
 
     updateConnections(fullRerender = true) {
         let merged: MergedConnection[];
+        let paths: ConnPath[];
+
         if (fullRerender || this.mergedConnectionsCache.length == 0) {
             merged = this.mergeConnections(this.connections);
+            paths = this.calculatePaths(merged);
         } else {
+            const changed = this.connections
+                .filter(conn => [conn.from, conn.to].some(e => e && !this.unchangedFiles.has(e.file)));
+            if (changed.length == 0) {
+                return; // nothing to do, we don't need to rerender anything.
+            }
+
             const unchanged = this.mergedConnectionsCache
                 .filter(mergedConn =>
                     mergedConn.connections.every(conn =>
                         [conn.from, conn.to].every(e => !e || this.unchangedFiles.has(e.file))
                     )
                 );
-            const changed = this.connections
-                .filter(conn => [conn.from, conn.to].some(e => e && !this.unchangedFiles.has(e.file)));
             merged = [...unchanged, ...this.mergeConnections(changed)];
+            paths = this.calculatePaths(merged);
         }
-        this.mergedConnectionsCache = merged;
 
-        const paths = this.calculatePaths(merged);
+        this.mergedConnectionsCache = merged;
 
         // If directed == false, we don't need any markers
         const markers = this.settings.directed ? _(merged).map(c => c.color).uniq().value() : [];
