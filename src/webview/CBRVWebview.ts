@@ -123,6 +123,9 @@ export default class CBRVWebview {
     transform: d3.ZoomTransform = new d3.ZoomTransform(1, 0, 0);
     /** Maps file paths to their rendered circle (or first visible circle if they are hidden) */
     pathMap: Map<string, Node> = new Map()
+    /** A set of the filenames of nodes have not moved in the last update */
+    unchangedFiles: Set<string> = new Set()
+    mergedConnectionsCache: MergedConnection[] = [];
 
     // TODO maybe move this (and width/height/etc.) into a React-style "state" object and make update use it.
     hideUnconnected = false
@@ -228,10 +231,10 @@ export default class CBRVWebview {
 
         if (settings) {
             this.updateCodebase(true);
-            this.updateConnections();
+            this.updateConnections(true);
         } else {
             this.updateCodebase(!!codebase);
-            this.updateConnections();
+            this.updateConnections(!!codebase);
         }
 
         // this is cheap and influenced by multiple things so always update it.
@@ -252,7 +255,7 @@ export default class CBRVWebview {
         inputDiv.style("display", hasConnections ? 'inherit' : 'none');
     }
 
-    updateCodebase(fullRerender = false) { // rename to filesChanged
+    updateCodebase(fullRerender = true) { // rename to filesChanged
         const filteredCodebase = this.filteredCodebase();
 
         const root = d3.hierarchy<AnyFile>(filteredCodebase,
@@ -474,15 +477,25 @@ export default class CBRVWebview {
                 nodes[i].setAttribute('d', path.toString());
             });
 
+        this.allFilesSelection = all as Selection<SVGGElement, Node>;
+
         // Store a map of paths to nodes for future use in connections
-        this.pathMap = new Map();
+        const newPathMap = new Map<string, Node>();
         packLayout.each((d) => {
             // get d or the first ancestor that is visible
             const firstVisible = d.ancestors().find(p => !p.parent || !this.shouldHideContents(p.parent))!;
-            this.pathMap.set(this.filePath(d), firstVisible);
+            newPathMap.set(this.filePath(d), firstVisible);
         });
-
-        this.allFilesSelection = all as Selection<SVGGElement, Node>;
+        this.unchangedFiles = new Set();
+        if (!fullRerender) { // full rerender nothing is unchanged
+            for (const [filePath, newNode] of newPathMap) {
+                const oldNode = this.pathMap.get(filePath);
+                if (oldNode && this.filePath(oldNode) == this.filePath(newNode)) {
+                    this.unchangedFiles.add(filePath);
+                }
+            }
+        }
+        this.pathMap = newPathMap;
     }
 
     filteredCodebase() {
@@ -500,8 +513,23 @@ export default class CBRVWebview {
         );
     }
 
-    updateConnections() {
-        const merged = this.mergeConnections(this.connections);
+    updateConnections(fullRerender = true) {
+        let merged: MergedConnection[];
+        if (fullRerender || this.mergedConnectionsCache.length == 0) {
+            merged = this.mergeConnections(this.connections);
+        } else {
+            const unchanged = this.mergedConnectionsCache
+                .filter(mergedConn =>
+                    mergedConn.connections.every(conn =>
+                        [conn.from, conn.to].every(e => !e || this.unchangedFiles.has(e.file))
+                    )
+                );
+            const changed = this.connections
+                .filter(conn => [conn.from, conn.to].some(e => e && !this.unchangedFiles.has(e.file)));
+            merged = [...unchanged, ...this.mergeConnections(changed)];
+        }
+        this.mergedConnectionsCache = merged;
+
         const paths = this.calculatePaths(merged);
 
         // If directed == false, we don't need any markers
@@ -583,10 +611,19 @@ export default class CBRVWebview {
             });
 
         if (this.settings.mergeRules) {
-            const merger = new RuleMerger({
-                ...this.settings.mergeRules,
-                from: "group", to: "group", connections: "group",
-            });
+            const merger = new RuleMerger(
+                {
+                    ...this.settings.mergeRules,
+                    from: "group", to: "first", connections: "group",
+                },
+                {},
+                { // virtual properties that can be used in the rules
+                    // o.connections will be the single connection for the object (since we haven't grouped it yet)
+                    file: (o: any) => this.connKey(o.connections, false, false),
+                    line: (o: any) => this.connKey(o.connections, true, false),
+                    direction: (o: any) => (o.from?.file ?? '') <= (o.to?.file ?? ''),
+                }
+            );
 
             return raised
                 // top level is from/to after being raised to the first visible files/folders, regardless of merging
@@ -595,10 +632,6 @@ export default class CBRVWebview {
                     const obj = pairs.map(({conn, raised}) => ({
                         ...this.settings.connectionDefaults,
                         ...conn,
-                        // special props for the special merge rules
-                        file: this.connKey(conn, false, false),
-                        line: this.connKey(conn, true, false),
-                        direction: (raised.from?.file ?? '') <= (raised.to?.file ?? ''),
                         // We'll group these into arrays for use later
                         from: raised.from, to: raised.to, // override conn.from/to with raised
                         connections: conn,
@@ -608,11 +641,11 @@ export default class CBRVWebview {
                 })
                 .map<MergedConnection>(obj => {
                     const from = obj.from[0];
-                    const to = obj.to[0];
+                    const to = obj.to;
                     const isSelfLoop = (from?.file === to?.file);
 
                     return {
-                        ..._.omit(obj, ["file", "line", "direction"]),
+                        ...obj,
                         from, to,
                         bidirectional: !isSelfLoop && (obj.from.some((e: NormalizedEndpoint) => e?.file === to?.file)),
                     } as MergedConnection;
