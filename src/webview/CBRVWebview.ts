@@ -722,7 +722,7 @@ export default class CBRVWebview {
      * NOTE: It mutates the ends in ends.
      */
     anchorEnds(ends: IncompleteConnEnd[]): void {
-        const {target, r: targetR, conn, end} = ends[0];
+        const {r: targetR, conn, end} = ends[0];
         const file = conn[end]?.file ?? '';
 
         if (targetR) { // This is an end to a normal file
@@ -730,7 +730,7 @@ export default class CBRVWebview {
             // to a number that is divisible by 4 so we get nice angles.
             const numAnchors = Math.max(geo.snap((2*Math.PI*targetR) / this.s.conn.anchorSpacing, 4), 4);
             const deltaTheta = (2*Math.PI) / numAnchors;
-            const anchorPoints: IncompleteConnEnd[][] = _.range(numAnchors).map(i => []);
+            const anchorPoints: IncompleteConnEnd[][] = _.times(numAnchors, i => []);
 
             // assign to an anchor point and update the actual rendered point. Makes sure that connections going
             // opposite directions don't go to the same anchor point.
@@ -809,7 +809,7 @@ export default class CBRVWebview {
             anchorPoints.forEach((ends, anchorI) => {
                 ends.forEach(end => {
                     // NOTE: Mutating end
-                    end.anchorId = JSON.stringify([file, anchorI]);
+                    end.anchorId = `r:${file}:${anchorI}`;
                     end.anchorAngle = deltaTheta * anchorI;
                 });
             });
@@ -817,7 +817,8 @@ export default class CBRVWebview {
             ends.forEach(end => {
                 // NOTE: Mutating end
                 // use the file of the end that is connected to a real file as the anchorId
-                end.anchorId = JSON.stringify(["", end.conn[end.end == "from" ? "to" : "from"]!.file]);
+                const connectedFile = end.conn[end.end == "from" ? "to" : "from"]!.file;
+                end.anchorId = `oos:${connectedFile}`;
             });
         }
     }
