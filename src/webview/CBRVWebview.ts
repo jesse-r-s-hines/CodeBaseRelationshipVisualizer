@@ -439,7 +439,7 @@ export default class CBRVWebview {
             .classed("labels-hidden", d => this.shouldHideLabels(d));
 
         // we only need to recalculate these for new elements unless the file structure changed (not just zoom)
-        const changed = fullRerender ? all : all.filter(".new"); // hmm. Probably don't need this .new bit. Just make changed "enter" selection
+        const changed = fullRerender ? all : all.filter(".new");
         
         changed.attr("transform", d => `translate(${d.x},${d.y})`);
 
@@ -558,7 +558,22 @@ export default class CBRVWebview {
                 enter => enter.append("path")
                     .classed("connection", true)
                     .attr("data-from", ({conn}) => conn.from?.file ?? "")
-                    .attr("data-to", ({conn}) => conn.to?.file ?? ""),
+                    .attr("data-to", ({conn}) => conn.to?.file ?? "")
+                    // To avoid creating many tippy instances, create them dynamically on hover over a connection
+                    .on("mouseover", (event, {id, conn}) => {
+                        const elem = event.currentTarget as HTMLElement;
+                        clearTimeout(this.hoverTimerId);
+                        if (!elem.hasAttribute("data-tippy-content")) {
+                            this.hoverTimerId = _.delay(() => {
+                                this.emit("tooltip-request", {id, conn}); // will create and trigger the tooltip
+                            }, 250);
+                        }
+                        this.connShowTransition(d3.select(event.currentTarget), true);
+                    })
+                    .on("mouseout", (event, {id, conn}) => {
+                        clearTimeout(this.hoverTimerId);
+                        this.connShowTransition(d3.select(event.currentTarget), false);
+                    }),
                 update => update,
                 exit => exit
                     .each((d, i, nodes) => (nodes[i] as any)._tippy?.destroy()) // destroy any tippy instances
@@ -575,22 +590,7 @@ export default class CBRVWebview {
                 .attr("data-tippy-content", null) // set this on tooltip creation
                 .interrupt() // clear transitions
                 .style("display", null) // unset these to clear any showOnHover transitions
-                .style("opacity", null)
-                // To avoid creating many tippy instances, create them dynamically on hover over a connection
-                .on("mouseover", (event, {id, conn}) => {
-                    const elem = event.currentTarget as HTMLElement;
-                    clearTimeout(this.hoverTimerId);
-                    if (!elem.hasAttribute("data-tippy-content")) {
-                        this.hoverTimerId = _.delay(() => {
-                            this.emit("tooltip-request", {id, conn}); // will create and trigger the tooltip
-                        }, 250);
-                    }
-                    this.connShowTransition(d3.select(event.currentTarget), true);
-                })
-                .on("mouseout", (event, {id, conn}) => {
-                    clearTimeout(this.hoverTimerId);
-                    this.connShowTransition(d3.select(event.currentTarget), false);
-                });
+                .style("opacity", null);
     }
 
     /**
