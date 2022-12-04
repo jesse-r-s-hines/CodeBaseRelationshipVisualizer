@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Uri } from "vscode";
+import { Uri, RelativePattern } from "vscode";
 import * as path from 'path';
 import { promises as fsp } from 'fs';
 import { AnyFile, Directory, FileType } from "./privateTypes";
@@ -53,8 +53,8 @@ export async function getFileTree(uri: Uri, base?: Uri, type?: FileType): Promis
     }
 }
 
-/** Gets a list of files under base with similar semantics as the built-in VSCode search interface. */
-export async function getFilteredFileList(base: Uri, include?: string, exclude?: string): Promise<Uri[]> {
+/** Convert globs to RelativePatterns with similar semantics as the built-in VSCode search interface  */
+export function parseGlobs(base: Uri, include?: string, exclude?: string): [RelativePattern, RelativePattern|undefined] {
     // TODO this means you can't use {} in the globals since you can't nest {}.
     // Also you can't pass a whole folder as part of include/exclude either.
     // Exceptions?
@@ -63,14 +63,19 @@ export async function getFilteredFileList(base: Uri, include?: string, exclude?:
     //    - https://github.com/Microsoft/vscode/issues/32761
     //    - https://github.com/microsoft/vscode/commit/97fc799b6f5e87e8a808a802c3a341c75d4fc180
     //    - vscode/src/vs/workbench/services/search/common/queryBuilder.ts
-
     const parseGlob = (glob: string) => {
         glob = `{${glob.split(",").map(g => g.trim()).join(",")}}`;
-        return new vscode.RelativePattern(base, glob);
+        return new RelativePattern(base, glob);
     };
 
     const includePattern = parseGlob(include?.trim() ? include : '**/*');
     const excludePattern = exclude?.trim() ? parseGlob(exclude) : undefined;
+    return [includePattern, excludePattern];
+}
+
+/** Gets a list of files under base with similar semantics as the built-in VSCode search interface. */
+export async function getFilteredFileList(base: Uri, include?: string, exclude?: string): Promise<Uri[]> {
+    const [includePattern, excludePattern] = parseGlobs(base, include, exclude);
     let fileList = await vscode.workspace.findFiles(includePattern, excludePattern);
     fileList = _.sortBy(fileList, uri => uri.fsPath);
     return fileList;
