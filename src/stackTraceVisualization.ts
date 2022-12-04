@@ -54,7 +54,8 @@ class StackTraceVisualization implements vscode.DebugAdapterTrackerFactory {
                     const stoppedMsg = msg as DebugProtocol.StoppedEvent;
                     const threadId = stoppedMsg.body.threadId;
 
-                    // TODO may have to do "paging" of the stackTrace?
+                    // TODO VSCode docs imply I need to do "paging" of the stackTrace? I can't get python debugging
+                    // to require paging, may be implementation dependent.
                     const stackTrace = await session.customRequest("stackTrace", {
                         threadId: threadId,
                     }) as DebugProtocol.StackTraceResponse['body'];
