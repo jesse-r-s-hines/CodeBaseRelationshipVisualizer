@@ -16,6 +16,7 @@
         "*",
         "onCommand:codeBaseRelationshipVisualizer.start",
         "onCommand:hyperlinkVisualization.start",
+        "onCommand:stackTraceVisualization.start",
         "onWebviewPanel:codeBaseRelationshipVisualizer"
     ],
     "contributes": {
@@ -28,6 +29,11 @@
             {
                 "command": "hyperlinkVisualization.start",
                 "title": "Visualize a hyperlink graph",
+                "category": "CodeBase Relationship Visualizer"
+            },
+            {
+                "command": "stackTraceVisualization.start",
+                "title": "Visualize the stack trace during a debugger session",
                 "category": "CodeBase Relationship Visualizer"
             }
         ]
