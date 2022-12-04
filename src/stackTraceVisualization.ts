@@ -68,6 +68,10 @@ class StackTraceVisualization implements vscode.DebugAdapterTrackerFactory {
 
                     this.updateVisualization();
                 }
+            },
+            onWillStopSession: async () => {
+                this.stackTrace = undefined;
+                this.updateVisualization();
             }
         };
     }
