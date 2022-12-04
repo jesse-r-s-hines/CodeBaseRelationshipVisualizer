@@ -28,10 +28,12 @@ export async function visualizeHyperlinkGraph(cbrvAPI: API) {
         },
     };
 
-    const codebase = workspace.workspaceFolders![0]!.uri;
-    const files = await workspace.findFiles(new RelativePattern(workspace.workspaceFolders![0]!.uri, '**/*'));
-    const connections = await getHyperlinks(codebase, files);
-    const visualization = await cbrvAPI.create(settings, connections);
+    const visualization = await cbrvAPI.create(settings);
+
+    visualization.onFSChange(async (visState) => {
+        visState.connections = await getHyperlinks(visState.codebase, visState.files);
+    }, {immediate: true});
+
     return visualization;
 }
 
