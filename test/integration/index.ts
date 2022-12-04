@@ -4,7 +4,7 @@ import glob from 'glob';
 
 export function run(): Promise<void> {
     // Create the mocha test
-    const mocha = new Mocha({ui: 'tdd', color: true});
+    const mocha = new Mocha({ui: 'tdd', color: true, timeout: 10*1000});
 
     const testsRoot = path.resolve(__dirname, '.');
 
