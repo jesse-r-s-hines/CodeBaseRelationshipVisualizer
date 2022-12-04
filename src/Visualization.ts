@@ -109,9 +109,10 @@ export class Visualization {
             this.connections = cloneDeep(this.visualization.connections);
         }
 
-        /**
-        * Get a list of all the files included by the current include/exclude settings.
-        */
+        /** The root of the codebase we are visualizing */
+        get codebase(): Uri { return this.visualization.codebase; }
+
+        /** Get a list of all the files included by the current include/exclude settings. */
         get files(): Uri[] { return this.visualization.files; }
 
         // /** TODO
