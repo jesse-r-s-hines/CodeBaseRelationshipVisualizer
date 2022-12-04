@@ -60,18 +60,30 @@ export class Visualization {
         this.codebase = codebase;
     }
 
-    /**
-     * These properties and methods are just passed through to the internal webview panel.
-     * See https://code.visualstudio.com/api/references/vscode-api#WebviewPanel
-     */
-    get active() { return this.webviewPanel!.active; }
-    get viewColumn() { return this.webviewPanel!.viewColumn; }
-    get visible() { return this.webviewPanel!.visible; }
-    reveal(viewColumn?: vscode.ViewColumn, preserveFocus?: boolean): void {
-        this.webviewPanel!.reveal(viewColumn, preserveFocus);
-    }
-    dispose(): any {
-        return this.webviewPanel!.dispose();
+    /** A mutable "view" on a Visualization */
+    static VisualizationState = class {
+        private visualization: Visualization
+
+        settings: VisualizationSettings
+        connections: Connection[]
+        
+        constructor(visualization: Visualization) {
+            this.visualization = visualization;
+            this.settings = cloneDeep(this.visualization.originalSettings);
+            this.connections = cloneDeep(this.visualization.connections);
+        }
+
+        /** The root of the codebase we are visualizing */
+        get codebase(): Uri { return this.visualization.codebase; }
+
+        /** Get a list of all the files included by the current include/exclude settings. */
+        get files(): Uri[] { return this.visualization.files; }
+
+        // /** TODO
+        // * Return connections that are connected to the given file. Optionally
+        // * specify the direction the are going relative to the file.
+        // */
+        // getConnected(file: Uri, direction?: Direction): Connection[]
     }
 
     /**
@@ -108,31 +120,21 @@ export class Visualization {
         this.onFSChangeCallbackImmediate = options?.immediate ?? false;
     }
 
-    /** A mutable "view" on a Visualization */
-    static VisualizationState = class {
-        private visualization: Visualization
 
-        settings: VisualizationSettings
-        connections: Connection[]
-        
-        constructor(visualization: Visualization) {
-            this.visualization = visualization;
-            this.settings = cloneDeep(this.visualization.originalSettings);
-            this.connections = cloneDeep(this.visualization.connections);
-        }
-
-        /** The root of the codebase we are visualizing */
-        get codebase(): Uri { return this.visualization.codebase; }
-
-        /** Get a list of all the files included by the current include/exclude settings. */
-        get files(): Uri[] { return this.visualization.files; }
-
-        // /** TODO
-        // * Return connections that are connected to the given file. Optionally
-        // * specify the direction the are going relative to the file.
-        // */
-        // getConnected(file: Uri, direction?: Direction): Connection[]
+    /**
+     * These properties and methods are just passed through to the internal webview panel.
+     * See https://code.visualstudio.com/api/references/vscode-api#WebviewPanel
+     */
+    get active() { return this.webviewPanel!.active; }
+    get viewColumn() { return this.webviewPanel!.viewColumn; }
+    get visible() { return this.webviewPanel!.visible; }
+    reveal(viewColumn?: vscode.ViewColumn, preserveFocus?: boolean): void {
+        this.webviewPanel!.reveal(viewColumn, preserveFocus);
     }
+    dispose(): any {
+        return this.webviewPanel!.dispose();
+    }
+
 
     async launch() {
         if (this.webviewPanel) {
