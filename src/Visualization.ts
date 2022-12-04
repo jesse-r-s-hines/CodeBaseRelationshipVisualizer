@@ -8,6 +8,8 @@ import { DeepRequired } from "ts-essentials";
 import _, { isEqual, cloneDeep } from 'lodash';
 import * as fileHelper from "./fileHelper";
 
+type VisualizationState = InstanceType<typeof Visualization.VisualizationState>;
+
 /**
  * Handles the visualization, allowing you to update the visualization.
  */
@@ -51,7 +53,7 @@ export class Visualization {
         connections: Connection[] = []
     ) {
         this.context = context;
-        this.originalSettings = this.settings = settings as any; // just to silence typescript "not initialized" errors
+        this.originalSettings = this.settings = undefined as any; // just to silence typescript "not initialized" errors
         this.updateSettings(settings); // sets originalSettings and settings
         this.codebase = codebase;
         this.connections = connections;
@@ -75,9 +77,9 @@ export class Visualization {
      * Used to update the visualization. Update the state in the callback and the visualization will update after
      * calling the callback.
      */
-    update(func: (state: InstanceType<typeof Visualization.VisualizationState>) => void): void {
+    async update(func: (visState: VisualizationState) => Promise<void>): Promise<void> {
         const state = new Visualization.VisualizationState(this);
-        func(state); // user can mutate settings and connections in here
+        await func(state); // user can mutate settings and connections in here
         
         const send = {settings: false, connections: false};
 
@@ -91,7 +93,7 @@ export class Visualization {
             this.connections = state.connections;
         }
 
-        this.sendUpdate(send);
+        await this.sendUpdate(send);
     }
 
     /** A mutable "view" on a Visualization */
@@ -134,11 +136,15 @@ export class Visualization {
                         new vscode.RelativePattern(this.codebase, '**/*')
                     );
 
+                    const callback = async (uri: Uri) => {
+                        await this.sendUpdate({codebase: true});
+                    };
+
                     // TODO might have issues with using default excludes?
                     // TODO send only changes? Likely use a merge-throttle pattern to clump multiple changes.
-                    this.fsWatcher.onDidChange(uri => this.sendUpdate({codebase: true}));
-                    this.fsWatcher.onDidCreate(uri => this.sendUpdate({codebase: true}));
-                    this.fsWatcher.onDidDelete(uri => this.sendUpdate({codebase: true}));
+                    this.fsWatcher.onDidChange(callback);
+                    this.fsWatcher.onDidCreate(callback);
+                    this.fsWatcher.onDidDelete(callback);
                     // this.fsWatcher.dispose(); // TODO dispose after usage
                 } else if (message.type == "filter") {
                     this.include = message.include;
