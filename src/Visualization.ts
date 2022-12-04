@@ -142,17 +142,31 @@ export class Visualization {
         }
         this.webviewPanel = this.createWebviewPanel();
 
+        // Await until we get the ready message from the webview
+        await new Promise((resolve, reject) => {
+            const disposable = this.webviewPanel!.webview.onDidReceiveMessage(
+                async (message: CBRVMessage) => {
+                    if (message.type == "ready") {
+                        disposable.dispose();
+                        resolve(undefined);
+                    } else {
+                        reject(new Error('First message should be "ready"'));
+                    }
+                }
+            );
+        });
+
+        await this.updateFileList();
+        await this.sendSet({codebase: true, settings: true, connections: true});
+        if (this.onFSChangeCallback && this.onFSChangeCallbackImmediate) {
+            this.update(this.onFSChangeCallback);
+        }
+
+        this.setupWatcher();
+
         this.webviewPanel.webview.onDidReceiveMessage(
             async (message: CBRVMessage) => {
-                if (message.type == "ready") {
-                    await this.updateFileList();
-                    await this.sendSet({codebase: true, settings: true, connections: true});
-                    if (this.onFSChangeCallback && this.onFSChangeCallbackImmediate) {
-                        this.update(this.onFSChangeCallback);
-                    }
-
-                    this.setupWatcher();
-                } else if (message.type == "filter") {
+                if (message.type == "filter") {
                     this.include = message.include;
                     this.exclude = message.exclude;
                     await this.sendSet({codebase: true});
