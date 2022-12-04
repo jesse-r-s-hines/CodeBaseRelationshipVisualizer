@@ -106,7 +106,7 @@ export class Visualization {
             this.connections = state.connections;
         }
 
-        await this.sendUpdate(send);
+        await this.sendSet(send);
     }
 
     /**
@@ -145,7 +145,7 @@ export class Visualization {
         this.webviewPanel.webview.onDidReceiveMessage(
             async (message: CBRVMessage) => {
                 if (message.type == "ready") {
-                    await this.sendUpdate({codebase: true, settings: true, connections: true});
+                    await this.sendSet({codebase: true, settings: true, connections: true});
                     if (this.onFSChangeCallback && this.onFSChangeCallbackImmediate) {
                         this.update(this.onFSChangeCallback);
                     }
@@ -156,7 +156,7 @@ export class Visualization {
                     );
 
                     const callback = async (uri: Uri) => {
-                        await this.sendUpdate({codebase: true});
+                        await this.sendSet({codebase: true});
                         if (this.onFSChangeCallback) {
                             this.update(this.onFSChangeCallback);
                         }
@@ -171,7 +171,7 @@ export class Visualization {
                 } else if (message.type == "filter") {
                     this.include = message.include;
                     this.exclude = message.exclude;
-                    await this.sendUpdate({codebase: true});
+                    await this.sendSet({codebase: true});
                 } else if (message.type == "open") {
                     // NOTE: we could do these and Command URIs inside the webview instead. That might be simpler
                     await vscode.commands.executeCommand("vscode.open", this.getUri(message.file));
@@ -266,7 +266,7 @@ export class Visualization {
         `;
     }
 
-    private async sendUpdate(send: {codebase?: boolean, settings?: boolean, connections?: boolean}) {
+    private async sendSet(send: {codebase?: boolean, settings?: boolean, connections?: boolean}) {
         let codebase: Directory|undefined;
         if (send.codebase) {
             this.files = await fileHelper.getFilteredFileList(this.codebase, this.include, this.exclude);
