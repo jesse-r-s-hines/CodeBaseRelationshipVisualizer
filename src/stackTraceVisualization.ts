@@ -79,17 +79,18 @@ class StackTraceVisualization implements vscode.DebugAdapterTrackerFactory {
 
     updateVisualization() {
         this.visualization?.update(async visState => {
-            visState.connections = (this.stackTrace ?? []).map((frame, i, arr) => ({
-                from: (i == 0) ? undefined : {
-                    file: path.relative(visState.codebase.fsPath, arr[i - 1].file),
-                    line: arr[i - 1].line,
-                },
-                to: {
-                    file: path.relative(visState.codebase.fsPath, frame.file),
-                    line: frame.line,
-                },
-            }));
-            console.log("updateVisualization", visState.connections);
+            visState.connections = (this.stackTrace ?? [])
+                .filter(frame => visState.files.some(uri => frame.file == uri.fsPath))
+                .map((frame, i, arr) => ({
+                    from: (i == 0) ? undefined : {
+                        file: path.relative(visState.codebase.fsPath, arr[i - 1].file),
+                        line: arr[i - 1].line,
+                    },
+                    to: {
+                        file: path.relative(visState.codebase.fsPath, frame.file),
+                        line: frame.line,
+                    },
+                }));
         });
     }
 }
