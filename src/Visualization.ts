@@ -163,7 +163,9 @@ export class Visualization {
 
         this.webviewPanel.webview.onDidReceiveMessage(
             async (message: CBRVMessage) => {
-                if (message.type == "filter") {
+                if (message.type == "ready") { // we can get ready again if the webview closes and reopens.
+                    await this.sendSet({codebase: true, settings: true, connections: true});
+                } else if (message.type == "filter") {
                     this.include = message.include;
                     this.exclude = message.exclude;
                     await this.sendSet({codebase: true});
