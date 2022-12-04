@@ -2,19 +2,19 @@ import * as vscode from 'vscode';
 import { Uri } from 'vscode';
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { API, VisualizationSettings, Connection } from "./api";
+import { API, Visualization, VisualizationSettings, Connection } from "./api";
 import _ from 'lodash';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cbrvAPI = new API(context);
     context.subscriptions.push(
         vscode.commands.registerCommand('hyperlinkGraphVisualization.start', async () => {
-            const visualization = await visualizeHyperlinkGraph(cbrvAPI);
+            const visualization = await createHyperlinkVisualization(cbrvAPI);
         }),
     );
 }
 
-async function visualizeHyperlinkGraph(cbrvAPI: API) {
+async function createHyperlinkVisualization(cbrvAPI: API): Promise<Visualization> {
     const settings: VisualizationSettings = {
         title: "Hyperlink Visualization",
         directed: true,
