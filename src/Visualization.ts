@@ -55,8 +55,8 @@ export class Visualization {
         settings: VisualizationSettings = {},
     ) {
         this.context = context;
-        this.originalSettings = this.settings = undefined as any; // just to silence typescript "not initialized" errors
-        this.updateSettings(settings); // sets originalSettings and settings
+        this.originalSettings = settings;
+        this.settings = this.normalizeSettings(settings);
         this.codebase = codebase;
     }
 
@@ -97,13 +97,17 @@ export class Visualization {
         const send = {settings: false, connections: false};
 
         if (!isEqual(this.originalSettings, state.settings)) {
+            this.originalSettings = state.settings;
+            this.settings = this.normalizeSettings(state.settings);
+            if (this.webviewPanel) {
+                this.webviewPanel.title == this.settings.title;
+            }
             send.settings = true;
-            this.updateSettings(state.settings);
         }
 
         if (!isEqual(this.connections, state.connections)) {
-            send.connections = true;
             this.connections = state.connections;
+            send.connections = true;
         }
 
         await this.sendSet(send);
@@ -194,8 +198,8 @@ export class Visualization {
         );
     }
 
-    private updateSettings(settings: VisualizationSettings) {
-        this.originalSettings = settings;
+    /** Returns a complete settings object with defaults filled in an normalized a bit.  */
+    private normalizeSettings(settings: VisualizationSettings): DeepRequired<VisualizationSettings> {
         settings = cloneDeep(settings);
         if (settings.mergeRules === true) {
             settings.mergeRules = {}; // just use all the defaults
@@ -204,11 +208,9 @@ export class Visualization {
             settings.showOnHover = "both";
         }
 
-        this.settings = _.merge({}, Visualization.defaultSettings, settings);
+        settings = _.merge({}, Visualization.defaultSettings, settings);
 
-        if (this.webviewPanel) {
-            this.webviewPanel.title == this.settings.title;
-        }
+        return settings as DeepRequired<VisualizationSettings>;
     }
 
     private createWebviewPanel(): WebviewPanel {
