@@ -229,13 +229,8 @@ export default class CBRVWebview {
         this.codebase = codebase ?? this.codebase;
         this.connections = connections ?? this.connections;
 
-        if (settings) {
-            this.updateCodebase(true);
-            this.updateConnections(true);
-        } else {
-            this.updateCodebase(!!codebase);
-            this.updateConnections(!!codebase);
-        }
+        this.updateCodebase(!!(settings || codebase));
+        this.updateConnections(!!(settings || codebase || connections));
 
         // this is cheap and influenced by multiple things so always update it.
         // And update it last so it can use connectionSelection
