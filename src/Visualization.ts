@@ -135,10 +135,6 @@ export class Visualization {
     reveal(viewColumn?: vscode.ViewColumn, preserveFocus?: boolean): void {
         this.webviewPanel!.reveal(viewColumn, preserveFocus);
     }
-    dispose(): any {
-        return this.webviewPanel!.dispose();
-    }
-
 
     async launch() {
         if (this.webviewPanel) {
@@ -180,6 +176,12 @@ export class Visualization {
             undefined,
             this.context.subscriptions
         );
+    }
+
+    /** Destroy the visualization and all webviews/watchers etc. */
+    dispose(): void {
+        this.webviewPanel?.dispose();
+        this.fsWatcher?.dispose();
     }
 
     /**
