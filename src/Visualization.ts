@@ -149,29 +149,13 @@ export class Visualization {
         this.webviewPanel.webview.onDidReceiveMessage(
             async (message: CBRVMessage) => {
                 if (message.type == "ready") {
+                    await this.updateFileList();
                     await this.sendSet({codebase: true, settings: true, connections: true});
                     if (this.onFSChangeCallback && this.onFSChangeCallbackImmediate) {
                         this.update(this.onFSChangeCallback);
                     }
 
-                    this.fsWatcher = workspace.createFileSystemWatcher(
-                        // TODO this should use excludes
-                        new vscode.RelativePattern(this.codebase, '**/*')
-                    );
-
-                    const callback = async (uri: Uri) => {
-                        await this.sendSet({codebase: true});
-                        if (this.onFSChangeCallback) {
-                            this.update(this.onFSChangeCallback);
-                        }
-                    };
-
-                    // TODO might have issues with using default excludes?
-                    // TODO send only changes? Likely use a merge-throttle pattern to clump multiple changes.
-                    this.fsWatcher.onDidChange(callback);
-                    this.fsWatcher.onDidCreate(callback);
-                    this.fsWatcher.onDidDelete(callback);
-                    // this.fsWatcher.dispose(); // TODO dispose after usage
+                    this.setupWatcher();
                 } else if (message.type == "filter") {
                     this.include = message.include;
                     this.exclude = message.exclude;
@@ -198,6 +182,13 @@ export class Visualization {
         );
     }
 
+    /**
+     * Updates stuff after the codebase or include/exclude settings have changed.
+     */
+    private async updateFileList(): Promise<void> {
+        this.files = await fileHelper.getFilteredFileList(this.codebase, this.include, this.exclude);
+    }
+
     /** Returns a complete settings object with defaults filled in an normalized a bit.  */
     private normalizeSettings(settings: VisualizationSettings): DeepRequired<VisualizationSettings> {
         settings = cloneDeep(settings);
@@ -211,6 +202,45 @@ export class Visualization {
         settings = _.merge({}, Visualization.defaultSettings, settings);
 
         return settings as DeepRequired<VisualizationSettings>;
+    }
+
+    private setupWatcher() {
+        // TODO VSCode watcher may be ignoring some file trees like node_modules by default.
+        this.fsWatcher = workspace.createFileSystemWatcher(
+            // Watch entire codebase. The workspace is watched by default, so it shouldn't be a performance
+            // issue to add a broad watcher for it since it will just use the default watcher. We'll check
+            // include/exclude the callback.
+            new vscode.RelativePattern(this.codebase, '**/*')
+        );
+
+        const callback = async () => {
+            await this.sendSet({codebase: true});
+            if (this.onFSChangeCallback) {
+                this.update(this.onFSChangeCallback);
+            }
+        };
+
+        const inFiles = (uri: Uri) => this.files.some(u => u.fsPath == uri.fsPath);
+
+        this.fsWatcher.onDidChange(async uri => {
+            if (inFiles(uri)) {
+                await callback();
+                // don't need to update file list
+            }
+        });
+        this.fsWatcher.onDidCreate(async uri => {
+            await this.updateFileList();
+            if (inFiles(uri)) {
+                callback(); // check if in new file list
+            }
+        });
+        this.fsWatcher.onDidDelete(async uri => {
+            if (inFiles(uri)) { // check if in original file list
+                await this.updateFileList();
+                callback();
+            }
+        });
+        // this.fsWatcher.dispose(); // TODO dispose after usage
     }
 
     private createWebviewPanel(): WebviewPanel {
@@ -271,7 +301,6 @@ export class Visualization {
     private async sendSet(send: {codebase?: boolean, settings?: boolean, connections?: boolean}) {
         let codebase: Directory|undefined;
         if (send.codebase) {
-            this.files = await fileHelper.getFilteredFileList(this.codebase, this.include, this.exclude);
             codebase = await fileHelper.listToFileTree(this.codebase, this.files);
         }
 
