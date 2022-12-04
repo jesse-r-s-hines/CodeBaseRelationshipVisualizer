@@ -15,6 +15,7 @@ type VisualizationState = InstanceType<typeof Visualization.VisualizationState>;
  */
 export class Visualization {
     private context: vscode.ExtensionContext;
+    private readonly codebase: Uri
     private originalSettings: VisualizationSettings;
     private settings: DeepRequired<VisualizationSettings>
     private connections: Connection[] = []
