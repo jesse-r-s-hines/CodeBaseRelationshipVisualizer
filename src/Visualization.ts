@@ -17,8 +17,7 @@ export class Visualization {
     private context: vscode.ExtensionContext;
     private originalSettings: VisualizationSettings;
     private settings: DeepRequired<VisualizationSettings>
-    private codebase: Uri
-    private connections: Connection[]
+    private connections: Connection[] = []
 
     private webviewPanel?: WebviewPanel
     private fsWatcher?: FileSystemWatcher
@@ -53,13 +52,11 @@ export class Visualization {
         context: vscode.ExtensionContext,
         codebase: Uri,
         settings: VisualizationSettings = {},
-        connections: Connection[] = []
     ) {
         this.context = context;
         this.originalSettings = this.settings = undefined as any; // just to silence typescript "not initialized" errors
         this.updateSettings(settings); // sets originalSettings and settings
         this.codebase = codebase;
-        this.connections = connections;
     }
 
     /**

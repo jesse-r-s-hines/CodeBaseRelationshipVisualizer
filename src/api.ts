@@ -35,13 +35,12 @@ export class API {
      */
     async create(
         settings: VisualizationSettings,
-        connections?: Connection[]
     ): Promise<Visualization> {
         const codebase = vscode.workspace.workspaceFolders?.[0]?.uri;
         if (!codebase) {
             throw new Error("No workspace to visualize");
         }
-        const vis = new Visualization(this.context, codebase, settings, connections);
+        const vis = new Visualization(this.context, codebase, settings);
         await vis.launch();
         return vis;
     }
