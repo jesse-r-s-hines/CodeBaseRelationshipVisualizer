@@ -15,7 +15,7 @@
     "activationEvents": [
         "*",
         "onCommand:codeBaseRelationshipVisualizer.start",
-        "onCommand:hyperlinkGraphVisualization.start",
+        "onCommand:hyperlinkVisualization.start",
         "onWebviewPanel:codeBaseRelationshipVisualizer"
     ],
     "contributes": {
@@ -26,7 +26,7 @@
                 "category": "CodeBase Relationship Visualizer"
             },
             {
-                "command": "hyperlinkGraphVisualization.start",
+                "command": "hyperlinkVisualization.start",
                 "title": "Visualize a hyperlink graph",
                 "category": "CodeBase Relationship Visualizer"
             }

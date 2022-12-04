@@ -8,7 +8,7 @@ import _ from 'lodash';
 export async function activate(context: vscode.ExtensionContext) {
     const cbrvAPI = new API(context);
     context.subscriptions.push(
-        vscode.commands.registerCommand('hyperlinkGraphVisualization.start', async () => {
+        vscode.commands.registerCommand('hyperlinkVisualization.start', async () => {
             const visualization = await createHyperlinkVisualization(cbrvAPI);
         }),
     );
