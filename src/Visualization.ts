@@ -27,6 +27,9 @@ export class Visualization {
     private exclude = ""
     private files: Uri[] = [];
 
+    private onFSChangeCallback?: (visState: VisualizationState) => Promise<void>
+    private onFSChangeCallbackImmediate?: boolean
+
     private static readonly defaultSettings: DeepRequired<VisualizationSettings> = {
         title: 'CodeBase Relationship Visualizer',
         directed: false,
@@ -96,6 +99,17 @@ export class Visualization {
         await this.sendUpdate(send);
     }
 
+    /**
+     * Set the callback to update the visualization whenever the files change. Shortcut for setting up a custom
+     * FileSystemWatcher on the codebase that calls `Visualization.update`.
+     * 
+     * You can pass `initial = true` if you want it to trigger on initial creation of the visualization as well.
+     */
+    onFSChange(func: (visState: VisualizationState) => Promise<void>, options?: {immediate?: boolean}): void {
+        this.onFSChangeCallback = func;
+        this.onFSChangeCallbackImmediate = options?.immediate ?? false;
+    }
+
     /** A mutable "view" on a Visualization */
     static VisualizationState = class {
         private visualization: Visualization
@@ -132,6 +146,10 @@ export class Visualization {
             async (message: CBRVMessage) => {
                 if (message.type == "ready") {
                     await this.sendUpdate({codebase: true, settings: true, connections: true});
+                    if (this.onFSChangeCallback && this.onFSChangeCallbackImmediate) {
+                        this.update(this.onFSChangeCallback);
+                    }
+
                     this.fsWatcher = workspace.createFileSystemWatcher(
                         // TODO this should use excludes
                         new vscode.RelativePattern(this.codebase, '**/*')
@@ -139,6 +157,9 @@ export class Visualization {
 
                     const callback = async (uri: Uri) => {
                         await this.sendUpdate({codebase: true});
+                        if (this.onFSChangeCallback) {
+                            this.update(this.onFSChangeCallback);
+                        }
                     };
 
                     // TODO might have issues with using default excludes?
