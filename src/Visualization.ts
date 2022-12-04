@@ -28,7 +28,6 @@ export class Visualization {
     private files: Uri[] = [];
 
     private onFSChangeCallback?: (visState: VisualizationState) => Promise<void>
-    private onFSChangeCallbackImmediate?: boolean
 
     private static readonly defaultSettings: DeepRequired<VisualizationSettings> = {
         title: 'CodeBase Relationship Visualizer',
@@ -117,11 +116,13 @@ export class Visualization {
      * Set the callback to update the visualization whenever the files change. Shortcut for setting up a custom
      * FileSystemWatcher on the codebase that calls `Visualization.update`.
      * 
-     * You can pass `initial = true` if you want it to trigger on initial creation of the visualization as well.
+     * You can pass `{immediate: true}` if you want it to trigger immediately as well.
      */
     onFSChange(func: (visState: VisualizationState) => Promise<void>, options?: {immediate?: boolean}): void {
         this.onFSChangeCallback = func;
-        this.onFSChangeCallbackImmediate = options?.immediate ?? false;
+        if (options?.immediate ?? false) {
+            this.update(this.onFSChangeCallback);
+        }
     }
 
 
@@ -158,10 +159,6 @@ export class Visualization {
 
         await this.updateFileList();
         await this.sendSet({codebase: true, settings: true, connections: true});
-        if (this.onFSChangeCallback && this.onFSChangeCallbackImmediate) {
-            this.update(this.onFSChangeCallback);
-        }
-
         this.setupWatcher();
 
         this.webviewPanel.webview.onDidReceiveMessage(
