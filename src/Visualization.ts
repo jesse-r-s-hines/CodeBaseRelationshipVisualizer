@@ -168,6 +168,7 @@ export class Visualization {
                 } else if (message.type == "filter") {
                     this.include = message.include;
                     this.exclude = message.exclude;
+                    await this.updateFileList();
                     await this.sendSet({codebase: true});
                 } else if (message.type == "open") {
                     // NOTE: we could do these and Command URIs inside the webview instead. That might be simpler
