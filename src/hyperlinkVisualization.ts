@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { workspace, Uri, RelativePattern } from 'vscode';
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { TextDecoder } from 'text-encoding';
 import { API, VisualizationSettings, Connection } from "./api";
 import _ from 'lodash';
 
@@ -36,9 +35,11 @@ export async function visualizeHyperlinkGraph(cbrvAPI: API) {
     return visualization;
 }
 
-const hyperlinkRegex = /\[.*?\]\((.+?)\)|<(.+?)>|(https?:\/\/\S+)/g;
+// Using regex to pull out the links. This is rather brittle, but avoids the overhead of a full html and markdown parser
+const htmlLinkRegex = /\b(?:href|src)\s*=\s*["'](.+?)["']|(https?:\/\/[^\s>"']*[^\s>"'.!?])/g;
+const markdownLinkRegex = new RegExp(`${htmlLinkRegex.source}|${/\[.*?\]\((.+?)\)|<(\S+?)>/.source}`, 'g');
 
-async function getHyperlinks(codebase: Uri, files: Uri[]): Promise<Connection[]> {
+export async function getHyperlinks(codebase: Uri, files: Uri[]): Promise<Connection[]> {
     // Convert paths relative to codebase, and sort so we can binary search for files with the same name but different
     // ext. Among files with the same basename, make sure the files without an ext appear before first.
     const paths = _(files)
@@ -77,7 +78,8 @@ async function getHyperlinks(codebase: Uri, files: Uri[]): Promise<Connection[]>
         if (link == "") return undefined;
 
         // try interpreting as a path relative to this file, e.g. ../image.png
-        let match = findByName(path.resolve(file.fsPath, link));
+        const relativePath = path.relative(codebase.fsPath, path.resolve(path.dirname(file.fsPath), link));
+        let match = findByName(relativePath);
         if (match) return match;
         
         // check if its an absolute path from some common "base"
@@ -95,12 +97,14 @@ async function getHyperlinks(codebase: Uri, files: Uri[]): Promise<Connection[]>
 
     const fileConns: Connection[][] = await Promise.all(files.map(async (file) => {
         const relativePath = path.relative(codebase.fsPath, file.fsPath);
+        const ext = path.extname(relativePath).toLowerCase();
 
-        if (relativePath.endsWith(".md")) {
+        if ([".md", ".html"].includes(ext)) {
+            const regex = ext == '.html' ? htmlLinkRegex : markdownLinkRegex;
             const contents = (await fs.readFile(file.fsPath)).toString();
-            const matches = [...contents.matchAll(hyperlinkRegex)];
-            return matches.
-                map(([whole, ...groups]) => {
+            const matches = [...contents.matchAll(regex)];
+            return matches
+                .map(([whole, ...groups]) => {
                     // matchAll returns undefined for the unmatched "|" sections
                     const link = groups.filter(u => u !== undefined)[0];
                     return resolveLink(file, link);
