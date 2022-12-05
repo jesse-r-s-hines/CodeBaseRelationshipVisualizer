@@ -749,9 +749,14 @@ export default class CBRVWebview {
                     anchorPoints[index1].push(connEnd);
                 } else {
                     // fallback index if conflict. Assign in to even, and out to odd anchors.
-                    // May be same as index1
-                    const theta2 = geo.snapAngle(rawTheta, 2 * deltaTheta, connEnd.hasArrow ? 0 : deltaTheta);
-                    const index2 = Math.round(theta2 / deltaTheta);
+                    let index2: number;
+                    if ((index1 % 2 == 0) == connEnd.hasArrow) {
+                        index2 = index1; // keep choice
+                    } else {
+                        // find a nearby anchor point that matches our arrow. from and to will look in opposite
+                        // directions around the circle so that the adjustments are more likely to line up nicely.
+                        index2 = loopIndex(index1 + (connEnd.end == "to" ? -1 : +1), numAnchors);
+                    }
                     const connEnds2 = anchorPoints[index2];
                     const hasArrow2 = connEnds2.length ? connEnds2[0].hasArrow : undefined;
 
