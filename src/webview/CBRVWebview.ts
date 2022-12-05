@@ -83,7 +83,7 @@ export default class CBRVWebview {
             /** Offset of control points for out-of-screen connections, as a percentage of the conn length */
             outOfScreenControlOffset: 0.10,
             /** Width and height of arrow markers */
-            arrowSize: 4,
+            arrowSize: 3,
         },
         zoom: {
             /** Radius when a directory's contents will be hidden (in px) */
@@ -543,14 +543,14 @@ export default class CBRVWebview {
                 enter => enter.append('marker')
                     .classed("arrow", true)
                     .attr("id", color => color)
-                    .attr("viewBox", "0 0 10 10")
-                    .attr("refX", 5)
-                    .attr("refY", 5)
+                    .attr("viewBox", "0 0 8 6")
+                    .attr("refX", 4)
+                    .attr("refY", 3)
                     .attr("markerWidth", this.s.conn.arrowSize)
                     .attr("markerHeight", this.s.conn.arrowSize)
                     .attr("orient", "auto-start-reverse")
                     .append("path")
-                        .attr("d", "M 0 0 L 10 5 L 0 10 z")
+                        .attr("d", "M 0 0 L 8 3 L 0 6 z")
                         .attr("fill", color => color),
             );
 
