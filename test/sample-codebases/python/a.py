@@ -1,3 +1,4 @@
 import b.c
 
-b.c.func()
+print(b.c.fact(6))
+print(b.c.recursive(6))
