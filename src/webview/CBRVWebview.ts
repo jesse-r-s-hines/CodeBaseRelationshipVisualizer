@@ -899,7 +899,7 @@ export default class CBRVWebview {
             // Vector in direction of line between from and to
             const vec = [toAnchor[0] - fromAnchor[0], toAnchor[1] - fromAnchor[1]];
             // calculate the perpendicular unit vector (perp vectors have dot product of 0)
-            const perpVec = geo.unitVector([1, -vec[0] / vec[1]]);
+            const perpVec = geo.unitVector((vec[1] != 0) ? [1, -vec[0] / vec[1]] : [0, 1]);
 
             const dist = this.s.conn.dupConnPadding * dupOffset;
             const control: Point = [
