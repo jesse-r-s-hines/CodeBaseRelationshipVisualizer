@@ -4,6 +4,7 @@ import { API, Visualization, VisualizationSettings, Connection } from "./api";
 import {DebugAdapterTracker, DebugSession} from 'vscode';
 import {DebugProtocol} from 'vscode-debugprotocol';
 import * as path from "path";
+import _ from "lodash";
 
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -24,19 +25,21 @@ async function createStackTraceVisualization(cbrvAPI: API): Promise<Visualizatio
         title: "Stack Trace Visualization",
         directed: true,
         connectionDefaults: {
-            // tooltip: (conn) => _(conn.connections)
-            //     .map(c => `"${c.from?.file}" -> "${c.to?.file}"`)
-            //     .countBy()
-            //     .map((count, tooltip) => count == 1 ? tooltip : `${tooltip} x${count}`)
-            //     .sortBy()
-            //     .join("<br/>")
+            tooltip: (conn) => {
+                const tooltips = conn.connections.map(c => `-> "${c.toName}" "${c.to!.file}:${c.to!.line}"`);
+                return _(tooltips)
+                    .countBy()
+                    .toPairs()
+                    .sortBy(pair => tooltips.indexOf(pair[0])) // put back in original order
+                    .map(([tooltip, count]) => (count > 1) ? `${tooltip} (x${count})` : tooltip)
+                    .join("<br/>");
+            }
         },
         mergeRules: {
-            // file: "ignore",
-            // line: "ignore",
-            // direction: "ignore",
-            // width: "greatest",
-            // color: "mostCommon",
+            file: "ignore",
+            line: "ignore",
+            direction: "same",
+            width: { rule: "add", max: 4 },
         },
     };
 
@@ -45,7 +48,7 @@ async function createStackTraceVisualization(cbrvAPI: API): Promise<Visualizatio
 
 class StackTraceVisualization implements vscode.DebugAdapterTrackerFactory {
     visualization?: Visualization;
-    stackTrace?: {file: string, line?: number}[];
+    stackTrace?: {file: string, line: number, name: string}[];
 
     createDebugAdapterTracker(session: DebugSession): DebugAdapterTracker {
         return {
@@ -65,6 +68,7 @@ class StackTraceVisualization implements vscode.DebugAdapterTrackerFactory {
                         .map((frame) => ({
                             file: frame.source!.path!,
                             line: frame.line,
+                            name: frame.name,
                         }));
 
                     this.updateVisualization();
@@ -90,6 +94,7 @@ class StackTraceVisualization implements vscode.DebugAdapterTrackerFactory {
                         file: path.relative(visState.codebase.fsPath, frame.file),
                         line: frame.line,
                     },
+                    toName: frame.name,
                 }));
         });
     }
