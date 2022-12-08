@@ -83,14 +83,16 @@ export async function getDependencyGraph(codebase: Uri, files: Uri[]): Promise<C
 
     const allFiles = new Set(files.map(uri => uri.fsPath));
     const dependencyGraph: Map<string, string[]> = new Map();
+    const stack = files.map(uri => uri.fsPath);
 
-    for (const file of files) {
-        const fsPath = file.fsPath;
-        if (path.extname(fsPath) == ".py" && !dependencyGraph.has(fsPath)) { // python and not already filled in
+    while (stack.length > 0) {
+        const fsPath = stack.pop()!;
+        const relPath = path.relative(codebase.fsPath, fsPath);
+        if (path.extname(fsPath) == ".py" && !dependencyGraph.has(relPath)) { // python and not already filled in
             let graph: any;
             try {
                 const result = await child_process_promise.spawn(pythonPath,
-                    ['-m', 'pydeps', '--show-deps', '--no-output', '--max-bacon', '2', fsPath],
+                    ['-m', 'pydeps', '--show-deps', '--no-output', '--max-bacon', '0', fsPath], // infinite bacon
                     { capture: ['stdout', 'stderr'], cwd: codebase.fsPath }
                 );
                 graph = JSON.parse(result.stdout);
@@ -100,36 +102,23 @@ export async function getDependencyGraph(codebase: Uri, files: Uri[]): Promise<C
             }
 
             if (graph) {
-                const info = Object.values<any>(graph).find(info => info.path === fsPath);
-                const relPath = path.relative(codebase.fsPath, fsPath);
-                const dependencies = (info.imports ?? [])
-                    .flatMap((m: string) => {
-                        const modulePath = graph[m].path;
-                        if (typeof modulePath == 'string' && allFiles.has(modulePath)) {
-                            return [path.relative(codebase.fsPath, modulePath)];
-                        } else {
-                            return [];
+                for (const [moduleName, info] of Object.entries<any>(graph)) {
+                    if (typeof info.path == 'string') {
+                        const infoPathRel = path.relative(codebase.fsPath, info.path);
+                        if (allFiles.has(info.path) && !dependencyGraph.has(infoPathRel)) {
+                            const dependencies = (info.imports ?? [])
+                                .flatMap((m: string) => {
+                                    const modulePath = graph[m].path;
+                                    if (typeof modulePath == 'string' && allFiles.has(modulePath)) {
+                                        return [path.relative(codebase.fsPath, modulePath)];
+                                    } else {
+                                        return [];
+                                    }
+                                });
+                            dependencyGraph.set(infoPathRel, dependencies);
                         }
-                    });
-                dependencyGraph.set(relPath, dependencies);
-
-                // for (const [moduleName, info] of Object.entries<any>(graph)) {
-                //     if (typeof info.path == 'string') {
-                //         const relPath = path.relative(codebase.fsPath, info.path);
-                //         if (allFiles.has(info.path) && !dependencyGraph.has(relPath)) {
-                //             const dependencies = (info.imports ?? [])
-                //                 .flatMap((m: string) => {
-                //                     const modulePath = graph[m].path;
-                //                     if (typeof modulePath == 'string' && allFiles.has(modulePath)) {
-                //                         return [path.relative(codebase.fsPath, modulePath)];
-                //                     } else {
-                //                         return [];
-                //                     }
-                //                 });
-                //             dependencyGraph.set(relPath, dependencies);
-                //         }
-                //     }
-                // }
+                    }
+                }
             }
         }
     }
