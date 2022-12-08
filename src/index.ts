@@ -3,6 +3,7 @@ import { API } from "./api";
 import * as codebaseVisualization from "./codebaseVisualization";
 import * as hyperlinkVisualization from "./hyperlinkVisualization";
 import * as stackTraceVisualization from "./stackTraceVisualization";
+import * as pythonDependencyVisualization from "./pythonDependencyVisualization";
 
 export async function activate(context: vscode.ExtensionContext) {
     const cbrvAPI = new API(context);
@@ -10,7 +11,8 @@ export async function activate(context: vscode.ExtensionContext) {
     await codebaseVisualization.activate(context);
     await hyperlinkVisualization.activate(context);
     await stackTraceVisualization.activate(context);
+    await pythonDependencyVisualization.activate(context);
 
     // TODO: Remove this. Launching automatically for convenience during testing. Also remove "*" activationEvent.
-    vscode.commands.executeCommand('stackTraceVisualization.start');
+    vscode.commands.executeCommand('pythonDependencyVisualization.start');
 }
