@@ -77,8 +77,6 @@ class StackTraceVisualization implements vscode.DebugAdapterTrackerFactory {
                             })
                     );
 
-                    console.log({ pairs });
-
                     this.stackTraces = new Map(
                         pairs
                             .filter(([threadId, frame]) => frame.stackFrames.length > 0) // filter finished threads
