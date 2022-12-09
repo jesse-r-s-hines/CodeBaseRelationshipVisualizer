@@ -109,6 +109,7 @@ export default class CBRVWebview {
     includeInput: Selection<HTMLInputElement>
     excludeInput: Selection<HTMLInputElement>
     hideUnconnectedInput: Selection<HTMLInputElement>
+    showOnHoverSelect: Selection<HTMLSelectElement>
 
     zoom: d3.ZoomBehavior<Element, unknown>
 
@@ -201,6 +202,7 @@ export default class CBRVWebview {
         this.includeInput = d3.select<HTMLInputElement, unknown>("#include");
         this.excludeInput = d3.select<HTMLInputElement, unknown>("#exclude");
         this.hideUnconnectedInput = d3.select<HTMLInputElement, unknown>("#hide-unconnected");
+        this.showOnHoverSelect = d3.select<HTMLSelectElement, unknown>("#show-on-hover");
 
         const updateFilters = () => this.emit('filter', {
             include: this.includeInput.property('value'),
@@ -210,7 +212,11 @@ export default class CBRVWebview {
         this.excludeInput.on('change', updateFilters);
         this.hideUnconnectedInput.on('change', () => {
             this.hideUnconnected = this.hideUnconnectedInput.property('checked');
-            this.update(this.settings, this.codebase, this.connections); // force re-render
+            this.update(this.settings); // force re-render
+        });
+        this.showOnHoverSelect.on('change', () => {
+            const value = this.showOnHoverSelect.property('value');
+            this.update({...this.settings, showOnHover: value == "off" ? false : value});
         });
 
         this.update(this.settings, this.codebase, this.connections);
@@ -248,6 +254,8 @@ export default class CBRVWebview {
         const hasConnections = !!this.connectionSelection?.size();
         const inputDiv = d3.select(this.hideUnconnectedInput.node()!.parentElement);
         inputDiv.style("display", hasConnections ? 'inherit' : 'none');
+
+        this.showOnHoverSelect.property('value', this.settings.showOnHover || "off");
     }
 
     updateCodebase(fullRerender = true) { // rename to filesChanged

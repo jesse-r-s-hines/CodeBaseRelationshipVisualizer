@@ -305,6 +305,15 @@ export class Visualization {
                         <label for="hide-unconnected">Hide Unconnected</label>
                         <input id="hide-unconnected" type="checkbox"></input>
                     </div>
+                    <div class="form-input">
+                        <label for="show-on-hover">Show on hover:</label>
+                        <select name="show-on-hover" id="show-on-hover">
+                            <option value="off" selected>Off</option>
+                            <option value="both">All</option>
+                            <option value="in">In only</option>
+                            <option value="out">Out only</option>
+                        </select> 
+                    </div>
                 </div>
                 <svg id="diagram"></svg>
                 <script>var exports = {}</script>
