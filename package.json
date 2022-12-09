@@ -13,7 +13,6 @@
         "Debuggers"
     ],
     "activationEvents": [
-        "*",
         "onCommand:codeBaseRelationshipVisualizer.start",
         "onCommand:hyperlinkVisualization.start",
         "onCommand:stackTraceVisualization.start",

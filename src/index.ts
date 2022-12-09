@@ -12,7 +12,4 @@ export async function activate(context: vscode.ExtensionContext) {
     await hyperlinkVisualization.activate(context);
     await stackTraceVisualization.activate(context);
     await pythonDependencyVisualization.activate(context);
-
-    // TODO: Remove this. Launching automatically for convenience during testing. Also remove "*" activationEvent.
-    vscode.commands.executeCommand('pythonDependencyVisualization.start');
 }
