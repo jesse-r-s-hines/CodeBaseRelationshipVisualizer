@@ -17,6 +17,7 @@
         "onCommand:codeBaseRelationshipVisualizer.start",
         "onCommand:hyperlinkVisualization.start",
         "onCommand:stackTraceVisualization.start",
+        "onCommand:pythonDependencyVisualization.start",
         "onWebviewPanel:codeBaseRelationshipVisualizer"
     ],
     "contributes": {
@@ -34,6 +35,11 @@
             {
                 "command": "stackTraceVisualization.start",
                 "title": "Visualize the stack trace during a debugger session",
+                "category": "CodeBase Relationship Visualizer"
+            },
+            {
+                "command": "pythonDependencyVisualization.start",
+                "title": "Visualize the dependencies between python files",
                 "category": "CodeBase Relationship Visualizer"
             }
         ]
