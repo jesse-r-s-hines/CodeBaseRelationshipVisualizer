@@ -47,6 +47,7 @@ export interface SymbolicLink extends BaseFile {
 export interface WebviewVisualizationSettings {
     directed: boolean
     showOnHover: "in"|"out"|"both"|false
+    hideUnconnected: boolean,
     connectionDefaults: {
         width: number
         color: string

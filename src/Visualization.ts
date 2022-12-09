@@ -33,6 +33,7 @@ export class Visualization {
         title: 'CodeBase Relationship Visualizer',
         directed: false,
         showOnHover: false,
+        hideUnconnected: false,
         connectionDefaults: {
             width: 2,
             color: 'yellow',

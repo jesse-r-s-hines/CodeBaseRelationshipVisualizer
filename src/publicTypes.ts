@@ -18,8 +18,8 @@ export interface VisualizationSettings {
     directed?: boolean
 
     /**
-     * Settings to limit which connections are shown based on the hovered
-     * file.
+     * Settings to limit which connections are shown based on the hovered file by default. These can be overridden by
+     * the use via the controls.
      * 
      * Can be set to:
      * - `"in"`: Show only directed connections into the hovered file.
@@ -31,6 +31,12 @@ export interface VisualizationSettings {
      * If connections are undirected, "in", "out", and "both" behave the same.
      */
     showOnHover?: "in"|"out"|"both"|boolean
+
+    /**
+     * If true, only files with connections to them will be shown. Default false, which will show all files.
+     * This can be overridden by the use via the controls.
+     */
+    hideUnconnected?: boolean,
 
     connectionDefaults?: {
         /** Default width of the SVG path for connections. Can be overridden per connection via `Connection.width` */

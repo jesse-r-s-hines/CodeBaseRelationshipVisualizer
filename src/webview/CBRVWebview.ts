@@ -128,8 +128,6 @@ export default class CBRVWebview {
     unchangedFiles: Set<string> = new Set()
     mergedConnectionsCache: MergedConnection[] = [];
 
-    // TODO maybe move this (and width/height/etc.) into a React-style "state" object and make update use it.
-    hideUnconnected = false
     hoverTimerId?: number
 
     /** Pass the selector for the canvas svg */
@@ -211,8 +209,8 @@ export default class CBRVWebview {
         this.includeInput.on('change', updateFilters);
         this.excludeInput.on('change', updateFilters);
         this.hideUnconnectedInput.on('change', () => {
-            this.hideUnconnected = this.hideUnconnectedInput.property('checked');
-            this.update(this.settings); // force re-render
+            const value = this.hideUnconnectedInput.property('checked');
+            this.update({...this.settings, hideUnconnected: !!value});
         });
         this.showOnHoverSelect.on('change', () => {
             const value = this.showOnHoverSelect.property('value');
@@ -503,7 +501,7 @@ export default class CBRVWebview {
 
     filteredCodebase() {
         let connected: Set<string> = new Set();
-        if (this.hideUnconnected) {
+        if (this.settings.hideUnconnected) {
             connected = new Set(_(this.connections)
                 .flatMap(conn => [conn.from?.file, conn.to?.file].filter(e => e) as string[])
                 .uniq().value()
@@ -511,7 +509,7 @@ export default class CBRVWebview {
         }
 
         return filterFileTree(this.codebase, (f, path) =>
-            !(this.hideUnconnected && f.type != FileType.Directory && !connected.has(path)) &&
+            !(this.settings.hideUnconnected && f.type != FileType.Directory && !connected.has(path)) &&
             !(f.type == FileType.Directory && f.children.length == 0) // filter empty dirs
         );
     }
