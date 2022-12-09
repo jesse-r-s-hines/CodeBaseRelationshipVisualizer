@@ -72,7 +72,13 @@ async function createPythonDependencyVisualization(cbrvAPI: API): Promise<Visual
     const visualization = await cbrvAPI.create(settings);
 
     visualization.onFSChange(async (visState) => {
-        visState.connections = await getDependencyGraph(visState.codebase, visState.files);
+        visState.connections = await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: "Loading dependency graph...",
+            cancellable: false,
+        }, async (progress, token) => {
+            return await getDependencyGraph(visState.codebase, visState.files);
+        });
     }, { immediate: true });
 
     return visualization;
