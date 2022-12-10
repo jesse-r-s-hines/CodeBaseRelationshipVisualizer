@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { workspace } from "vscode";
 import { Uri, Webview, WebviewPanel, FileSystemWatcher } from 'vscode';
 import * as path from "path";
-import { Connection, WebviewConnection, MergedConnection, MergeRules } from "./publicTypes";
+import { WebviewConnection, MergedConnection, MergeRules } from "./publicTypes";
 import { WebviewVisualizationSettings, CBRVMessage, Directory } from "./privateTypes";
 
 import { DeepRequired } from "ts-essentials";
@@ -109,6 +109,55 @@ export type ContextMenuItem = {
     title: string,
     action: ((uri: Uri, vis: Visualization) => void),
 }
+
+// TODO move back into publicTypes
+/**
+ * Represents a connection or relationship between files. A `Connection` connects two file:line locations in the
+ * workspace. `Connections` will be rendered as a line or arrow in the visualization. `line` is optional, in which case
+ * the `Connection` will just connect the files and can be passed just the file `Uri`. `Connections` can be between two
+ * different files, different lines in the same file, or even connect a file to itself. `Connections` can only connect
+ * files, not folders. If `from` or `to` is undefined, the connection will start or end "outside" the visualization.
+ * 
+ * E.g.
+ * ```ts
+ * {
+ *   from: {file: Uri.file("main.py"), line: 10},
+ *   to: {file: Uri.file("tutorial.py"), line: 3}
+ * }
+ * ```
+ * or
+ * ```ts
+ * {
+ *   from: Uri.file("main.py"),
+ *   to: Uri.file("tutorial.py")
+ * }
+ * ```
+ */
+ export interface Connection {
+    from?: Endpoint
+    to?: Endpoint
+
+    /** Width of the SVG path */
+    width?: number
+
+    /** CSS color string */
+    color?: string
+
+    /** String to show as tooltip */
+    tooltip?: string
+
+    /**
+     * Other properties can be defined on the `Connection` and referenced in the tooltip callback or `MergeRules`.
+     */
+    [key: string]: any
+}
+
+/**
+ * Represents one endpoint of a `Connection`. Can be a path to the file or an object containing a path and an optional
+ * line number.
+ * TODO: maybe use Uri instead, or update Docs
+ */
+export type Endpoint = string | { file: string, line?: number }
 
 /**
  * Handles the visualization, allowing you to update the visualization.
