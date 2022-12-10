@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { workspace } from "vscode";
 import { Uri, Webview, WebviewPanel, FileSystemWatcher } from 'vscode';
 import * as path from "path";
-import { WebviewConnection, MergedConnection, MergeRules } from "./publicTypes";
+import { WebviewConnection, MergedConnection, MergeRules, WebviewEndpoint } from "./publicTypes";
 import { WebviewVisualizationSettings, CBRVMessage, Directory } from "./privateTypes";
 
 import { DeepRequired } from "ts-essentials";
@@ -155,9 +155,8 @@ export type ContextMenuItem = {
 /**
  * Represents one endpoint of a `Connection`. Can be a path to the file or an object containing a path and an optional
  * line number.
- * TODO: maybe use Uri instead, or update Docs
  */
-export type Endpoint = string | { file: string, line?: number }
+export type Endpoint = Uri | { file: Uri, line?: number }
 
 /**
  * Handles the visualization, allowing you to update the visualization.
@@ -538,11 +537,19 @@ export class Visualization {
                 if (!conn.from && !conn.to) {
                     throw Error("Connections must have at least one of from or to defined");
                 }
-                return { // TODO normalize file paths as well
-                    ...conn,
-                    from: (typeof conn.from == 'string') ? {file: conn.from} : conn.from,
-                    to: (typeof conn.to == 'string') ? {file: conn.to} : conn.to,
+                const convEndpoint = (e: Endpoint|undefined) => {
+                    if (e) {
+                        const uri = (e instanceof Uri) ? e : e.file;
+                        return {
+                            file: path.relative(this.codebase.fsPath, uri.fsPath),
+                            line: (e instanceof Uri) ? undefined : e.line,
+                        };
+                    } else {
+                        return undefined;
+                    }
                 };
+
+                return {...conn, from: convEndpoint(conn.from), to: convEndpoint(conn.to)};
             });
         }
 

@@ -93,8 +93,7 @@ export async function getDependencyGraph(codebase: Uri, files: Uri[]): Promise<C
 
     while (stack.length > 0) {
         const fsPath = stack.pop()!;
-        const relPath = path.relative(codebase.fsPath, fsPath);
-        if (path.extname(fsPath) == ".py" && !dependencyGraph.has(relPath)) { // python and not already filled in
+        if (path.extname(fsPath) == ".py" && !dependencyGraph.has(fsPath)) { // python and not already filled in
             let graph: any;
             try {
                 const result = await child_process_promise.spawn(pythonPath,
@@ -110,18 +109,17 @@ export async function getDependencyGraph(codebase: Uri, files: Uri[]): Promise<C
             if (graph) {
                 for (const [moduleName, info] of Object.entries<any>(graph)) {
                     if (typeof info.path == 'string') {
-                        const infoPathRel = path.relative(codebase.fsPath, info.path);
-                        if (allFiles.has(info.path) && !dependencyGraph.has(infoPathRel)) {
+                        if (allFiles.has(info.path) && !dependencyGraph.has(info.path)) {
                             const dependencies = (info.imports ?? [])
                                 .flatMap((m: string) => {
                                     const modulePath = graph[m].path;
                                     if (typeof modulePath == 'string' && allFiles.has(modulePath)) {
-                                        return [path.relative(codebase.fsPath, modulePath)];
+                                        return [modulePath];
                                     } else {
                                         return [];
                                     }
                                 });
-                            dependencyGraph.set(infoPathRel, dependencies);
+                            dependencyGraph.set(info.path, dependencies);
                         }
                     }
                 }
@@ -131,6 +129,9 @@ export async function getDependencyGraph(codebase: Uri, files: Uri[]): Promise<C
 
     return [...dependencyGraph.entries()]
         .flatMap(([source, dependencies]) =>
-            dependencies.map(dep => ({ from: source, to: dep }))
+            dependencies.map(dep => ({
+                from: Uri.file(source),
+                to: Uri.file(dep),
+            }))
         );
 }

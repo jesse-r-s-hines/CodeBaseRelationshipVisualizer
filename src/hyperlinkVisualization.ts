@@ -57,6 +57,9 @@ export async function getHyperlinks(codebase: Uri, files: Uri[]): Promise<Connec
         .sortBy(stripExt, path.extname)
         .value();
     
+    // Converts a relative path to a Uri
+    const toUri = (file: string) => Uri.file(path.resolve(codebase.fsPath, file));
+
     // Checks if there's a matching path, ignoring extensions. Returns the matching path (with extension) or undefined.
     const findByName = (p: string): string|undefined => {
         const basename = stripExt(p);
@@ -76,7 +79,7 @@ export async function getHyperlinks(codebase: Uri, files: Uri[]): Promise<Connec
     };
 
     /** Best effort to match the link with an actual file */
-    const resolveLink = (file: Uri, link: string): string|undefined => {
+    const resolveLink = (file: Uri, link: string): Uri|undefined => {
         link = link
             .split('#')[0] // remove any # url part
             .trim()
@@ -90,7 +93,7 @@ export async function getHyperlinks(codebase: Uri, files: Uri[]): Promise<Connec
         // try interpreting as a path relative to this file, e.g. ../image.png
         const relativePath = path.relative(codebase.fsPath, path.resolve(path.dirname(file.fsPath), link));
         let match = findByName(relativePath);
-        if (match) return match;
+        if (match) return toUri(match);
         
         // check if its an absolute path from some common "base"
         const guesses = link // try trimming off parts from the beginning until we get a working path
@@ -99,15 +102,14 @@ export async function getHyperlinks(codebase: Uri, files: Uri[]): Promise<Connec
 
         for (const guess of guesses) {
             match = findByName(guess);
-            if (match) return match;
+            if (match) return toUri(match);
         }
 
         return undefined;
     };
 
     const fileConns: Connection[][] = await Promise.all(files.map(async (file) => {
-        const relativePath = path.relative(codebase.fsPath, file.fsPath);
-        const ext = path.extname(relativePath).toLowerCase();
+        const ext = path.extname(file.fsPath).toLowerCase();
 
         if ([".md", ".html"].includes(ext)) {
             const regex = ext == '.html' ? htmlLinkRegex : markdownLinkRegex;
@@ -120,7 +122,7 @@ export async function getHyperlinks(codebase: Uri, files: Uri[]): Promise<Connec
                     return resolveLink(file, link);
                 })
                 .filter(f => f) // remove undefined links
-                .map(to => ({ from: relativePath, to: to }));
+                .map(to => ({ from: file, to: to }));
         } else {
             return [];
         }

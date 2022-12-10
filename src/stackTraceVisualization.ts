@@ -3,7 +3,6 @@ import { Uri } from 'vscode';
 import { API, Visualization, VisualizationSettings, Connection } from "./api";
 import { DebugAdapterTracker, DebugSession } from 'vscode';
 import { DebugProtocol } from 'vscode-debugprotocol';
-import * as path from "path";
 import _ from "lodash";
 
 const colorScheme = [
@@ -52,7 +51,7 @@ async function createStackTraceVisualization(cbrvAPI: API): Promise<Visualizatio
 }
 
 
-type Frame = { file: string, line: number, name: string }
+type Frame = { file: Uri, line: number, name: string }
 
 class StackTraceVisualization implements vscode.DebugAdapterTrackerFactory {
     visualization?: Visualization;
@@ -84,7 +83,7 @@ class StackTraceVisualization implements vscode.DebugAdapterTrackerFactory {
                                 const simpleFrames = [...frame.stackFrames]
                                     .reverse()
                                     .map((frame) => ({
-                                        file: frame.source!.path!,
+                                        file: Uri.file(frame.source!.path!),
                                         line: frame.line,
                                         name: frame.name,
                                         threadId: threadId,
@@ -108,14 +107,14 @@ class StackTraceVisualization implements vscode.DebugAdapterTrackerFactory {
             visState.connections = [...this.stackTraces.entries()]
                 .flatMap(([threadId, frames], threadIndex) =>
                     frames
-                        .filter(frame => visState.files.some(uri => frame.file == uri.fsPath))
+                        .filter(frame => visState.files.some(uri => frame.file.fsPath == uri.fsPath))
                         .map((frame, i, arr) => ({
                             from: (i == 0) ? undefined : {
-                                file: path.relative(visState.codebase.fsPath, arr[i - 1].file),
+                                file: arr[i - 1].file,
                                 line: arr[i - 1].line,
                             },
                             to: {
-                                file: path.relative(visState.codebase.fsPath, frame.file),
+                                file: frame.file,
                                 line: frame.line,
                             },
                             toName: frame.name,
@@ -126,7 +125,3 @@ class StackTraceVisualization implements vscode.DebugAdapterTrackerFactory {
         });
     }
 }
-
-
-// tooltip not updating whent connectiosn change
-// error on update if merge rules are falses
