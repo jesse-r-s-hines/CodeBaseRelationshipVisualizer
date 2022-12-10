@@ -15,7 +15,7 @@ import tippy, {followCursor, Instance as Tippy} from 'tippy.js';
 import 'tippy.js/dist/tippy.css'; // optional for styling
 
 import { NormalizedConnection, MergedConnection, NormalizedEndpoint } from '../publicTypes';
-import { AnyFile, FileType, Directory, SymbolicLink, WebviewVisualizationSettings } from '../privateTypes';
+import { AnyFile, FileType, Directory, SymbolicLink, WebviewVisualizationSettings, CBRVMessage } from '../privateTypes';
 import { getExtension, filterFileTree, loopIndex, OptionalKeys } from '../util';
 import * as geo from './geometry';
 import { Point, Box } from './geometry';
@@ -202,7 +202,8 @@ export default class CBRVWebview {
         this.hideUnconnectedInput = d3.select<HTMLInputElement, unknown>("#hide-unconnected");
         this.showOnHoverSelect = d3.select<HTMLSelectElement, unknown>("#show-on-hover");
 
-        const updateFilters = () => this.emit('filter', {
+        const updateFilters = () => this.emit({
+            type: 'filter',
             include: this.includeInput.property('value'),
             exclude: this.excludeInput.property('value'),
         });
@@ -382,9 +383,9 @@ export default class CBRVWebview {
                         .on("mouseout", (event, d) => showConnectedConns(d, false))
                         .on("dblclick", (event, d) => {
                             if (d.data.type == FileType.Directory) {
-                                this.emit("reveal-in-explorer", {file: this.filePath(d)});
+                                this.emit({type: "reveal-in-explorer", file: this.filePath(d)});
                             } else if (d.data.type == FileType.File) {
-                                this.emit("open", {file: this.filePath(d)});
+                                this.emit({type: "open", file: this.filePath(d)});
                             } else if (d.data.type == FileType.SymbolicLink) {
                                 const jumpTo = this.pathMap.get(d.data.resolved);
                                 if (jumpTo) {
@@ -571,7 +572,7 @@ export default class CBRVWebview {
                         clearTimeout(this.hoverTimerId);
                         if (!elem.hasAttribute("data-tippy-content")) {
                             this.hoverTimerId = _.delay(() => {
-                                this.emit("tooltip-request", {id, conn}); // will create and trigger the tooltip
+                                this.emit({type: "tooltip-request", id, conn}); // will create and trigger the tooltip
                             }, 250);
                         }
                         this.connShowTransition(d3.select(event.currentTarget), true);
@@ -1063,27 +1064,27 @@ export default class CBRVWebview {
         this.throttledUpdate();
     }
 
-    emit(event: string, data: any) {
-        this.diagram.node()!.dispatchEvent(new CustomEvent(`cbrv:${event}`, {detail: data}));
+    emit(message: CBRVMessage) {
+        this.diagram.node()!.dispatchEvent(new CustomEvent(`cbrv:send`, {detail: message}));
     }
 
     contextMenu(d: Node) {
         return [
             {
                 title: 'Reveal in Explorer',
-                action: (d: Node) => this.emit("reveal-in-explorer", {file: this.filePath(d)})
+                action: (d: Node) => this.emit({type: "reveal-in-explorer", file: this.filePath(d)})
             },
             d.data.type == FileType.File ? {
                 title: 'Open in Editor',
-                action: (d: Node) => this.emit("open", {file: this.filePath(d)})
+                action: (d: Node) => this.emit({type: "open", file: this.filePath(d)})
             } : undefined,
             {
                 title: 'Copy Path',
-                action: (d: Node) => this.emit("copy-path", {file: this.filePath(d)})
+                action: (d: Node) => this.emit({type: "copy-path", file: this.filePath(d)})
             },
             {
                 title: 'Copy Relative Path',
-                action: (d: Node) => this.emit("copy-relative-path", {file: this.filePath(d)})
+                action: (d: Node) => this.emit({type: "copy-relative-path", file: this.filePath(d)})
             }
         ].filter(item => item);
     }
