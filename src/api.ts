@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Visualization, VisualizationSettings, ContextMenuItem } from './Visualization';
-import { Connection, Endpoint, NormalizedConnection, NormalizedEndpoint, MergedConnection,
+import { Connection, Endpoint, WebviewConnection, WebviewEndpoint, MergedConnection,
          MergeRules } from "./publicTypes";
 import { SameRule, IgnoreRule, LeastRule, GreatestRule, LeastCommonRule, MostCommonRule, GroupRule, AddRule, ValueRule,
          JoinRule, BuiltinMergeRule } from "./mergingTypes";
@@ -49,7 +49,7 @@ export class API {
 // Re-export public types
 export {
     type Visualization,
-    VisualizationSettings, Connection, Endpoint, NormalizedConnection, NormalizedEndpoint, MergedConnection, MergeRules,
+    VisualizationSettings, Connection, Endpoint, WebviewConnection, WebviewEndpoint, MergedConnection, MergeRules,
     SameRule, IgnoreRule, LeastRule, GreatestRule, LeastCommonRule, MostCommonRule, GroupRule, AddRule, ValueRule,
     JoinRule, BuiltinMergeRule, ContextMenuItem,
 };

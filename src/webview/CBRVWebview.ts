@@ -14,7 +14,7 @@ import "d3-context-menu/css/d3-context-menu.css"; // manually require the CSS
 import tippy, {followCursor, Instance as Tippy} from 'tippy.js';
 import 'tippy.js/dist/tippy.css'; // optional for styling
 
-import { NormalizedConnection, MergedConnection, NormalizedEndpoint } from '../publicTypes';
+import { WebviewConnection, MergedConnection, WebviewEndpoint } from '../publicTypes';
 import { AnyFile, FileType, Directory, SymbolicLink, WebviewVisualizationSettings, CBRVMessage } from '../privateTypes';
 import { getExtension, filterFileTree, loopIndex, OptionalKeys } from '../util';
 import * as geo from './geometry';
@@ -44,7 +44,7 @@ type Selection<GElement extends d3.BaseType = HTMLElement, Datum = unknown> =
 export default class CBRVWebview {
     settings: WebviewVisualizationSettings
     codebase: Directory
-    connections: NormalizedConnection[]
+    connections: WebviewConnection[]
 
     /**
      * Settings and constants for the diagram
@@ -131,7 +131,7 @@ export default class CBRVWebview {
     hoverTimerId?: number
 
     /** Pass the selector for the canvas svg */
-    constructor(settings: WebviewVisualizationSettings, codebase: Directory, connections: NormalizedConnection[]) {
+    constructor(settings: WebviewVisualizationSettings, codebase: Directory, connections: WebviewConnection[]) {
         this.codebase = codebase;
         this.settings = settings;
         this.connections = connections;
@@ -229,7 +229,7 @@ export default class CBRVWebview {
 
     throttledUpdate: () => void
 
-    update(settings?: WebviewVisualizationSettings, codebase?: Directory, connections?: NormalizedConnection[]) {
+    update(settings?: WebviewVisualizationSettings, codebase?: Directory, connections?: WebviewConnection[]) {
         this.settings = settings ?? this.settings;
         this.codebase = codebase ?? this.codebase;
         this.connections = connections ?? this.connections;
@@ -604,7 +604,7 @@ export default class CBRVWebview {
      * Merge all the connections to combine connections going between the same files after being raised to the first
      * visible file/folder, using mergeRules.
      */
-    mergeConnections(connections: NormalizedConnection[]): MergedConnection[] {
+    mergeConnections(connections: WebviewConnection[]): MergedConnection[] {
         // Each keyFunc will split up connections in to smaller groups
         const raised = _(connections)
             // filter connections to missing files
@@ -613,7 +613,7 @@ export default class CBRVWebview {
                 const [from, to] = [conn.from, conn.to].map(
                     e => e ? {file: this.filePath(this.pathMap.get(e.file)!)} : undefined
                 );
-                const raised: NormalizedConnection = {from, to};
+                const raised: WebviewConnection = {from, to};
                 return {conn, raised};
             });
 
@@ -654,7 +654,7 @@ export default class CBRVWebview {
                     return {
                         ...obj,
                         from, to,
-                        bidirectional: !isSelfLoop && (obj.from.some((e: NormalizedEndpoint) => e?.file === to?.file)),
+                        bidirectional: !isSelfLoop && (obj.from.some((e: WebviewEndpoint) => e?.file === to?.file)),
                     } as MergedConnection;
                 })
                 .value();
@@ -1027,7 +1027,7 @@ export default class CBRVWebview {
         return (d.data.type == FileType.SymbolicLink) ? d.data.linkedType : d.data.type;
     }
 
-    connKey(conn: NormalizedConnection, lines = true, ordered = true): string {
+    connKey(conn: WebviewConnection, lines = true, ordered = true): string {
         let from = conn.from ? `${conn.from.file}:${lines && conn.from.line ? conn.from.line : ''}` : '';
         let to = conn.to ? `${conn.to.file}:${lines && conn.to.line ? conn.to.line : ''}` : '';
         if (!ordered && from > to) {
@@ -1050,7 +1050,7 @@ export default class CBRVWebview {
         return this.calcPixelLength(d.r) <= this.s.zoom.hideLabelsR;
     }
 
-    onZoom(e: d3.D3ZoomEvent<SVGSVGElement, NormalizedConnection>) {
+    onZoom(e: d3.D3ZoomEvent<SVGSVGElement, WebviewConnection>) {
         const oldK = this.transform.k;
         this.transform = e.transform;
         this.zoomWindow.attr('transform', this.transform.toString());

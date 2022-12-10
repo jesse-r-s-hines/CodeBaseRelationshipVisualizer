@@ -1,6 +1,6 @@
 /** Contains interfaces and classes internal to CBRV that are can be used both inside and outside the webview */
 
-import { NormalizedConnection, MergedConnection, MergeRules } from "./publicTypes";
+import { WebviewConnection, MergedConnection, MergeRules } from "./publicTypes";
 
 /**
  * Just an alias for VSCode's FileType enum.
@@ -69,7 +69,7 @@ export type SetMessage = {
     type: "set",
     settings?: WebviewVisualizationSettings,
     codebase?: Directory,
-    connections?: NormalizedConnection[],
+    connections?: WebviewConnection[],
 }
 export type OpenMessage = { type: "open", file: string }
 export type RevealInExplorerMessage = { type: "reveal-in-explorer", file: string }

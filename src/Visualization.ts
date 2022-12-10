@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { workspace } from "vscode";
 import { Uri, Webview, WebviewPanel, FileSystemWatcher } from 'vscode';
 import * as path from "path";
-import { Connection, NormalizedConnection, MergedConnection, MergeRules } from "./publicTypes";
+import { Connection, WebviewConnection, MergedConnection, MergeRules } from "./publicTypes";
 import { WebviewVisualizationSettings, CBRVMessage, Directory } from "./privateTypes";
 
 import { DeepRequired } from "ts-essentials";
@@ -483,7 +483,7 @@ export class Visualization {
             settings = this.getWebviewSettings();
         }
 
-        let connections: NormalizedConnection[]|undefined;
+        let connections: WebviewConnection[]|undefined;
         if (send.connections) {
             connections = this.connections?.map(conn => {
                 if (!conn.from && !conn.to) {

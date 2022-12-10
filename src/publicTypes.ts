@@ -50,16 +50,16 @@ export interface Connection {
  */
 export type Endpoint = string | { file: string, line?: number }
 
-export interface NormalizedConnection {
-    from?: NormalizedEndpoint
-    to?: NormalizedEndpoint
+export interface WebviewConnection { // TODO move to private
+    from?: WebviewEndpoint
+    to?: WebviewEndpoint
     width?: number
     color?: string
     tooltip?: string
     [key: string]: any
 }
 
-export type NormalizedEndpoint = { file: string, line?: number }
+export type WebviewEndpoint = { file: string, line?: number }
 
 /**
  * Represents a merged group of connections, that will be rendered as one
@@ -73,13 +73,13 @@ export interface MergedConnection {
     * user zooms in. Then connections to those files will show connected to
     * the visible parent folder.
     */
-    from?: NormalizedEndpoint
+    from?: WebviewEndpoint
 
     /**
     * The file or folder the rendered connection will show to. Can be a
     * folder just like `from`.
     */
-    to?: NormalizedEndpoint
+    to?: WebviewEndpoint
 
     /** True if this merged connection represents connections going both directions between from and to */
     bidirectional: boolean
@@ -92,7 +92,7 @@ export interface MergedConnection {
     * The original connections that were merged.
     * Will be sorted using the order function if one is given.
     */
-    connections: NormalizedConnection[]
+    connections: WebviewConnection[]
 
     [key: string]: any
 }
