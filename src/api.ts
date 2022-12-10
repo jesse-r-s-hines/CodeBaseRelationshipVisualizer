@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { Visualization } from './Visualization';
-import { VisualizationSettings, Connection, Endpoint, NormalizedConnection, NormalizedEndpoint, MergedConnection,
+import { Visualization, VisualizationSettings } from './Visualization';
+import { Connection, Endpoint, NormalizedConnection, NormalizedEndpoint, MergedConnection,
          MergeRules } from "./publicTypes";
 import { SameRule, IgnoreRule, LeastRule, GreatestRule, LeastCommonRule, MostCommonRule, GroupRule, AddRule, ValueRule,
          JoinRule, BuiltinMergeRule } from "./mergingTypes";
