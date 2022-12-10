@@ -83,7 +83,7 @@ export default class CBRVWebview {
             /** Offset of control points for out-of-screen connections, as a percentage of the conn length */
             outOfScreenControlOffset: 0.10,
             /** Width and height of arrow markers */
-            arrowSize: 3,
+            arrowSize: 5,
         },
         zoom: {
             /** Radius when a directory's contents will be hidden (in px) */
