@@ -15,7 +15,7 @@ import tippy, {followCursor, Instance as Tippy} from 'tippy.js';
 import 'tippy.js/dist/tippy.css'; // optional for styling
 
 import { AnyFile, FileType, Directory, SymbolicLink, WebviewVisualizationSettings, CBRVMessage, WebviewMergedConnection, WebviewConnection, WebviewEndpoint } from '../privateTypes';
-import { getExtension, filterFileTree, loopIndex, OptionalKeys } from '../util';
+import { getExtension, filterFileTree, loopIndex, OptionalKeys } from './util';
 import * as geo from './geometry';
 import { Point, Box } from './geometry';
 import { ellipsisText, getRect } from './rendering';

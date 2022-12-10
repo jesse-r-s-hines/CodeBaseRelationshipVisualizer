@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { API } from "./api";
-import * as codebaseVisualization from "./codebaseVisualization";
-import * as hyperlinkVisualization from "./hyperlinkVisualization";
-import * as stackTraceVisualization from "./stackTraceVisualization";
-import * as pythonDependencyVisualization from "./pythonDependencyVisualization";
+import * as codebaseVisualization from "./visualizations/codebaseVisualization";
+import * as hyperlinkVisualization from "./visualizations/hyperlinkVisualization";
+import * as stackTraceVisualization from "./visualizations/stackTraceVisualization";
+import * as pythonDependencyVisualization from "./visualizations/pythonDependencyVisualization";
 
 export async function activate(context: vscode.ExtensionContext) {
     const cbrvAPI = new API(context);

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { Uri } from 'vscode';
 import * as path from 'path';
-import { API, Visualization, VisualizationSettings, Connection } from "./api";
+import { API, Visualization, VisualizationSettings, Connection } from "../api";
 import * as child_process from 'child_process';
 import * as child_process_promise from 'child-process-promise';
 import _ from 'lodash';

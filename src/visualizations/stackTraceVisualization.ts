@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Uri } from 'vscode';
-import { API, Visualization, VisualizationSettings, Connection } from "./api";
+import { API, Visualization, VisualizationSettings, Connection } from "../api";
 import { DebugAdapterTracker, DebugSession } from 'vscode';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import _ from "lodash";

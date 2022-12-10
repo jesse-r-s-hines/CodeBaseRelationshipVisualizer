@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Uri } from 'vscode';
-import { API, VisualizationSettings } from "./api";
+import { API, VisualizationSettings } from "../api";
 import _ from 'lodash';
 
 export async function activate(context: vscode.ExtensionContext) {

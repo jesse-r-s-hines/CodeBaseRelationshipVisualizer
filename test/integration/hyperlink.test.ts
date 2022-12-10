@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { describe, test, it } from "mocha";
-import { getHyperlinks } from '../../src/hyperlinkVisualization';
+import { getHyperlinks } from '../../src/visualizations/hyperlinkVisualization';
 import { writeFileTree } from "./integrationHelpers";
 import { workspace, Uri, RelativePattern } from 'vscode';
 import * as path from 'path'

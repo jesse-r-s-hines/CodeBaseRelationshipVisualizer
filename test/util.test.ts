@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { describe, test } from "mocha";
 import { AnyFile, FileType } from '../src/privateTypes';
-import * as util from '../src/util';
+import * as util from '../src/webview/util';
 import _ from "lodash";
 
 describe("Test utils.ts", () => {
