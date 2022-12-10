@@ -1,6 +1,42 @@
 /** Contains interfaces and classes internal to CBRV that are can be used both inside and outside the webview */
 
-import { WebviewConnection, MergedConnection, MergeRules } from "./publicTypes";
+import { WebviewConnection, WebviewEndpoint, MergeRules } from "./publicTypes";
+
+/**
+ * Represents a merged group of connections, that will be rendered as one
+ * line in the visualization. The connections are grouped together based
+ * on the merge rules.
+ */
+ export interface WebviewMergedConnection { // TODO reduce duplication with public MergedConnection
+    /**
+    * The file/folder the rendered connection will show from. This can be a
+    * folder when there are deeply nested files which are hidden until the
+    * user zooms in. Then connections to those files will show connected to
+    * the visible parent folder.
+    */
+    from?: WebviewEndpoint
+
+    /**
+    * The file or folder the rendered connection will show to. Can be a
+    * folder just like `from`.
+    */
+    to?: WebviewEndpoint
+
+    /** True if this merged connection represents connections going both directions between from and to */
+    bidirectional: boolean
+
+    width: number
+    color: string
+    tooltip?: string
+
+    /**
+    * The original connections that were merged.
+    * Will be sorted using the order function if one is given.
+    */
+    connections: WebviewConnection[]
+
+    [key: string]: any
+}
 
 /**
  * Just an alias for VSCode's FileType enum.
@@ -73,11 +109,22 @@ export type SetMessage = {
 }
 export type OpenMessage = { type: "open", file: string }
 export type RevealInExplorerMessage = { type: "reveal-in-explorer", file: string }
-export type TooltipRequestMessage = { type: "tooltip-request", id: string, conn: MergedConnection }
+export type TooltipRequestMessage = {
+    type: "tooltip-request",
+    id: string,
+    // send merged connection, but with indexes instead of the conns (so we can map them back to server side conns)
+    conn: MappedOmit<WebviewMergedConnection, 'connections'> & {connections: number[]},
+}
 export type TooltipSetMessage = { type: "tooltip-set", id: string, content: string }
 export type FilterMessage = { type: "filter", include: string, exclude: string }
 export type ContextMenuActionMessage = {
     type: "context-menu-action",
     action: string,
     file: string,
+}
+
+
+/** Like omit, but will work with mapped types. TODO move somewhere else. */
+export type MappedOmit<T, Keys> = {
+    [K in keyof T as (K extends Keys ? never : K)]: T[K]
 }

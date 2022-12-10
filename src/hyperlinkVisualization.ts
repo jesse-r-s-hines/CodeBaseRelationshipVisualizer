@@ -20,8 +20,8 @@ async function createHyperlinkVisualization(cbrvAPI: API): Promise<Visualization
         directed: true,
         showOnHover: true,
         connectionDefaults: {
-            tooltip: (conn) => _(conn.connections)
-                .map(c => `"${c.from?.file}" -> "${c.to?.file}"`)
+            tooltip: (conn, vis) => _(conn.connections)
+                .map(c => `"${vis.getRelativePath(c.from)}" -> "${vis.getRelativePath(c.to)}"`)
                 .countBy()
                 .map((count, tooltip) => count == 1 ? tooltip : `${tooltip} x${count}`)
                 .sortBy()

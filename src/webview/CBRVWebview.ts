@@ -14,8 +14,8 @@ import "d3-context-menu/css/d3-context-menu.css"; // manually require the CSS
 import tippy, {followCursor, Instance as Tippy} from 'tippy.js';
 import 'tippy.js/dist/tippy.css'; // optional for styling
 
-import { WebviewConnection, MergedConnection, WebviewEndpoint } from '../publicTypes';
-import { AnyFile, FileType, Directory, SymbolicLink, WebviewVisualizationSettings, CBRVMessage } from '../privateTypes';
+import { WebviewConnection, WebviewEndpoint } from '../publicTypes';
+import { AnyFile, FileType, Directory, SymbolicLink, WebviewVisualizationSettings, CBRVMessage, WebviewMergedConnection } from '../privateTypes';
 import { getExtension, filterFileTree, loopIndex, OptionalKeys } from '../util';
 import * as geo from './geometry';
 import { Point, Box } from './geometry';
@@ -24,9 +24,9 @@ import { RuleMerger } from './ruleMerger';
 import _, { isEqual } from "lodash";
 
 type Node = d3.HierarchyCircularNode<AnyFile>;
-type ConnPath = {id: string, conn: MergedConnection, path: string}
+type ConnPath = {id: string, conn: WebviewMergedConnection, path: string}
 type ConnEnd = { // TODO maybe split this type out into FileConnEnd and OutOfScreenConnEnd
-    conn: MergedConnection, end: "from"|"to",
+    conn: WebviewMergedConnection, end: "from"|"to",
     target: Point, // center of node or position on border of screen this connection logically connects to
     r?: number, // radius of the node (for file connections)
     hasArrow: boolean, // whether this end of the connection has an arrow marker
@@ -126,7 +126,7 @@ export default class CBRVWebview {
     pathMap: Map<string, Node> = new Map()
     /** A set of the filenames of nodes have not moved in the last update */
     unchangedFiles: Set<string> = new Set()
-    mergedConnectionsCache: MergedConnection[] = [];
+    mergedConnectionsCache: WebviewMergedConnection[] = [];
 
     hoverTimerId?: number
 
@@ -514,7 +514,7 @@ export default class CBRVWebview {
     }
 
     updateConnections(fullRerender = true) {
-        let merged: MergedConnection[];
+        let merged: WebviewMergedConnection[];
         let paths: ConnPath[];
 
         if (fullRerender || this.mergedConnectionsCache.length == 0) {
@@ -571,8 +571,19 @@ export default class CBRVWebview {
                         const elem = event.currentTarget as HTMLElement;
                         clearTimeout(this.hoverTimerId);
                         if (!elem.hasAttribute("data-tippy-content")) {
+                            const mergedConnSet = new Set(conn.connections);
+                            const connIndices = _(this.connections)
+                                .entries()
+                                .filter(([i, origConn]) => mergedConnSet.has(origConn))
+                                .map(([i, origConn]) => +i)
+                                .value();
+
                             this.hoverTimerId = _.delay(() => {
-                                this.emit({type: "tooltip-request", id, conn}); // will create and trigger the tooltip
+                                this.emit({
+                                    type: "tooltip-request",
+                                    id,
+                                    conn: {...conn, connections: connIndices },
+                                }); // will create and trigger the tooltip
                             }, 250);
                         }
                         this.connShowTransition(d3.select(event.currentTarget), true);
@@ -604,7 +615,7 @@ export default class CBRVWebview {
      * Merge all the connections to combine connections going between the same files after being raised to the first
      * visible file/folder, using mergeRules.
      */
-    mergeConnections(connections: WebviewConnection[]): MergedConnection[] {
+    mergeConnections(connections: WebviewConnection[]): WebviewMergedConnection[] {
         // Each keyFunc will split up connections in to smaller groups
         const raised = _(connections)
             // filter connections to missing files
@@ -646,7 +657,7 @@ export default class CBRVWebview {
 
                     return merger.merge(obj);
                 })
-                .map<MergedConnection>(obj => {
+                .map<WebviewMergedConnection>(obj => {
                     const from = obj.from[0];
                     const to = obj.to;
                     const isSelfLoop = (from?.file === to?.file);
@@ -655,7 +666,7 @@ export default class CBRVWebview {
                         ...obj,
                         from, to,
                         bidirectional: !isSelfLoop && (obj.from.some((e: WebviewEndpoint) => e?.file === to?.file)),
-                    } as MergedConnection;
+                    } as WebviewMergedConnection;
                 })
                 .value();
         } else { // no merging
@@ -672,7 +683,7 @@ export default class CBRVWebview {
     }
 
     /** Calculate the paths for each connection. */
-    calculatePaths(connections: MergedConnection[]): ConnPath[] {
+    calculatePaths(connections: WebviewMergedConnection[]): ConnPath[] {
         const viewbox = this.getViewbox();
         const directed = this.settings.directed;
 

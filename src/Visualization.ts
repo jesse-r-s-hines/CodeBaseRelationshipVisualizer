@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { workspace } from "vscode";
 import { Uri, Webview, WebviewPanel, FileSystemWatcher } from 'vscode';
 import * as path from "path";
-import { WebviewConnection, MergedConnection, MergeRules, WebviewEndpoint } from "./publicTypes";
+import { WebviewConnection, WebviewEndpoint, MergeRules } from "./publicTypes";
 import { WebviewVisualizationSettings, CBRVMessage, Directory } from "./privateTypes";
 
 import { DeepRequired } from "ts-essentials";
@@ -59,7 +59,7 @@ export interface VisualizationSettings {
          * will shown. Default is to return. Default is to use `connection.tooltip` or no tooltip if not present and to
          * join unique tooltips with <br> when merging.
          */
-        tooltip?: ((conn: MergedConnection) => string|false|undefined)
+        tooltip?: ((conn: MergedConnection, vis: Visualization) => string|false|undefined)
     }
 
     /**
@@ -159,11 +159,47 @@ export type ContextMenuItem = {
 export type Endpoint = Uri | { file: Uri, line?: number }
 
 /**
+ * Represents a merged group of connections, that will be rendered as one
+ * line in the visualization. The connections are grouped together based
+ * on the merge rules.
+ */
+ export interface MergedConnection {
+    /**
+    * The file/folder the rendered connection will show from. This can be a
+    * folder when there are deeply nested files which are hidden until the
+    * user zooms in. Then connections to those files will show connected to
+    * the visible parent folder.
+    */
+    from?: WebviewEndpoint
+
+    /**
+    * The file or folder the rendered connection will show to. Can be a
+    * folder just like `from`.
+    */
+    to?: WebviewEndpoint
+
+    /** True if this merged connection represents connections going both directions between from and to */
+    bidirectional: boolean
+
+    width: number
+    color: string
+    tooltip?: string
+
+    /**
+    * The original connections that were merged.
+    * Will be sorted using the order function if one is given.
+    */
+    connections: Connection[]
+
+    [key: string]: any
+}
+
+/**
  * Handles the visualization, allowing you to update the visualization.
  */
 export class Visualization {
     private context: vscode.ExtensionContext;
-    private readonly codebase: Uri
+    public readonly codebase: Uri
     private originalSettings: VisualizationSettings;
     private settings: DeepRequired<VisualizationSettings>
     private connections: Connection[] = []
@@ -356,10 +392,15 @@ export class Visualization {
                 } else if (message.type == "reveal-in-explorer") {
                     await vscode.commands.executeCommand("revealInExplorer", this.getUri(message.file));
                 } else if (message.type == "tooltip-request") {
+                    const conn: MergedConnection = {
+                        ...message.conn,
+                        connections: message.conn.connections.map(i => this.connections[i]),
+                    };
+
                     await this.send({
                         type: "tooltip-set",
                         id: message.id,
-                        content: this.settings.connectionDefaults.tooltip(message.conn) || "",
+                        content: this.settings.connectionDefaults.tooltip(conn, this) || "",
                     });
                 } else if (message.type == "context-menu-action") {
                     const [menu, i] = message.action.split("-");
@@ -376,6 +417,17 @@ export class Visualization {
     dispose(): void {
         this.webviewPanel?.dispose();
         this.fsWatcher?.dispose();
+    }
+
+    /** Takes an endpoint of a connection and returns the path relative to the codebase */
+    getRelativePath(end: Endpoint|undefined): string|undefined {
+        const uri = (end instanceof Uri) ? end : end?.file;
+        return uri ? path.relative(this.codebase.fsPath, uri.fsPath) : undefined;
+    }
+
+    /** Takes a endpoint of a connection and returns the line number, if there is one. */
+    getLine(end: Endpoint|undefined): number|undefined {
+        return (end instanceof Uri) ? undefined : end?.line;
     }
 
     /**
@@ -539,11 +591,10 @@ export class Visualization {
                 }
                 const convEndpoint = (e: Endpoint|undefined) => {
                     if (e) {
-                        const uri = (e instanceof Uri) ? e : e.file;
-                        return {
-                            file: path.relative(this.codebase.fsPath, uri.fsPath),
-                            line: (e instanceof Uri) ? undefined : e.line,
-                        };
+                        return e ? {
+                            file: this.getRelativePath(e)!,
+                            line: this.getLine(e),
+                        } : undefined;
                     } else {
                         return undefined;
                     }

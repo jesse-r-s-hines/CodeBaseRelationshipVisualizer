@@ -27,9 +27,10 @@ async function createStackTraceVisualization(cbrvAPI: API): Promise<Visualizatio
         title: "Stack Trace Visualization",
         directed: true,
         connectionDefaults: {
-            tooltip: (conn) => {
-                const tooltips = conn.connections
-                    .map(c => `to Thread ${c.threadId} "${c.toName}" "${c.to!.file}:${c.to!.line}"`);
+            tooltip: (conn, vis) => {
+                const tooltips = conn.connections.map(c =>
+                    `to Thread ${c.threadId} "${c.toName}" "${vis.getRelativePath(c.to)}:${vis.getLine(c.to)}"`
+                );
                 return _(tooltips)
                     .countBy()
                     .toPairs()

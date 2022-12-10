@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
-import { Visualization, VisualizationSettings, ContextMenuItem, Connection, Endpoint } from './Visualization';
-import { WebviewConnection, WebviewEndpoint, MergedConnection,
-         MergeRules } from "./publicTypes";
+import { Visualization, VisualizationSettings, MergedConnection, ContextMenuItem, Connection, Endpoint } from './Visualization';
+import { WebviewConnection, WebviewEndpoint, MergeRules } from "./publicTypes";
 import { SameRule, IgnoreRule, LeastRule, GreatestRule, LeastCommonRule, MostCommonRule, GroupRule, AddRule, ValueRule,
          JoinRule, BuiltinMergeRule } from "./mergingTypes";
 

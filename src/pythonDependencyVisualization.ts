@@ -55,8 +55,8 @@ async function createPythonDependencyVisualization(cbrvAPI: API): Promise<Visual
         directed: true,
         showOnHover: true,
         connectionDefaults: {
-            tooltip: (conn) => _(conn.connections)
-                .map(c => `"${c.from?.file}" -> "${c.to?.file}"`)
+            tooltip: (conn, vis) => _(conn.connections)
+                .map(c => `"${vis.getRelativePath(c.from)}" -> "${vis.getRelativePath(c.to)}"`)
                 .sortBy()
                 .join("<br/>")
         },
