@@ -19,7 +19,7 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 function installPyDepsIfNeeded() {
-    const pythonPath = vscode.workspace.getConfiguration('python').get('defaultInterpreterPath') as string;
+    const pythonPath = vscode.workspace.getConfiguration('python').get<string>('defaultInterpreterPath', 'python');
 
     child_process.exec(`'${pythonPath}' -m pydeps --version`, (error) => {
         if (error) {
@@ -85,7 +85,7 @@ async function createPythonDependencyVisualization(cbrvAPI: API): Promise<Visual
 }
 
 export async function getDependencyGraph(codebase: Uri, files: Uri[]): Promise<Connection[]> {
-    const pythonPath = vscode.workspace.getConfiguration('python').get('defaultInterpreterPath') as string;
+    const pythonPath = vscode.workspace.getConfiguration('python').get<string>('defaultInterpreterPath', 'python');
 
     const allFiles = new Set(files.map(uri => uri.fsPath));
     const dependencyGraph: Map<string, string[]> = new Map();
