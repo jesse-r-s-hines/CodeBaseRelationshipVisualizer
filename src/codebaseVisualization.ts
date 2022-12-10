@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
 import { Uri } from 'vscode';
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import { API, VisualizationSettings, Connection } from "./api";
+import { API, VisualizationSettings } from "./api";
 import _ from 'lodash';
 
 export async function activate(context: vscode.ExtensionContext) {
