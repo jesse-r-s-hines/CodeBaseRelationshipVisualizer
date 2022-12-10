@@ -287,8 +287,6 @@ export default class CBRVWebview {
         // Calculate unique key for each data. Use `type:path/to/file` so that types is treated as creating a new node
         // rather than update the existing one, which simplifies the logic.
         const keyFunc = (d: Node) => `${d.data.type}:${this.filePath(d)}`;
-        const nodeIsOrLinksToType = (d: Node, type: FileType.File|FileType.Directory) =>
-            (d.data.type == type || (d.data.type == FileType.SymbolicLink && d.data.linkedType == type));
 
         const data = packLayout.descendants().filter(d => !d.parent || !this.shouldHideContents(d.parent));
 
@@ -298,8 +296,8 @@ export default class CBRVWebview {
                 enter => {
                     const all = enter.append('g')
                         .attr('data-file', d => this.filePath(d))
-                        .classed("file", d => nodeIsOrLinksToType(d, FileType.File))
-                        .classed("directory", d => nodeIsOrLinksToType(d, FileType.Directory))
+                        .classed("file", d => this.resolvedType(d) == FileType.File)
+                        .classed("directory", d => this.resolvedType(d) == FileType.Directory)
                         .classed("symlink", d => d.data.type == FileType.SymbolicLink)
                         .classed("new", true); // We'll use this to reselect newly added nodes later.
 
@@ -309,8 +307,8 @@ export default class CBRVWebview {
                         .classed("circle", true)
                         .attr("id", d => this.filePath(d));
 
-                    const files = all.filter(d => nodeIsOrLinksToType(d, FileType.File));
-                    const directories = all.filter(d => nodeIsOrLinksToType(d, FileType.Directory));
+                    const files = all.filter(d => this.resolvedType(d) == FileType.File);
+                    const directories = all.filter(d => this.resolvedType(d) == FileType.Directory);
                     const symlinks = all.filter(d => d.data.type == FileType.SymbolicLink); // overlaps files/directories
 
                     // Add labels
@@ -353,7 +351,7 @@ export default class CBRVWebview {
                             .attr("width", iconSize) // minSize is radius
                             .attr("height", iconSize)
                             .style("fill", d => {
-                                const isDir = nodeIsOrLinksToType(d, FileType.Directory);
+                                const isDir = this.resolvedType(d) == FileType.Directory;
                                 return `var(--vscode-editor-${isDir ? 'foreground' : 'background'})`;
                             });
 
@@ -1021,6 +1019,11 @@ export default class CBRVWebview {
         // more natural, but "" is already used for "out-of-screen" targets. root won't show up in any connections 
         // or tooltips anyway, so this is only internal.
         return ancestors.length == 0 ? "/" : ancestors.join("/");
+    }
+
+    /** Returns the type of the file if its a regular file, or its linked file type if its a symlink. */
+    resolvedType(d: Node): FileType.File|FileType.Directory {
+        return (d.data.type == FileType.SymbolicLink) ? d.data.linkedType : d.data.type;
     }
 
     connKey(conn: NormalizedConnection, lines = true, ordered = true): string {
