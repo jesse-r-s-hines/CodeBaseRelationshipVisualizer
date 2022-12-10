@@ -3,11 +3,14 @@ import { describe, test, it } from "mocha";
 import { getHyperlinks } from '../../src/hyperlinkVisualization';
 import { writeFileTree } from "./integrationHelpers";
 import { workspace, Uri, RelativePattern } from 'vscode';
-import { Connection } from "../../src/api";
+import * as path from 'path'
 
 async function testGetHyperlinks(dir: Uri) {
     const files = await workspace.findFiles(new RelativePattern(dir, '**/*'));
-    return await getHyperlinks(dir, files);
+    return (await getHyperlinks(dir, files)).map(c => ({
+        from: path.relative(dir.fsPath, (c.from as any).fsPath),
+        to: path.relative(dir.fsPath, (c.to as any).fsPath),
+    }));
 }
 
 describe("Test getHyperlinks", () => {
@@ -136,20 +139,6 @@ describe("Test getHyperlinks", () => {
             {from: "index.html", to: "img.jpg"},
             {from: "index.html", to: "assets/script.js"},
         ]);
-    });
-
-    it('test files list', async () => {
-        // const dir = await writeFileTree({
-        //     'A.md': "A link to [this](./B.md)",
-        //     'B.md': "Lorem ipsum...",
-        // });
-        // const files = [
-        //     Uri.joinPath(dir, 'A.md'),
-        //     // not B.md
-        // ];
-        // expect(await getHyperlinks(dir, files)).to.eql([
-
-        // ]);
     });
 });
 
