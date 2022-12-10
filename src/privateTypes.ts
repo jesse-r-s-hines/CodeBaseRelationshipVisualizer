@@ -1,6 +1,6 @@
 /** Contains interfaces and classes internal to CBRV that are can be used both inside and outside the webview */
 
-import { WebviewConnection, WebviewEndpoint, MergeRules } from "./publicTypes";
+import { MergeRules } from "./publicTypes";
 
 /**
  * Represents a merged group of connections, that will be rendered as one
@@ -94,6 +94,18 @@ export interface WebviewVisualizationSettings {
         directory: WebviewContextMenuItem[],
     }
 }
+
+export interface WebviewConnection {
+    from?: WebviewEndpoint
+    to?: WebviewEndpoint
+    width?: number
+    color?: string
+    tooltip?: string
+    [key: string]: any
+}
+
+export type WebviewEndpoint = { file: string, line?: number }
+
 
 export type WebviewContextMenuItem = {title: string, action: string}
 

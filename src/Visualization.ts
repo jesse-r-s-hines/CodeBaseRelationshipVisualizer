@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { workspace } from "vscode";
 import { Uri, Webview, WebviewPanel, FileSystemWatcher } from 'vscode';
 import * as path from "path";
-import { WebviewConnection, WebviewEndpoint, MergeRules } from "./publicTypes";
-import { WebviewVisualizationSettings, CBRVMessage, Directory } from "./privateTypes";
+import { MergeRules } from "./publicTypes";
+import { WebviewVisualizationSettings, WebviewConnection, WebviewEndpoint, CBRVMessage, Directory } from "./privateTypes";
 
 import { DeepRequired } from "ts-essentials";
 import _, { isEqual, cloneDeep } from 'lodash';
