@@ -53,11 +53,17 @@ export interface WebviewVisualizationSettings {
         color: string
     }
     mergeRules: MergeRules|false
+    contextMenu: {
+        file: WebviewContextMenuItem[],
+        directory: WebviewContextMenuItem[],
+    }
 }
 
+export type WebviewContextMenuItem = {title: string, action: string}
+
 // messages for communication between the webview and VSCode
-export type CBRVMessage = ReadyMessage|SetMessage|OpenMessage|RevealInExplorerMessage|CopyPathMessage|
-                          CopyRelativePathMessage|TooltipRequestMessage|TooltipSetMessage|FilterMessage
+export type CBRVMessage = ReadyMessage|SetMessage|OpenMessage|RevealInExplorerMessage|TooltipRequestMessage|
+                          TooltipSetMessage|FilterMessage|ContextMenuActionMessage
 export type ReadyMessage = { type: "ready" }
 export type SetMessage = {
     type: "set",
@@ -67,8 +73,11 @@ export type SetMessage = {
 }
 export type OpenMessage = { type: "open", file: string }
 export type RevealInExplorerMessage = { type: "reveal-in-explorer", file: string }
-export type CopyPathMessage = { type: "copy-path", file: string }
-export type CopyRelativePathMessage = {type: "copy-relative-path", file: string }
 export type TooltipRequestMessage = { type: "tooltip-request", id: string, conn: MergedConnection }
 export type TooltipSetMessage = { type: "tooltip-set", id: string, content: string }
 export type FilterMessage = { type: "filter", include: string, exclude: string }
+export type ContextMenuActionMessage = {
+    type: "context-menu-action",
+    action: string,
+    file: string,
+}

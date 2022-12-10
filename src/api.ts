@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Visualization, VisualizationSettings } from './Visualization';
+import { Visualization, VisualizationSettings, ContextMenuItem } from './Visualization';
 import { Connection, Endpoint, NormalizedConnection, NormalizedEndpoint, MergedConnection,
          MergeRules } from "./publicTypes";
 import { SameRule, IgnoreRule, LeastRule, GreatestRule, LeastCommonRule, MostCommonRule, GroupRule, AddRule, ValueRule,
@@ -51,5 +51,5 @@ export {
     type Visualization,
     VisualizationSettings, Connection, Endpoint, NormalizedConnection, NormalizedEndpoint, MergedConnection, MergeRules,
     SameRule, IgnoreRule, LeastRule, GreatestRule, LeastCommonRule, MostCommonRule, GroupRule, AddRule, ValueRule,
-    JoinRule, BuiltinMergeRule,
+    JoinRule, BuiltinMergeRule, ContextMenuItem,
 };

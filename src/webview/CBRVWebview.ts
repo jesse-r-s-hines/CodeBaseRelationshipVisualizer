@@ -1069,24 +1069,15 @@ export default class CBRVWebview {
     }
 
     contextMenu(d: Node) {
-        return [
-            {
-                title: 'Reveal in Explorer',
-                action: (d: Node) => this.emit({type: "reveal-in-explorer", file: this.filePath(d)})
-            },
-            d.data.type == FileType.File ? {
-                title: 'Open in Editor',
-                action: (d: Node) => this.emit({type: "open", file: this.filePath(d)})
-            } : undefined,
-            {
-                title: 'Copy Path',
-                action: (d: Node) => this.emit({type: "copy-path", file: this.filePath(d)})
-            },
-            {
-                title: 'Copy Relative Path',
-                action: (d: Node) => this.emit({type: "copy-relative-path", file: this.filePath(d)})
-            }
-        ].filter(item => item);
+        const fileType = (this.resolvedType(d) == FileType.Directory) ? 'directory' : 'file';
+        return this.settings.contextMenu[fileType].map((item, i) => ({
+            title: item.title,
+            action: (d: Node) => this.emit({
+                type: "context-menu-action",
+                action: `${fileType}-${i}`,
+                file: this.filePath(d),
+            })
+        }));
     }
 
     setTooltip(id: string, content: string) {

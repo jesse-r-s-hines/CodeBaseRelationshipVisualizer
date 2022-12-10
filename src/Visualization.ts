@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { workspace } from "vscode";
 import { Uri, Webview, WebviewPanel, FileSystemWatcher } from 'vscode';
+import * as path from "path";
 import { Connection, NormalizedConnection, MergedConnection, MergeRules } from "./publicTypes";
 import { WebviewVisualizationSettings, CBRVMessage, Directory } from "./privateTypes";
 
@@ -94,6 +95,19 @@ export interface VisualizationSettings {
      *      - `{rule: "value", value: string}`: Show merged connections with a different color than single ones.
      */
     mergeRules?: MergeRules|boolean
+
+    /**
+     * Context menu options that will show for files and folders in addition to the default ones.
+     */
+     contextMenu?: {
+        file?: ContextMenuItem[]
+        directory?: ContextMenuItem[]
+    }
+}
+
+export type ContextMenuItem = {
+    title: string,
+    action: ((uri: Uri, vis: Visualization) => void),
 }
 
 /**
@@ -133,6 +147,37 @@ export class Visualization {
             color: "mostCommon",
             tooltip: { rule: "join", sep: "<br/>" },
         },
+        contextMenu: {
+            file: [
+                {
+                    title: 'Reveal in Explorer',
+                    action: async (uri) => await vscode.commands.executeCommand("revealInExplorer", uri),
+                }, {
+                    title: 'Open in Editor',
+                    action: async (uri) => await vscode.commands.executeCommand("vscode.open", uri),
+                }, {
+                    title: 'Copy Path',
+                    action: (uri) => vscode.env.clipboard.writeText(uri.fsPath),
+                }, {
+                    title: 'Copy Relative Path',
+                    action: (uri, vis) =>
+                        vscode.env.clipboard.writeText(path.relative(vis.codebase.fsPath, uri.fsPath)),
+                }
+            ],
+            directory: [
+                {
+                    title: 'Reveal in Explorer',
+                    action: async (uri) => await vscode.commands.executeCommand("revealInExplorer", uri),
+                }, {
+                    title: 'Copy Path',
+                    action: (uri) => vscode.env.clipboard.writeText(uri.fsPath),
+                }, {
+                    title: 'Copy Relative Path',
+                    action: (uri, vis) =>
+                        vscode.env.clipboard.writeText(path.relative(vis.codebase.fsPath, uri.fsPath)),
+                }
+            ]
+        }
     };
 
     constructor(
@@ -262,16 +307,16 @@ export class Visualization {
                     await vscode.commands.executeCommand("vscode.open", this.getUri(message.file));
                 } else if (message.type == "reveal-in-explorer") {
                     await vscode.commands.executeCommand("revealInExplorer", this.getUri(message.file));
-                } else if (message.type == "copy-path") {
-                    vscode.env.clipboard.writeText(this.getUri(message.file).fsPath);
-                } else if (message.type == "copy-relative-path") {
-                    vscode.env.clipboard.writeText(message.file);
                 } else if (message.type == "tooltip-request") {
                     await this.send({
                         type: "tooltip-set",
                         id: message.id,
                         content: this.settings.connectionDefaults.tooltip(message.conn) || "",
                     });
+                } else if (message.type == "context-menu-action") {
+                    const [menu, i] = message.action.split("-");
+                    const uri = this.getUri(message.file);
+                    this.settings.contextMenu[menu as 'file'|'directory'][Number(i)].action(uri, this);
                 }
             },
             undefined,
@@ -301,10 +346,27 @@ export class Visualization {
         if (settings.showOnHover === true) {
             settings.showOnHover = "both";
         }
+        // prepend defaults to menu items (if they are specified)
+        if (settings.contextMenu?.file)
+            settings.contextMenu.file.splice(0, 0, ...Visualization.defaultSettings.contextMenu.file);
+        if (settings.contextMenu?.directory)
+            settings.contextMenu.directory.splice(0, 0, ...Visualization.defaultSettings.contextMenu.directory);
 
         settings = _.merge({}, Visualization.defaultSettings, settings);
 
         return settings as DeepRequired<VisualizationSettings>;
+    }
+
+        /** Returns a complete settings object with defaults filled in an normalized a bit.  */
+    private getWebviewSettings(): WebviewVisualizationSettings {
+        const webviewSettings = {
+            ..._.omit(this.settings, ["title", "connectionDefaults.tooltip", "contextMenu"]),
+            contextMenu: {
+                file: this.settings.contextMenu.file.map((item, i) => ({...item, action: `file-${i}`})),
+                directory: this.settings.contextMenu.directory.map((item, i) => ({...item, action: `directory-${i}`})),
+            }
+        };
+        return webviewSettings as WebviewVisualizationSettings;
     }
 
     private setupWatcher() {
@@ -418,7 +480,7 @@ export class Visualization {
 
         let settings: WebviewVisualizationSettings|undefined;
         if (send.settings) {
-            settings = _.omit(this.settings, ["title", "connectionDefaults.tooltip"]) as WebviewVisualizationSettings;
+            settings = this.getWebviewSettings();
         }
 
         let connections: NormalizedConnection[]|undefined;
