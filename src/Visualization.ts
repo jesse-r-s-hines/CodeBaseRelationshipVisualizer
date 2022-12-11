@@ -40,12 +40,6 @@ export interface VisualizationSettings {
      */
     showOnHover?: "in"|"out"|"both"|boolean
 
-    /**
-     * If true, only files with connections to them will be shown. Default false, which will show all files.
-     * This can be overridden by the use via the controls.
-     */
-    hideUnconnected?: boolean,
-
     connectionDefaults?: {
         /** Default width of the SVG path for connections. Can be overridden per connection via `Connection.width` */
         width?: number
@@ -100,6 +94,18 @@ export interface VisualizationSettings {
      *      - `{rule: "value", value: string}`: Show merged connections with a different color than single ones.
      */
     mergeRules?: VisualizationMergeRules|boolean
+
+    /**
+     * The default filters on what files will show in the visualization.
+     * The user can still modify these defaults in the visualization.
+     */
+    filters?: {
+        /**
+         * If true, only files with connections to them will be shown. Default false, which will show all files.
+         * Can be overridden by the user via the controls.
+         */
+        hideUnconnected?: boolean,
+    }
 
     /**
      * Context menu options that will show for files and folders in addition to the default ones.
@@ -221,7 +227,6 @@ export class Visualization {
         title: 'CodeBase Relationship Visualizer',
         directed: false,
         showOnHover: false,
-        hideUnconnected: false,
         connectionDefaults: {
             width: 2,
             color: 'yellow',
@@ -234,6 +239,9 @@ export class Visualization {
             width: { rule: "add", max: 4 },
             color: "mostCommon",
             tooltip: { rule: "join", sep: "<br/>" },
+        },
+        filters: {
+            hideUnconnected: false,
         },
         contextMenu: {
             file: [

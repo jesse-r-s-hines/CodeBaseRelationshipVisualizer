@@ -14,6 +14,7 @@ import "d3-context-menu/css/d3-context-menu.css"; // manually require the CSS
 
 import tippy, {followCursor, Instance as Tippy} from 'tippy.js';
 import 'tippy.js/dist/tippy.css'; // optional for styling
+import { DeepPartial } from 'ts-essentials';
 
 import { AnyFile, FileType, Directory, SymbolicLink, WebviewVisualizationSettings, CBRVWebviewMessage,
          WebviewMergedConnection, WebviewConnection, WebviewEndpoint } from '../types';
@@ -210,15 +211,17 @@ export default class CBRVWebview {
         this.includeInput.on('change', updateFilters);
         this.excludeInput.on('change', updateFilters);
         this.hideUnconnectedInput.on('change', () => {
-            const value = !!this.hideUnconnectedInput.property('checked');
-            this.update({...this.settings, hideUnconnected: value});
-            this.emit({type: "update-settings", settings: {hideUnconnected: value}});
+            this.emitUpdateSettings({
+                filters: {
+                    hideUnconnected: !!this.hideUnconnectedInput.property('checked'),
+                },
+            });
         });
         this.showOnHoverSelect.on('change', () => {
-            const inputValue = this.showOnHoverSelect.property('value');
-            const value = inputValue == "off" ? false : inputValue;
-            this.update({...this.settings, showOnHover: value});
-            this.emit({type: "update-settings", settings: {showOnHover: value}});
+            const value = this.showOnHoverSelect.property('value');
+            this.emitUpdateSettings({
+                showOnHover: value == "off" ? false : value,
+            });
         });
 
         this.update(this.settings, this.codebase, this.connections);
@@ -503,7 +506,7 @@ export default class CBRVWebview {
 
     filteredCodebase() {
         let connected: Set<string> = new Set();
-        if (this.settings.hideUnconnected) {
+        if (this.settings.filters.hideUnconnected) {
             connected = new Set(_(this.connections)
                 .flatMap(conn => [conn.from?.file, conn.to?.file].filter(e => e) as string[])
                 .uniq().value()
@@ -511,7 +514,7 @@ export default class CBRVWebview {
         }
 
         return filterFileTree(this.codebase, (f, path) =>
-            !(this.settings.hideUnconnected && f.type != FileType.Directory && !connected.has(path)) &&
+            !(this.settings.filters.hideUnconnected && f.type != FileType.Directory && !connected.has(path)) &&
             !(f.type == FileType.Directory && f.children.length == 0) // filter empty dirs
         );
     }
@@ -1080,6 +1083,16 @@ export default class CBRVWebview {
 
     emit(message: CBRVWebviewMessage) {
         this.diagram.node()!.dispatchEvent(new CustomEvent(`cbrv:send`, {detail: message}));
+    }
+
+    emitUpdateSettings(settingsUpdate: DeepPartial<WebviewVisualizationSettings>, rerender = true) {
+        const newSettings = _.merge({}, this.settings, settingsUpdate);
+        if (rerender) {
+            this.update(newSettings);
+        } else {
+            this.settings = newSettings;
+        }
+        this.emit({type: "update-settings", settings: settingsUpdate});
     }
 
     contextMenu(d: Node) {
