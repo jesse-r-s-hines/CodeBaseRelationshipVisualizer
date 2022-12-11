@@ -630,7 +630,7 @@ export default class CBRVWebview {
      */
     mergeConnections(connections: WebviewConnection[]): WebviewMergedConnection[] {
         // Each keyFunc will split up connections in to smaller groups
-        const raised = _(connections)
+        let raised = _(connections)
             // filter connections to missing files
             .filter(conn => [conn.from, conn.to].every(e => !e || !!this.pathMap.get(e.file)))
             .map(conn => { // raise to first visible file
@@ -640,6 +640,9 @@ export default class CBRVWebview {
                 const raised: WebviewConnection = {from, to};
                 return {conn, raised};
             });
+        if (!this.settings.showSelfLoops) {
+            raised = raised.filter(({raised}) => raised.from?.file != raised.to?.file);
+        }
 
         if (this.settings.mergeRules) {
             const merger = new RuleMerger(

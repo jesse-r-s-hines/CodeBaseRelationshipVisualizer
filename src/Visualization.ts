@@ -45,6 +45,12 @@ export interface VisualizationSettings {
      */
     showOnHover?: "in"|"out"|"both"|boolean
 
+    /**
+     * Whether to show connections between lines within a single file as a self loop or to just ignore them.
+     * Default true.
+     */
+    showSelfLoops?: boolean
+
     connectionDefaults?: {
         /** Default width of the SVG path for connections. Can be overridden per connection via `Connection.width` */
         width?: number
@@ -243,6 +249,7 @@ export class Visualization {
         title: 'CodeBase Relationship Visualizer',
         directed: false,
         showOnHover: false,
+        showSelfLoops: true,
         connectionDefaults: {
             width: 2,
             color: 'yellow',
