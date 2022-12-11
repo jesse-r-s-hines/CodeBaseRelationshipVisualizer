@@ -43,7 +43,7 @@
             }
         ]
     },
-    "main": "./dist/index.js",
+    "main": "./dist/extension.js",
     "scripts": {
         "vscode:prepublish": "npm run build",
         "build": "npm-run-all build:*",
