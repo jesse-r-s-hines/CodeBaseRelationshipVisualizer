@@ -170,13 +170,13 @@ export type Endpoint = Uri | { file: Uri, line?: number }
     * user zooms in. Then connections to those files will show connected to
     * the visible parent folder.
     */
-    from?: WebviewEndpoint
+    from?: { file: Uri, line?: number }
 
     /**
     * The file or folder the rendered connection will show to. Can be a
     * folder just like `from`.
     */
-    to?: WebviewEndpoint
+    to?: { file: Uri, line?: number }
 
     /** True if this merged connection represents connections going both directions between from and to */
     bidirectional: boolean
@@ -392,8 +392,16 @@ export class Visualization {
                 } else if (message.type == "reveal-in-explorer") {
                     await vscode.commands.executeCommand("revealInExplorer", this.getUri(message.file));
                 } else if (message.type == "tooltip-request") {
+                    const convEndpoint = (e: WebviewEndpoint|undefined) =>
+                        e ? {
+                            file: Uri.file(path.resolve(this.codebase.fsPath, e.file)),
+                            line: e.line,
+                        } : undefined;
+
                     const conn: MergedConnection = {
                         ...message.conn,
+                        from: convEndpoint(message.conn.from),
+                        to: convEndpoint(message.conn.to),
                         connections: message.conn.connections.map(i => this.connections[i]),
                     };
 
