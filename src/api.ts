@@ -12,13 +12,15 @@ import { SameRule, IgnoreRule, LeastRule, GreatestRule, LeastCommonRule, MostCom
 /**
  * This is the API that the CBRV VSCode extension will expose.
  * 
- * It can be accessed like so:
+ * To use, add CBRV to your packge.json `extensionDependencies` and then import the api like so:
  *  ```ts
  * let cbrvAPI = extensions.getExtension('CBRV').exports;
  * let visualization = await cbrvAPI.create({
  *   // ...
  * })
  * ```
+ * 
+ * See https://code.visualstudio.com/api/references/vscode-api#extensions
  */
 export class API {
     context: vscode.ExtensionContext

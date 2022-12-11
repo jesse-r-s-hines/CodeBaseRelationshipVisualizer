@@ -13,4 +13,6 @@ export async function activate(context: vscode.ExtensionContext) {
     await hyperlinkVisualization.activate(context);
     await stackTraceVisualization.activate(context);
     await pythonDependencyVisualization.activate(context);
+
+    return cbrvAPI;
 }
