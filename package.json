@@ -47,8 +47,11 @@
     "scripts": {
         "vscode:prepublish": "npm run build",
         "build": "npm-run-all build:*",
-        "build:extension": "tsc -p ./src",
+        "build:extension": "webpack --config ./webpack.config.js --env dev",
         "build:webview": "webpack --config ./webpack.webview.config.js --env dev",
+        "build-prod": "npm-run-all build-prod:*",
+        "build-prod:extension": "webpack --config ./webpack.config.js --env prod",
+        "build-prod:webview": "webpack --config ./webpack.webview.config.js --env prod",
         "lint": "eslint . --ext .ts,.tsx",
         "watch": "npm-run-all watch:*",
         "watch:extension": "tsc -w -p ./src",
@@ -100,6 +103,7 @@
         "d3-selection-multi": "^1.0.1",
         "glob": "^8.0.3",
         "lodash": "^4.17.21",
+        "spawn-sync": "^2.0.0",
         "text-encoding": "^0.7.0",
         "tippy.js": "^6.3.7",
         "vscode-debugprotocol": "^1.51.0"

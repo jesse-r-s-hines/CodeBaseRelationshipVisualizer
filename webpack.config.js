@@ -1,41 +1,35 @@
-const path = require("path");
+const path = require('path');
 
 module.exports = (env) => ({
-  entry: {
-    webview: "./src/webview/index.ts"
-  },
-  mode: (env.prod) ? "production" : "development",
-  devtool: (env.prod) ? 'source-map' : 'inline-source-map', // inline-source-map makes debugging work better.
-  optimization: {
-    minimize: env.prod ? true : false // Debugger has trouble if you minify, even with the source map.
-  },
-  output: {
-    path: path.resolve(__dirname, "dist", "webview"),
-    filename: "[name].js"
-  },
-  resolve: {
-    extensions: [".js", ".ts", ".tsx"]
-  },
-  module: {
-    rules: [
-      {
-        test: /\.(ts|tsx)$/,
-        loader: "ts-loader",
-        options: {
-          configFile: "src/webview/tsconfig.json",
-        }
-      },
-      {
-        test: /\.css$/,
-        use: [
-          {
-            loader: "style-loader"
-          },
-          {
-            loader: "css-loader"
-          }
-        ]
-      }
-    ]
-  }
+    target: 'node',
+    mode: (env.prod) ? "production" : "development",
+    devtool: (env.prod) ? 'source-map' : 'inline-source-map', // inline-source-map makes debugging work better.
+    optimization: {
+      minimize: env.prod ? true : false // Debugger has trouble if you minify, even with the source map.
+    },
+    entry: './src/extension.ts',
+    output: {
+        path: path.resolve(__dirname, 'dist'),
+        filename: 'extension.js',
+        libraryTarget: "commonjs2",
+        devtoolModuleFilenameTemplate: "../[resource-path]",
+    },
+    externals: {
+        vscode: "commonjs vscode"
+    },
+    resolve: {
+        extensions: ['.ts', '.js'],
+    },
+    module: {
+        rules: [{
+            test: /\.ts$/,
+            exclude: /node_modules/,
+            use: [{
+                loader: 'ts-loader',
+                options: {
+                    configFile: path.resolve(__dirname, 'src/tsconfig.json'),
+                }
+            }]
+        }]
+    },
 });
