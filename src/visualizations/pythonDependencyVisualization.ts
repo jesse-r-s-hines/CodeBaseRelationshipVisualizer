@@ -68,6 +68,9 @@ async function createPythonDependencyVisualization(cbrvAPI: API): Promise<Visual
             width: "greatest",
             color: "mostCommon",
         },
+        filters: {
+            include: "**/*.py",
+        }
     };
 
     const visualization = await cbrvAPI.create(settings);
