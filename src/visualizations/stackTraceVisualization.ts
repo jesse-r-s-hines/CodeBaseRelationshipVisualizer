@@ -16,6 +16,11 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.debug.registerDebugAdapterTrackerFactory("*", stackTraceVisualization),
         vscode.commands.registerCommand('stackTraceVisualization.start', async () => {
+            if (stackTraceVisualization.stackTraces.size == 0) {
+                vscode.window.showInformationMessage(
+                    "No debug active session, start a VSCode debug session to start the visualization."
+                );
+            }
             stackTraceVisualization.visualization = await createStackTraceVisualization(cbrvAPI);
             stackTraceVisualization.updateVisualization();
         }),
