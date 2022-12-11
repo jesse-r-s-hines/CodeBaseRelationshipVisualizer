@@ -1,4 +1,5 @@
 import _, { isEqual } from "lodash";
+
 import { normalizedJSONStringify as normJSON } from "./util";
 import { MergeRules, Mergers } from "./ruleMergerTypes";
 

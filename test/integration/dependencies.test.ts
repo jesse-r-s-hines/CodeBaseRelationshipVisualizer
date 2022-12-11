@@ -1,10 +1,11 @@
 import { expect } from 'chai';
 import { describe, test, it } from "mocha";
-import { getDependencyGraph } from '../../src/visualizations/pythonDependencyVisualization';
-import { writeFileTree } from "./integrationHelpers";
 import { workspace, Uri, RelativePattern } from 'vscode';
 import * as path from 'path';
 import dedent from "dedent-js";
+
+import { getDependencyGraph } from '../../src/visualizations/pythonDependencyVisualization';
+import { writeFileTree } from "./integrationHelpers";
 
 async function testGetDependencyGraph(dir: Uri) {
     const files = await workspace.findFiles(new RelativePattern(dir, '**/*'));

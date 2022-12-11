@@ -2,8 +2,9 @@ import * as vscode from 'vscode';
 import { Uri, RelativePattern } from "vscode";
 import * as path from 'path';
 import { promises as fsp } from 'fs';
-import { AnyFile, Directory, FileType } from "./types";
 import _ from "lodash";
+
+import { AnyFile, Directory, FileType } from "./types";
 
 
 /** Creates a AnyFile object of type. */

@@ -1,4 +1,5 @@
 import * as d3 from 'd3';
+import _ from "lodash";
 
 // d3-context-menu lacks types, so just manually requiring. This is working, but should consider better options:
 // - VSCode built-in menu configuration
@@ -14,13 +15,13 @@ import "d3-context-menu/css/d3-context-menu.css"; // manually require the CSS
 import tippy, {followCursor, Instance as Tippy} from 'tippy.js';
 import 'tippy.js/dist/tippy.css'; // optional for styling
 
-import { AnyFile, FileType, Directory, SymbolicLink, WebviewVisualizationSettings, CBRVMessage, WebviewMergedConnection, WebviewConnection, WebviewEndpoint } from '../types';
+import { AnyFile, FileType, Directory, SymbolicLink, WebviewVisualizationSettings, CBRVMessage, WebviewMergedConnection,
+        WebviewConnection, WebviewEndpoint } from '../types';
 import { getExtension, filterFileTree, loopIndex, OptionalKeys } from './util';
 import * as geo from './geometry';
 import { Point, Box } from './geometry';
 import { ellipsisText, getRect } from './rendering';
 import { RuleMerger } from './ruleMerger';
-import _, { isEqual } from "lodash";
 
 type Node = d3.HierarchyCircularNode<AnyFile>;
 type ConnPath = {id: string, conn: WebviewMergedConnection, path: string}

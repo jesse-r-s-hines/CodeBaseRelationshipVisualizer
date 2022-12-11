@@ -1,12 +1,11 @@
 import * as vscode from 'vscode';
-import { workspace } from "vscode";
-import { Uri, Webview, WebviewPanel, FileSystemWatcher } from 'vscode';
+import { Uri, Webview, WebviewPanel, FileSystemWatcher, workspace } from 'vscode';
 import * as path from "path";
-import { VisualizationMergeRules } from "./types";
-import { WebviewVisualizationSettings, WebviewConnection, WebviewEndpoint, CBRVMessage, Directory } from "./types";
-
 import { DeepRequired } from "ts-essentials";
 import _, { isEqual, cloneDeep } from 'lodash';
+
+import { WebviewVisualizationSettings, WebviewConnection, WebviewEndpoint, CBRVMessage, Directory,
+         VisualizationMergeRules } from "./types";
 import * as fileHelper from "./fileHelper";
 
 type VisualizationState = InstanceType<typeof Visualization.VisualizationState>;

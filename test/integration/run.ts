@@ -1,5 +1,4 @@
 import * as path from 'path';
-
 import { runTests } from '@vscode/test-electron';
 // See https://code.visualstudio.com/api/working-with-extensions/testing-extension
 

@@ -2,8 +2,9 @@ import * as vscode from 'vscode';
 import { Uri } from 'vscode';
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { API, Visualization, VisualizationSettings, Connection } from "../api";
 import _ from 'lodash';
+
+import { API, Visualization, VisualizationSettings, Connection } from "../api";
 
 export async function activate(context: vscode.ExtensionContext) {
     const cbrvAPI = new API(context);

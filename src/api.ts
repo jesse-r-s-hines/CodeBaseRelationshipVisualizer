@@ -1,12 +1,13 @@
+/**
+ * The public CodeBase Relationship Visualization API
+ */
+
 import * as vscode from 'vscode';
+
 import { Visualization, VisualizationSettings, MergedConnection, ContextMenuItem, Connection, Endpoint } from './Visualization';
 import { VisualizationMergeRules } from "./types";
 import { SameRule, IgnoreRule, LeastRule, GreatestRule, LeastCommonRule, MostCommonRule, GroupRule, AddRule, ValueRule,
          JoinRule, BuiltinMergeRule } from "./webview/ruleMergerTypes";
-
-/**
- * The CodeBase Relationship Visualization API
- */
 
 /**
  * This is the API that the CBRV VSCode extension will expose.

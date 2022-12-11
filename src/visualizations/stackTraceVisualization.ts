@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import { Uri } from 'vscode';
-import { API, Visualization, VisualizationSettings, Connection } from "../api";
-import { DebugAdapterTracker, DebugSession } from 'vscode';
+import { Uri, DebugAdapterTracker, DebugSession } from 'vscode';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import _ from "lodash";
+
+import { API, Visualization, VisualizationSettings, Connection } from "../api";
 
 const colorScheme = [
     "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"
