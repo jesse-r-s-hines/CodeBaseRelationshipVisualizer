@@ -15,6 +15,11 @@ type VisualizationState = InstanceType<typeof Visualization.VisualizationState>;
  */
 export interface VisualizationSettings {
     /**
+     * Icon for the webview panel. See https://code.visualstudio.com/api/references/vscode-api#WebviewPanel
+     */
+    iconPath?: Uri | {dark: Uri, light: Uri} | null
+
+    /**
      * Title for the internal webview. See https://code.visualstudio.com/api/references/vscode-api#WebviewPanel
      */
     title?: string
@@ -234,6 +239,7 @@ export class Visualization {
     private onFSChangeCallback?: (visState: VisualizationState) => Promise<void>
 
     private static readonly defaultSettings: DeepRequired<VisualizationSettings> = {
+        iconPath: null,
         title: 'CodeBase Relationship Visualizer',
         directed: false,
         showOnHover: false,
@@ -339,7 +345,8 @@ export class Visualization {
             this.originalSettings = state.settings;
             this.settings = this.normalizeSettings(state.settings);
             if (this.webviewPanel) {
-                this.webviewPanel.title == this.settings.title;
+                this.webviewPanel.iconPath = this.settings.iconPath ?? undefined;
+                this.webviewPanel.title = this.settings.title;
             }
             send.settings = true;
         }
@@ -495,7 +502,7 @@ export class Visualization {
         /** Returns a complete settings object with defaults filled in an normalized a bit.  */
     private getWebviewSettings(): WebviewVisualizationSettings {
         const webviewSettings = {
-            ..._.omit(this.settings, ["title", "connectionDefaults.tooltip", "contextMenu"]),
+            ..._.omit(this.settings, ["iconPath", "title", "connectionDefaults.tooltip", "contextMenu"]),
             contextMenu: {
                 file: this.settings.contextMenu.file.map((item, i) => ({...item, action: `file-${i}`})),
                 directory: this.settings.contextMenu.directory.map((item, i) => ({...item, action: `directory-${i}`})),
@@ -554,6 +561,7 @@ export class Visualization {
                 // enableCommandUris: true,
             }
         );
+        panel.iconPath = this.settings.iconPath ?? undefined;
 
         panel.webview.html = this.getWebviewContent(panel.webview);
 
