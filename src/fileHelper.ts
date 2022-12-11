@@ -22,15 +22,20 @@ async function createAnyFile(type: FileType, uri: Uri, base: Uri, stat?: vscode.
         if (resolved.split(path.sep)[0] == "..") { 
             resolved = realpath; // resolved is relative to base unless link is outside, then its absolute
         }
+        const linkedType = type & ~FileType.SymbolicLink; // remove flag to make a single value
+        if (linkedType != FileType.Directory && linkedType != FileType.File) {
+            throw new Error("Other filetypes not supported");
+        }
+
         return {
             type: FileType.SymbolicLink,
-            linkedType: type & ~FileType.SymbolicLink, // remove flag to make a single value
+            linkedType,
             name,
             link: await fsp.readlink(uri.fsPath),
             resolved,
         };
     } else {
-        throw new Error("Other filetypes not supported"); // TODO
+        throw new Error("Other filetypes not supported");
     }
 }
 
