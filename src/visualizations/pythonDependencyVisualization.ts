@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Uri } from 'vscode';
+import { Uri, workspace, FileType } from 'vscode';
 import * as path from 'path';
 import * as child_process from 'child_process';
 import * as child_process_promise from 'child-process-promise';
@@ -88,20 +88,27 @@ async function createPythonDependencyVisualization(cbrvAPI: API): Promise<Visual
     return visualization;
 }
 
+async function isSymlink(file: Uri) {
+    const stat = await workspace.fs.stat(file);
+    return (stat.type & FileType.SymbolicLink) === FileType.SymbolicLink;
+}
+
 export async function getDependencyGraph(codebase: Uri, files: Uri[]): Promise<Connection[]> {
     const pythonPath = vscode.workspace.getConfiguration('python').get<string>('defaultInterpreterPath', 'python');
 
     const allFiles = new Set(files.map(uri => uri.fsPath));
     const dependencyGraph: Map<string, string[]> = new Map();
-    const stack = files.map(uri => uri.fsPath);
+    const stack = [...files];
 
     while (stack.length > 0) {
-        const fsPath = stack.pop()!;
-        if (path.extname(fsPath) == ".py" && !dependencyGraph.has(fsPath)) { // python and not already filled in
+        const uri = stack.pop()!;
+        // Only get deps for non-symlink python files that have not already been done
+        if (path.extname(uri.fsPath) == ".py" && !dependencyGraph.has(uri.fsPath) && !(await isSymlink(uri))) {
             let graph: any;
             try {
+                // Get dep JSON, with infinite bacon "depth"
                 const result = await child_process_promise.spawn(pythonPath,
-                    ['-m', 'pydeps', '--show-deps', '--no-output', '--max-bacon', '0', fsPath], // infinite bacon
+                    ['-m', 'pydeps', '--show-deps', '--no-output', '--max-bacon', '0', uri.fsPath],
                     { capture: ['stdout', 'stderr'], cwd: codebase.fsPath }
                 );
                 graph = JSON.parse(result.stdout);

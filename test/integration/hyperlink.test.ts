@@ -14,20 +14,23 @@ async function testGetHyperlinks(dir: Uri) {
     }));
 }
 
+const workspaceFolder = Uri.file(__dirname.split("/").slice(0, -4).join("/"));
+const samples = Uri.joinPath(workspaceFolder, '/test/sample-codebases');
+
 describe("Test getHyperlinks", () => {
     it('test markdown', async () => {
         let dir = await writeFileTree({
             'A.md': "A link to [this](./B.md)",
             'B.md': "Lorem ipsum...",
         });
-        expect(await testGetHyperlinks(dir)).to.eql([
+        expect(await testGetHyperlinks(dir)).to.have.deep.members([
             {from: "A.md", to: "B.md"},
         ]);
 
         dir = await writeFileTree({
             'A.md': "A link to [itself](./A.md)",
         });
-        expect(await testGetHyperlinks(dir)).to.eql([
+        expect(await testGetHyperlinks(dir)).to.have.deep.members([
             {from: "A.md", to: "A.md"},
         ]);
 
@@ -36,7 +39,7 @@ describe("Test getHyperlinks", () => {
             'stuff/B.md': "Lorem ipsum...",
             'C.md': "Lorem ipsum...",
         });
-        expect(await testGetHyperlinks(dir)).to.eql([
+        expect(await testGetHyperlinks(dir)).to.have.deep.members([
             {from: "stuff/A.md", to: "stuff/B.md"},
             {from: "stuff/A.md", to: "C.md"},
         ]);
@@ -54,7 +57,7 @@ describe("Test getHyperlinks", () => {
             'C.md': "Lorem ipsum...",
             'D.md': "Lorem ipsum...",
         });
-        expect(await testGetHyperlinks(dir)).to.eql([
+        expect(await testGetHyperlinks(dir)).to.have.deep.members([
             {from: "stuff/A.md", to: "stuff/B.md"},
             {from: "stuff/A.md", to: "C.md"},
             {from: "stuff/A.md", to: "stuff/B.md"},
@@ -74,7 +77,7 @@ describe("Test getHyperlinks", () => {
             'stuff/C.md': "Lorem ipsum...",
             'stuff/D.md': "Lorem ipsum...",
         });
-        expect(await testGetHyperlinks(dir)).to.eql([
+        expect(await testGetHyperlinks(dir)).to.have.deep.members([
             {from: "stuff/A.md", to: "stuff/B.md"},
             {from: "stuff/A.md", to: "stuff/C.md"},
             {from: "stuff/A.md", to: "stuff/D.md"},
@@ -84,7 +87,7 @@ describe("Test getHyperlinks", () => {
             'A.md': `A <a href="B.md">html style link</a> will work in markdown.`,
             'B.md': `Lorem Ipsum`,
         });
-        expect(await testGetHyperlinks(dir)).to.eql([
+        expect(await testGetHyperlinks(dir)).to.have.deep.members([
             {from: "A.md", to: "B.md"},
         ]);
     });
@@ -94,7 +97,7 @@ describe("Test getHyperlinks", () => {
             'A.md': "A markdown file with a [broken link](./not-a-file.md)",
             'B.md': "Lorem ipsum...",
         });
-        expect(await testGetHyperlinks(dir)).to.eql([
+        expect(await testGetHyperlinks(dir)).to.have.deep.members([
         ]);
     });
 
@@ -131,7 +134,7 @@ describe("Test getHyperlinks", () => {
             'assets/script.js': "console.log('hello world')",
             'assets/styles.css': "body { background-color: green; }",
         });
-        expect(await testGetHyperlinks(dir)).to.eql([
+        expect(await testGetHyperlinks(dir)).to.have.deep.members([
             {from: "index.html", to: "assets/styles.css"},
             {from: "index.html", to: "path/to/blog.html"},
             {from: "index.html", to: "path/to/markdown/file.md"},
@@ -139,6 +142,16 @@ describe("Test getHyperlinks", () => {
             {from: "index.html", to: "page.html"},
             {from: "index.html", to: "img.jpg"},
             {from: "index.html", to: "assets/script.js"},
+        ]);
+    });
+
+    it('test symlinks', async () => {
+        const symlinks = Uri.joinPath(samples, 'symlinks');
+
+        expect(await testGetHyperlinks(symlinks)).to.have.deep.members([
+            {from: "C.md",to: "B.md"},
+            {from: "B.md",to: "link.md"},
+            {from: "B.md",to: "C.md"},
         ]);
     });
 });

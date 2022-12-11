@@ -57,7 +57,8 @@ const symlinkContents: Directory = {
                 {name: "E.txt", type: FileType.File, size: 1828},
             ],
         },
-        {name: "B.md", type: FileType.File, size: 841},
+        {name: "B.md", type: FileType.File, size: 870},
+        {name: "C.md", type: FileType.File, size: 13},
         {
             name: "external",
             type: FileType.SymbolicLink,

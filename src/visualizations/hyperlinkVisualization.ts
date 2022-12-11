@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Uri } from 'vscode';
+import { Uri, FileType, workspace } from 'vscode';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import _ from 'lodash';
@@ -109,10 +109,16 @@ export async function getHyperlinks(codebase: Uri, files: Uri[]): Promise<Connec
         return undefined;
     };
 
+    const isSymlink = async (file: Uri) => {
+        const stat = await workspace.fs.stat(file);
+        return (stat.type & FileType.SymbolicLink) === FileType.SymbolicLink;
+    };
+
     const fileConns: Connection[][] = await Promise.all(files.map(async (file) => {
         const ext = path.extname(file.fsPath).toLowerCase();
+        const checkFile = [".md", ".html"].includes(ext) && !(await isSymlink(file));
 
-        if ([".md", ".html"].includes(ext)) {
+        if (checkFile) {
             const regex = ext == '.html' ? htmlLinkRegex : markdownLinkRegex;
             const contents = (await fs.readFile(file.fsPath)).toString();
             const matches = [...contents.matchAll(regex)];
