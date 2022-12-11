@@ -435,7 +435,7 @@ export default class CBRVWebview {
             );
 
         all
-            .classed("contents-hidden", d => this.shouldHideContents(d)) // TODO make this show an elipsis or something
+            .classed("contents-hidden", d => this.shouldHideContents(d))
             .classed("labels-hidden", d => this.shouldHideLabels(d));
 
         // we only need to recalculate these for new elements unless the file structure changed (not just zoom)

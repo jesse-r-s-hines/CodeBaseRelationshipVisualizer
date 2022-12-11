@@ -20,7 +20,7 @@ export function filterFileTree<T extends AnyFile>(
     condition: (node: AnyFile, path: string) => boolean,
     path = ""
 ): T {
-    // Can't use path module in webview. TODO consider how we're handling windows paths.
+    // Can't use path module in webview.
     const joinPath = (path: string, c: AnyFile) => path ? `${path}/${c.name}` : c.name;
 
     if (root.type == FileType.Directory) {

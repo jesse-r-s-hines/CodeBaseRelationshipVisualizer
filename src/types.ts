@@ -6,7 +6,7 @@ import { SameRule, IgnoreRule, BuiltinMergeRule } from "./webview/ruleMergerType
  * line in the visualization. The connections are grouped together based
  * on the merge rules.
  */
-export interface WebviewMergedConnection { // TODO reduce duplication with public MergedConnection
+export interface WebviewMergedConnection {
     /**
     * The file/folder the rendered connection will show from. This can be a
     * folder when there are deeply nested files which are hidden until the
@@ -135,8 +135,8 @@ export type ContextMenuActionMessage = {
 }
 
 
-/** Like omit, but will work with mapped types. TODO move somewhere else. */
-export type MappedOmit<T, Keys> = {
+/** Like omit, but will work with mapped types. */
+type MappedOmit<T, Keys> = {
     [K in keyof T as (K extends Keys ? never : K)]: T[K]
 }
 

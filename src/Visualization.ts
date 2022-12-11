@@ -62,17 +62,19 @@ export interface VisualizationSettings {
     }
 
     /**
-     * Rules for how to merge connections when multiple connections go between the same files or folders. If omitted or
-     * false connections will never be merged. Setting to true is the same as using all the default merge options.
+     * Rules for how to merge connections when multiple connections go between the same files or folders. This can occur
+     * if you have duplicate connections in the connection list, or because of dynamic zoom. If you zoom out enough
+     * to hide a folder's contents, all the connections to it will render to the folder instead of the contents.
      * 
-     * TODO update these docs
+     * If false, connections will never be merged. By default, all connections between the same two files or folders
+     * will be merged. Setting to true is the same as using all the default merge options.
      * 
      * Pass an object where each key is a custom property in your `Connection`s and each value is one of:
      * - `"same"`: Only merge connections with equal values for this prop.
      * - `"ignore"`: Ignore this prop when merging connections, i.e. merged connections can have different values for
      *               the prop. This is the default.
      * 
-     * The following special keys are recognized, in addition to custom props on `Connection`. 
+     * The following special keys are recognized, in addition to custom props on `Connection`.
      * - `file`: One of `"same"` or `"ignore"`. Whether to merge connections that go to different files (this can happen
      *           because of dynamic zoom). Default `"ignore"`.
      * - `line`: One of `"same"` or `"ignore"`. Whether to merge connections that go to different lines within the same
@@ -81,6 +83,8 @@ export interface VisualizationSettings {
      *                double-headed arrow. Only applicable if connections are directed. Default `"ignore"`.
      * - `width`: How to render the width of merged connections. Can be one of the following values:
      *      - `"same"`: Do not merge connections with different widths.
+     *      - `"first"`: Use the width of the first connection.
+     *      - `"last"`: Use the width of the last connection.
      *      - `"least"`: Use the smallest width of the merged connections.
      *      - `"greatest"`: Use the greatest width of the merged connections.
      *      - `"leastCommon"`: Use the least common width among the merged connections.
@@ -89,6 +93,8 @@ export interface VisualizationSettings {
      *      - `{rule: "value", value: number}`: Show merged connections with a different width than single ones.
      * - `color`: How to render the color of merged connections. Can be one of the following values:
      *      - `"same"`: Do not merge connections with different colors.
+     *      - `"first"`: Use the color of the first connection.
+     *      - `"last"`: Use the color of the last connection.
      *      - `"leastCommon"`: Use the least common color among the merged connections.
      *      - `"mostCommon"`: Use the most common color among the merge connections. This is the default
      *      - `{rule: "value", value: string}`: Show merged connections with a different color than single ones.
@@ -511,7 +517,6 @@ export class Visualization {
                 callback();
             }
         });
-        // this.fsWatcher.dispose(); // TODO dispose after usage
     }
 
     private createWebviewPanel(): WebviewPanel {

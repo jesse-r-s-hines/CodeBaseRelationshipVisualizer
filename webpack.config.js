@@ -1,6 +1,5 @@
 const path = require("path");
 
-// TODO cleanup build, build both extension and webview with webpack
 module.exports = (env) => ({
   entry: {
     webview: "./src/webview/index.ts"
