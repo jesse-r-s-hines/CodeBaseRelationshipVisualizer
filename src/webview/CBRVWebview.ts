@@ -203,11 +203,14 @@ export default class CBRVWebview {
         this.hideUnconnectedInput = d3.select<HTMLInputElement, unknown>("#hide-unconnected");
         this.showOnHoverSelect = d3.select<HTMLSelectElement, unknown>("#show-on-hover");
 
-        const updateFilters = () => this.emit({
-            type: 'filter',
-            include: this.includeInput.property('value'),
-            exclude: this.excludeInput.property('value'),
-        });
+        const updateFilters = () => {
+            this.emitUpdateSettings({
+                filters: {
+                    include: this.includeInput.property('value').trim(),
+                    exclude: this.excludeInput.property('value').trim(),
+                },
+            });
+        };
         this.includeInput.on('change', updateFilters);
         this.excludeInput.on('change', updateFilters);
         this.hideUnconnectedInput.on('change', () => {
@@ -260,6 +263,10 @@ export default class CBRVWebview {
         const inputDiv = d3.select(this.hideUnconnectedInput.node()!.parentElement);
         inputDiv.style("display", hasConnections ? 'inherit' : 'none');
 
+
+        this.includeInput.property('value', this.settings.filters.include);
+        this.excludeInput.property('value', this.settings.filters.exclude);
+        this.hideUnconnectedInput.property('checked', this.settings.filters.hideUnconnected);
         this.showOnHoverSelect.property('value', this.settings.showOnHover || "off");
     }
 

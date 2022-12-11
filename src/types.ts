@@ -89,6 +89,8 @@ export interface WebviewVisualizationSettings {
     }
     mergeRules: VisualizationMergeRules|false
     filters: {
+        include: string,
+        exclude: string,
         hideUnconnected: boolean,
     }
     contextMenu: {
@@ -115,7 +117,7 @@ export type WebviewContextMenuItem = {title: string, action: string}
 export type CBRVMessage = SetMessage|TooltipSetMessage
 /** Messages the webview will send to the Visualization class */
 export type CBRVWebviewMessage = ReadyMessage|OpenMessage|RevealInExplorerMessage|TooltipRequestMessage|
-                                 TooltipSetMessage|FilterMessage|ContextMenuActionMessage|UpdateSettings
+                                 TooltipSetMessage|ContextMenuActionMessage|UpdateSettings
 
 export type TooltipSetMessage = { type: "tooltip-set", id: string, content: string }
 export type SetMessage = {
@@ -134,7 +136,6 @@ export type TooltipRequestMessage = {
     // send merged connection, but with indexes instead of the conns (so we can map them back to server side conns)
     conn: MappedOmit<WebviewMergedConnection, 'connections'> & {connections: number[]},
 }
-export type FilterMessage = { type: "filter", include: string, exclude: string }
 export type ContextMenuActionMessage = {
     type: "context-menu-action",
     action: string,

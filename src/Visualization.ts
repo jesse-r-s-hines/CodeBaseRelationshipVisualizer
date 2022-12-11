@@ -101,6 +101,18 @@ export interface VisualizationSettings {
      */
     filters?: {
         /**
+         * Exclude files that match these comma separated glob patterns.
+         * Can be overridden by the user via the controls.
+         */
+        exclude?: string
+  
+        /**
+         * Include only files that match these comma separated glob patterns.
+         * Can be overridden by the user via the controls.
+         */
+        include?: string
+  
+        /**
          * If true, only files with connections to them will be shown. Default false, which will show all files.
          * Can be overridden by the user via the controls.
          */
@@ -217,8 +229,6 @@ export class Visualization {
     private webviewPanel?: WebviewPanel
     private fsWatcher?: FileSystemWatcher
 
-    private include = "**/*"
-    private exclude = ""
     private files: Uri[] = [];
 
     private onFSChangeCallback?: (visState: VisualizationState) => Promise<void>
@@ -241,6 +251,8 @@ export class Visualization {
             tooltip: { rule: "join", sep: "<br/>" },
         },
         filters: {
+            include: "",
+            exclude: "",
             hideUnconnected: false,
         },
         contextMenu: {
@@ -393,11 +405,6 @@ export class Visualization {
             async (message: CBRVWebviewMessage) => {
                 if (message.type == "ready") { // we can get ready again if the webview closes and reopens.
                     await this.sendSet({codebase: true, settings: true, connections: true});
-                } else if (message.type == "filter") {
-                    this.include = message.include;
-                    this.exclude = message.exclude;
-                    await this.updateFileList();
-                    await this.sendSet({codebase: true});
                 } else if (message.type == "open") {
                     // NOTE: we could do these and Command URIs inside the webview instead. That might be simpler
                     await vscode.commands.executeCommand("vscode.open", this.getUri(message.file));
@@ -424,6 +431,11 @@ export class Visualization {
                     });
                 } else if (message.type == "update-settings") {
                     this.settings = _.merge({}, this.settings, message.settings);
+                    const filters = message.settings.filters;
+                    if (filters?.include != undefined || filters?.exclude != undefined) {
+                        await this.updateFileList();
+                        await this.sendSet({codebase: true});
+                    }
                 } else if (message.type == "context-menu-action") {
                     const [menu, i] = message.action.split("-");
                     const uri = this.getUri(message.file);
@@ -456,7 +468,8 @@ export class Visualization {
      * Updates stuff after the codebase or include/exclude settings have changed.
      */
     private async updateFileList(): Promise<void> {
-        this.files = await fileHelper.getFilteredFileList(this.codebase, this.include, this.exclude);
+        const {include, exclude} = this.settings.filters;
+        this.files = await fileHelper.getFilteredFileList(this.codebase, include || '**/*', exclude);
     }
 
     /** Returns a complete settings object with defaults filled in an normalized a bit.  */
