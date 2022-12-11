@@ -111,6 +111,7 @@ export interface WebviewConnection {
 
 export type WebviewEndpoint = { file: string, line?: number }
 
+export type Direction = "in" | "out" | "both"
 
 export type WebviewContextMenuItem = {title: string, action: string}
 

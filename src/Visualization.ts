@@ -5,7 +5,7 @@ import { DeepRequired } from "ts-essentials";
 import _, { isEqual, cloneDeep } from 'lodash';
 
 import { WebviewVisualizationSettings, WebviewConnection, WebviewEndpoint, CBRVMessage, CBRVWebviewMessage, Directory,
-         VisualizationMergeRules } from "./types";
+         VisualizationMergeRules, Direction } from "./types";
 import * as fileHelper from "./fileHelper";
 
 type VisualizationState = InstanceType<typeof Visualization.VisualizationState>;
@@ -43,7 +43,7 @@ export interface VisualizationSettings {
      * 
      * If connections are undirected, "in", "out", and "both" behave the same.
      */
-    showOnHover?: "in"|"out"|"both"|boolean
+    showOnHover?: Direction|boolean
 
     /**
      * Whether to show connections between lines within a single file as a self loop or to just ignore them.
@@ -331,11 +331,19 @@ export class Visualization {
         /** Get a list of all the files included by the current include/exclude settings. */
         get files(): Uri[] { return this.visualization.files; }
 
-        // /** TODO
-        // * Return connections that are connected to the given file. Optionally
-        // * specify the direction the are going relative to the file.
-        // */
-        // getConnected(file: Uri, direction?: Direction): Connection[]
+        /**
+        * Return connections that are connected to the given file. Optionally specify the direction the are going
+        * relative to the file.
+        */
+        getConnected(file: Uri|undefined, direction: Direction = 'both'): Connection[] {
+            const getUri = (e: Endpoint|undefined) => (e instanceof Uri) ? e : e?.file;
+            return this.connections.filter(conn => {
+                const checkFrom = direction == 'out' || direction == 'both';
+                const checkTo = direction == 'in' || direction == 'both';
+                return (checkFrom && getUri(conn.from)?.fsPath == file?.fsPath) ||
+                    (checkTo && getUri(conn.to)?.fsPath == file?.fsPath);
+            });
+        }
     }
 
     /**
@@ -462,7 +470,7 @@ export class Visualization {
     }
 
     /** Destroy the visualization and all webviews/watchers etc. */
-    dispose(): void {
+    dispose(): void { // TODO make Visualization return or implement Disposable?
         this.webviewPanel?.dispose();
         this.fsWatcher?.dispose();
     }
