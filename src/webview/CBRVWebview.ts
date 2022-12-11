@@ -285,7 +285,7 @@ export default class CBRVWebview {
             } else if (d.type == FileType.SymbolicLink) {
                 return this.s.file.minSize; // render all symbolic links as the minimum size.
             } else {
-                throw new Error(`Unknown type`);
+                throw new Error(`Unknown type`); // shouldn't be possible, other types won't be sent.
             }
         });
 

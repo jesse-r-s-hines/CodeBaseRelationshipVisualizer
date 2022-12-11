@@ -129,6 +129,7 @@ const symlinkContents: Directory = {
                 },
             ],
         },
+        // NOTE: the brokenLink.html link will just get omitted.
     ],
 };
 

@@ -49,9 +49,13 @@ export async function getFileTree(uri: Uri, base?: Uri, type?: FileType): Promis
 
     if (type == FileType.Directory) {
         const files = await vscode.workspace.fs.readDirectory(uri);
-        const children = await Promise.all(files.map(
+        const childrenResults = await Promise.allSettled(files.map(
             ([name, type]) => getFileTree(Uri.joinPath(uri, name), base, type)
         ));
+        const children = childrenResults
+            .filter(rslt => rslt.status == "fulfilled")
+            .map(rslt => (rslt as PromiseFulfilledResult<AnyFile>).value);
+
         const folder = await createAnyFile(type, uri, base) as Directory;
         return {...folder, children: _.sortBy(children, f => f.name)};
     } else {
@@ -83,6 +87,7 @@ export function parseGlobs(base: Uri, include?: string, exclude?: string): [Rela
 export async function getFilteredFileList(base: Uri, include?: string, exclude?: string): Promise<Uri[]> {
     const [includePattern, excludePattern] = parseGlobs(base, include, exclude);
     let fileList = await vscode.workspace.findFiles(includePattern, excludePattern);
+    // note: broken symlinks don't get returned by findFiles
     fileList = _.sortBy(fileList, uri => uri.fsPath);
     return fileList;
 }
@@ -111,14 +116,16 @@ export async function listToFileTree(base: Uri, uris: Uri[]): Promise<Directory>
         .value();
 
     // query all the stat data asynchronously
-    const flat = await Promise.all(
+    const results = await Promise.allSettled(
         paths.map(async (uri): Promise<[string, AnyFile]> => {
             const stat = await vscode.workspace.fs.stat(uri);
             return [uri.fsPath, await createAnyFile(stat.type, uri, base, stat)];
         })
     );
+    const flat = results
+        .filter(rslt => rslt.status == "fulfilled")
+        .map(rslt => (rslt as PromiseFulfilledResult<[string, AnyFile]>).value);
 
-    // TODO symlink base?
     const tree: Directory = await createAnyFile(FileType.Directory, base, base) as Directory;
 
     // build a tree. flat is in sorted order, so directories will show up before their children.
