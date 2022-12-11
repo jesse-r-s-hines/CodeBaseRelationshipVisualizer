@@ -1,5 +1,5 @@
 import CBRVWebview from "./CBRVWebview";
-import { CBRVMessage } from "../types";
+import { CBRVMessage, CBRVWebviewMessage } from "../types";
 
 const vscode = acquireVsCodeApi();
 
@@ -22,7 +22,7 @@ function main() {
 
     // just pass events through as webview messages
     svg.addEventListener(`cbrv:send`, (event: any) => {
-        vscode.postMessage(event.detail);
+        vscode.postMessage(event.detail as CBRVWebviewMessage);
     });
 
     vscode.postMessage({ type: "ready" });

@@ -4,7 +4,7 @@ import * as path from "path";
 import { DeepRequired } from "ts-essentials";
 import _, { isEqual, cloneDeep } from 'lodash';
 
-import { WebviewVisualizationSettings, WebviewConnection, WebviewEndpoint, CBRVMessage, Directory,
+import { WebviewVisualizationSettings, WebviewConnection, WebviewEndpoint, CBRVMessage, CBRVWebviewMessage, Directory,
          VisualizationMergeRules } from "./types";
 import * as fileHelper from "./fileHelper";
 
@@ -104,7 +104,7 @@ export interface VisualizationSettings {
     /**
      * Context menu options that will show for files and folders in addition to the default ones.
      */
-     contextMenu?: {
+    contextMenu?: {
         file?: ContextMenuItem[]
         directory?: ContextMenuItem[]
     }
@@ -366,7 +366,7 @@ export class Visualization {
         // Await until we get the ready message from the webview
         await new Promise((resolve, reject) => {
             const disposable = this.webviewPanel!.webview.onDidReceiveMessage(
-                async (message: CBRVMessage) => {
+                async (message: CBRVWebviewMessage) => {
                     if (message.type == "ready") {
                         disposable.dispose();
                         resolve(undefined);
@@ -382,7 +382,7 @@ export class Visualization {
         this.setupWatcher();
 
         this.webviewPanel.webview.onDidReceiveMessage(
-            async (message: CBRVMessage) => {
+            async (message: CBRVWebviewMessage) => {
                 if (message.type == "ready") { // we can get ready again if the webview closes and reopens.
                     await this.sendSet({codebase: true, settings: true, connections: true});
                 } else if (message.type == "filter") {

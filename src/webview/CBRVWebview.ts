@@ -15,8 +15,8 @@ import "d3-context-menu/css/d3-context-menu.css"; // manually require the CSS
 import tippy, {followCursor, Instance as Tippy} from 'tippy.js';
 import 'tippy.js/dist/tippy.css'; // optional for styling
 
-import { AnyFile, FileType, Directory, SymbolicLink, WebviewVisualizationSettings, CBRVMessage, WebviewMergedConnection,
-        WebviewConnection, WebviewEndpoint } from '../types';
+import { AnyFile, FileType, Directory, SymbolicLink, WebviewVisualizationSettings, CBRVWebviewMessage,
+         WebviewMergedConnection, WebviewConnection, WebviewEndpoint } from '../types';
 import { getExtension, filterFileTree, loopIndex, OptionalKeys } from './util';
 import * as geo from './geometry';
 import { Point, Box } from './geometry';
@@ -1075,7 +1075,7 @@ export default class CBRVWebview {
         this.throttledUpdate();
     }
 
-    emit(message: CBRVMessage) {
+    emit(message: CBRVWebviewMessage) {
         this.diagram.node()!.dispatchEvent(new CustomEvent(`cbrv:send`, {detail: message}));
     }
 

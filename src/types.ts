@@ -108,16 +108,21 @@ export type WebviewEndpoint = { file: string, line?: number }
 
 export type WebviewContextMenuItem = {title: string, action: string}
 
-// messages for communication between the webview and VSCode
-export type CBRVMessage = ReadyMessage|SetMessage|OpenMessage|RevealInExplorerMessage|TooltipRequestMessage|
-                          TooltipSetMessage|FilterMessage|ContextMenuActionMessage
-export type ReadyMessage = { type: "ready" }
+/** Messages the Visualization class will send to the webview */
+export type CBRVMessage = SetMessage|TooltipSetMessage
+/** Messages the webview will send to the Visualization class */
+export type CBRVWebviewMessage = ReadyMessage|OpenMessage|RevealInExplorerMessage|TooltipRequestMessage|
+                                 TooltipSetMessage|FilterMessage|ContextMenuActionMessage
+
+export type TooltipSetMessage = { type: "tooltip-set", id: string, content: string }
 export type SetMessage = {
     type: "set",
     settings?: WebviewVisualizationSettings,
     codebase?: Directory,
     connections?: WebviewConnection[],
 }
+
+export type ReadyMessage = { type: "ready" }
 export type OpenMessage = { type: "open", file: string }
 export type RevealInExplorerMessage = { type: "reveal-in-explorer", file: string }
 export type TooltipRequestMessage = {
@@ -126,7 +131,6 @@ export type TooltipRequestMessage = {
     // send merged connection, but with indexes instead of the conns (so we can map them back to server side conns)
     conn: MappedOmit<WebviewMergedConnection, 'connections'> & {connections: number[]},
 }
-export type TooltipSetMessage = { type: "tooltip-set", id: string, content: string }
 export type FilterMessage = { type: "filter", include: string, exclude: string }
 export type ContextMenuActionMessage = {
     type: "context-menu-action",
