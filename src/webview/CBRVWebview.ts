@@ -210,12 +210,15 @@ export default class CBRVWebview {
         this.includeInput.on('change', updateFilters);
         this.excludeInput.on('change', updateFilters);
         this.hideUnconnectedInput.on('change', () => {
-            const value = this.hideUnconnectedInput.property('checked');
-            this.update({...this.settings, hideUnconnected: !!value});
+            const value = !!this.hideUnconnectedInput.property('checked');
+            this.update({...this.settings, hideUnconnected: value});
+            this.emit({type: "update-settings", settings: {hideUnconnected: value}});
         });
         this.showOnHoverSelect.on('change', () => {
-            const value = this.showOnHoverSelect.property('value');
-            this.update({...this.settings, showOnHover: value == "off" ? false : value});
+            const inputValue = this.showOnHoverSelect.property('value');
+            const value = inputValue == "off" ? false : inputValue;
+            this.update({...this.settings, showOnHover: value});
+            this.emit({type: "update-settings", settings: {showOnHover: value}});
         });
 
         this.update(this.settings, this.codebase, this.connections);

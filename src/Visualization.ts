@@ -414,6 +414,8 @@ export class Visualization {
                         id: message.id,
                         content: this.settings.connectionDefaults.tooltip(conn, this) || "",
                     });
+                } else if (message.type == "update-settings") {
+                    this.settings = _.merge({}, this.settings, message.settings);
                 } else if (message.type == "context-menu-action") {
                     const [menu, i] = message.action.split("-");
                     const uri = this.getUri(message.file);

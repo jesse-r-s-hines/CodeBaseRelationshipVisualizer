@@ -1,5 +1,6 @@
 /** Contains interfaces and classes internal to CBRV that are can be used both inside and outside the webview */
 import { SameRule, IgnoreRule, BuiltinMergeRule } from "./webview/ruleMergerTypes";
+import { DeepPartial } from "ts-essentials";
 
 /**
  * Represents a merged group of connections, that will be rendered as one
@@ -112,7 +113,7 @@ export type WebviewContextMenuItem = {title: string, action: string}
 export type CBRVMessage = SetMessage|TooltipSetMessage
 /** Messages the webview will send to the Visualization class */
 export type CBRVWebviewMessage = ReadyMessage|OpenMessage|RevealInExplorerMessage|TooltipRequestMessage|
-                                 TooltipSetMessage|FilterMessage|ContextMenuActionMessage
+                                 TooltipSetMessage|FilterMessage|ContextMenuActionMessage|UpdateSettings
 
 export type TooltipSetMessage = { type: "tooltip-set", id: string, content: string }
 export type SetMessage = {
@@ -137,7 +138,10 @@ export type ContextMenuActionMessage = {
     action: string,
     file: string,
 }
-
+export type UpdateSettings = {
+    type: "update-settings",
+    settings: DeepPartial<WebviewVisualizationSettings>,
+}
 
 /** Like omit, but will work with mapped types. */
 type MappedOmit<T, Keys> = {
