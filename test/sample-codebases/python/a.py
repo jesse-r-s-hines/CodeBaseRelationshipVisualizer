@@ -10,9 +10,19 @@ def thread2():
         print(i)
 
 if __name__ == "__main__":
+    print('Test basic recursion within a single file')
     print(b.c.fact(6))
+    print()
+    
+    print('Test recursion between two files')
     print(b.c.recursive(6))
+    print()
 
+    print('Test a deep stack trace')
+    print(b.c.deep("a"))
+    print()
+
+    print('Test threading')
     t1 = threading.Thread(target=thread1)
     t2 = threading.Thread(target=thread2)
 
