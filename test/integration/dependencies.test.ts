@@ -37,7 +37,7 @@ describe("Test getDependencyGraph", () => {
                 from . import c
             `,
         });
-        expect(await testGetDependencyGraph(Uri.joinPath(dir, 'mypkg'))).to.eql([
+        expect(await testGetDependencyGraph(Uri.joinPath(dir, 'mypkg'))).to.have.deep.members([
             { from: "b/c.py", to: "__init__.py" },
             { from: "b/c.py", to: "b/__init__.py" },
             { from: "b/c.py", to: "b/d.py" },
@@ -52,7 +52,7 @@ describe("Test getDependencyGraph", () => {
     it('test empty', async () => {
         const dir = await writeFileTree({
         });
-        expect(await testGetDependencyGraph(dir)).to.eql([
+        expect(await testGetDependencyGraph(dir)).to.have.deep.members([
         ]);
     });
 
@@ -62,7 +62,7 @@ describe("Test getDependencyGraph", () => {
                 print('hello world')
             `,
         });
-        expect(await testGetDependencyGraph(Uri.joinPath(dir, 'mypkg'))).to.eql([
+        expect(await testGetDependencyGraph(Uri.joinPath(dir, 'mypkg'))).to.have.deep.members([
         ]);
     });
 
@@ -80,7 +80,7 @@ describe("Test getDependencyGraph", () => {
                 print('c')
             `,
         });
-        expect(await testGetDependencyGraph(Uri.joinPath(dir, 'mypkg'))).to.eql([
+        expect(await testGetDependencyGraph(Uri.joinPath(dir, 'mypkg'))).to.have.deep.members([
             {from: "a.py", to: "b/__init__.py"},
             {from: "a.py", to: "b/c.py"},
         ]);
@@ -109,7 +109,7 @@ describe("Test getDependencyGraph", () => {
             'd.py',
         ]);
 
-        expect(actual).to.eql([
+        expect(actual).to.have.deep.members([
             { from: "c.py", to: "d.py" },
         ]);
     });
