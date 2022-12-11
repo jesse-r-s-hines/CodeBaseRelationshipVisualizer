@@ -1,6 +1,6 @@
 import _, { isEqual } from "lodash";
 import { normalizedJSONStringify as normJSON } from "./util";
-import { MergeRules, Mergers } from "../mergingTypes";
+import { MergeRules, Mergers } from "./ruleMergerTypes";
 
 type ParsedMergeRule = {
     prop: string,

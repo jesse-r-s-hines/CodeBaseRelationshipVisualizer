@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { describe, test } from "mocha";
 import { RuleMerger } from '../src/webview/ruleMerger';
-import { MergeRules, Mergers } from '../src/mergingTypes';
+import { MergeRules, Mergers } from '../src/webview/ruleMergerTypes';
 
 describe("Test merging.ts", () => {
     const basic = [

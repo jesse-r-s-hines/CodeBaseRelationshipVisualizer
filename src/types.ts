@@ -1,13 +1,12 @@
 /** Contains interfaces and classes internal to CBRV that are can be used both inside and outside the webview */
-
-import { MergeRules } from "./publicTypes";
+import { SameRule, IgnoreRule, BuiltinMergeRule } from "./webview/ruleMergerTypes";
 
 /**
  * Represents a merged group of connections, that will be rendered as one
  * line in the visualization. The connections are grouped together based
  * on the merge rules.
  */
- export interface WebviewMergedConnection { // TODO reduce duplication with public MergedConnection
+export interface WebviewMergedConnection { // TODO reduce duplication with public MergedConnection
     /**
     * The file/folder the rendered connection will show from. This can be a
     * folder when there are deeply nested files which are hidden until the
@@ -88,7 +87,7 @@ export interface WebviewVisualizationSettings {
         width: number
         color: string
     }
-    mergeRules: MergeRules|false
+    mergeRules: VisualizationMergeRules|false
     contextMenu: {
         file: WebviewContextMenuItem[],
         directory: WebviewContextMenuItem[],
@@ -139,4 +138,16 @@ export type ContextMenuActionMessage = {
 /** Like omit, but will work with mapped types. TODO move somewhere else. */
 export type MappedOmit<T, Keys> = {
     [K in keyof T as (K extends Keys ? never : K)]: T[K]
+}
+
+export type VisualizationMergeRules = {
+    file?: SameRule | IgnoreRule
+    line?: SameRule | IgnoreRule
+    direction?: SameRule | IgnoreRule
+
+    width?: BuiltinMergeRule
+    color?: BuiltinMergeRule
+    tooltip?: BuiltinMergeRule
+} | {
+    [key: string]: BuiltinMergeRule
 }

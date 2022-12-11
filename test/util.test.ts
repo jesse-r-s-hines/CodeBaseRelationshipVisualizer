@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { describe, test } from "mocha";
-import { AnyFile, FileType } from '../src/privateTypes';
+import { AnyFile, FileType } from '../src/types';
 import * as util from '../src/webview/util';
 import _ from "lodash";
 

@@ -8,7 +8,7 @@ import dedent from "dedent-js";
 
 async function testGetDependencyGraph(dir: Uri) {
     const files = await workspace.findFiles(new RelativePattern(dir, '**/*'));
-    const x = (await getDependencyGraph(dir, files))
+    const x = (await getDependencyGraph(dir, files));
     return (await getDependencyGraph(dir, files)).map(c => ({
         from: path.relative(dir.fsPath, (c.from as any).fsPath),
         to: path.relative(dir.fsPath, (c.to as any).fsPath),
@@ -45,14 +45,14 @@ describe("Test getDependencyGraph", () => {
     // });
 
     it('test empty', async () => {
-        let dir = await writeFileTree({
+        const dir = await writeFileTree({
         });
         expect(await testGetDependencyGraph(dir)).to.eql([
         ]);
     });
 
     it('test single', async () => {
-        let dir = await writeFileTree({
+        const dir = await writeFileTree({
             'mypkg/a.py': dedent`
                 print('hello world')
             `,
@@ -62,7 +62,7 @@ describe("Test getDependencyGraph", () => {
     });
 
     it('test missing', async () => {
-        let dir = await writeFileTree({
+        const dir = await writeFileTree({
             'mypkg/__init__.py': "",
             'mypkg/a.py': dedent`
                 from pathlib import Path

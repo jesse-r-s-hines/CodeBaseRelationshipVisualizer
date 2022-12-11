@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { workspace } from "vscode";
 import { Uri, Webview, WebviewPanel, FileSystemWatcher } from 'vscode';
 import * as path from "path";
-import { MergeRules } from "./publicTypes";
-import { WebviewVisualizationSettings, WebviewConnection, WebviewEndpoint, CBRVMessage, Directory } from "./privateTypes";
+import { VisualizationMergeRules } from "./types";
+import { WebviewVisualizationSettings, WebviewConnection, WebviewEndpoint, CBRVMessage, Directory } from "./types";
 
 import { DeepRequired } from "ts-essentials";
 import _, { isEqual, cloneDeep } from 'lodash';
@@ -94,7 +94,7 @@ export interface VisualizationSettings {
      *      - `"mostCommon"`: Use the most common color among the merge connections. This is the default
      *      - `{rule: "value", value: string}`: Show merged connections with a different color than single ones.
      */
-    mergeRules?: MergeRules|boolean
+    mergeRules?: VisualizationMergeRules|boolean
 
     /**
      * Context menu options that will show for files and folders in addition to the default ones.
@@ -110,7 +110,6 @@ export type ContextMenuItem = {
     action: ((uri: Uri, vis: Visualization) => void),
 }
 
-// TODO move back into publicTypes
 /**
  * Represents a connection or relationship between files. A `Connection` connects two file:line locations in the
  * workspace. `Connections` will be rendered as a line or arrow in the visualization. `line` is optional, in which case
@@ -163,7 +162,7 @@ export type Endpoint = Uri | { file: Uri, line?: number }
  * line in the visualization. The connections are grouped together based
  * on the merge rules.
  */
- export interface MergedConnection {
+export interface MergedConnection {
     /**
     * The file/folder the rendered connection will show from. This can be a
     * folder when there are deeply nested files which are hidden until the

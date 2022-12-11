@@ -3,7 +3,7 @@ import { describe, test, it } from "mocha";
 import { getHyperlinks } from '../../src/visualizations/hyperlinkVisualization';
 import { writeFileTree } from "./integrationHelpers";
 import { workspace, Uri, RelativePattern } from 'vscode';
-import * as path from 'path'
+import * as path from 'path';
 
 async function testGetHyperlinks(dir: Uri) {
     const files = await workspace.findFiles(new RelativePattern(dir, '**/*'));

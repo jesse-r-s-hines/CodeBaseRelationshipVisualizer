@@ -7,7 +7,7 @@ import { Uri } from 'vscode';
 import * as fs from 'fs';
 import _ from 'lodash';
 
-import { Directory, FileType } from '../../src/privateTypes';
+import { Directory, FileType } from '../../src/types';
 import * as fileHelper from '../../src/fileHelper';
 
 // I can't find a built-in way to get workspaceFolder. __dirname is .../CBRV/dist/test/test/integration
@@ -225,7 +225,7 @@ describe('Test fileHelper', () => {
             ]
         });
 
-        tree = await fileHelper.getFilteredFileTree(minimal, '**/*', 'A')
+        tree = await fileHelper.getFilteredFileTree(minimal, '**/*', 'A');
 
         tree = await fileHelper.getFilteredFileTree(minimal, '**/*', 'A, *.txt');
         expect(tree).to.eql({
