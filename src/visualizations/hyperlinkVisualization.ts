@@ -85,8 +85,8 @@ export async function getHyperlinks(codebase: Uri, files: Uri[]): Promise<Connec
             .split('#')[0] // remove any # url part
             .trim()
             .replace(/^https?:\/\//, '') // remove http://
-            .replace("\\", "/") // convert to URL/posix style if we have windows paths for some reason
-            .replace(/(^\/+)|(\/+$)/, '') // trim trailing "/"
+            .replace(/\\/g, "/") // convert to URL/posix style if we have windows paths for some reason
+            .replace(/(^\/+)|(\/+$)/g, '') // trim trailing "/"
             .trim();
 
         if (link == "") return undefined;

@@ -649,7 +649,7 @@ export class Visualization {
                 const convEndpoint = (e: Endpoint|undefined) => {
                     if (e) {
                         return e ? {
-                            file: this.getRelativePath(e)!.replace("\\", '/'), // normalize to unix style
+                            file: this.getRelativePath(e)!.replace(/\\/g, '/'), // normalize to unix style
                             line: this.getLine(e),
                         } : undefined;
                     } else {
