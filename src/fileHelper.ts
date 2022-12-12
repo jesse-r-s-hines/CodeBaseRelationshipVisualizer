@@ -18,8 +18,8 @@ async function createAnyFile(type: FileType, uri: Uri, base: Uri, stat?: vscode.
     // FileType enum is bit-flagged together for Symlink files/directories
     } else if ((type & FileType.SymbolicLink) === FileType.SymbolicLink) {
         const realpath = await fsp.realpath(uri.fsPath);
-        let resolved = path.relative(base.fsPath, realpath);
-        if (resolved.split(path.sep)[0] == "..") { 
+        let resolved = path.relative(base.fsPath, realpath).split(path.sep).join("/"); // always use / style paths for internal links
+        if (resolved.split('/')[0] == "..") { 
             resolved = realpath; // resolved is relative to base unless link is outside, then its absolute
         }
         const linkedType = type & ~FileType.SymbolicLink; // remove flag to make a single value

@@ -8,7 +8,7 @@ import * as fs from 'fs';
 import _ from 'lodash';
 import * as path from "path"
 
-import { Directory, FileType } from '../../src/types';
+import { AnyFile, Directory, FileType } from '../../src/types';
 import * as fileHelper from '../../src/fileHelper';
 import { writeFileTree } from "./integrationHelpers";
 
@@ -131,33 +131,65 @@ const symlinkContents: Directory = {
     ],
 };
 
+function expectTree(actual: AnyFile, expected: AnyFile) {
+    // Size can vary a bit by platform (line endings) so don't compare it directly
+    const stripFields = (file: AnyFile): any => {
+        if (file.type == FileType.Directory) {
+            return {
+                ...file,
+                children: file.children.map(c => stripFields(c)),
+            }
+        } else if (file.type == FileType.File) {
+            return _.omit(file, "size");
+        } else {
+            return _.omit(file, ['link', 'resolved']);
+        }
+    }
+    // do a normal expect so we get nice error messages for simple errors
+    expect(stripFields(actual)).to.eql(stripFields(expected));
+
+    // check that sizes are close to what we expected and symlinks paths match
+    const areEqual = _.isEqualWith(actual, expected, (a, b, key) => {
+        if (key == 'size') {
+            return Math.abs(b - a) < b * 0.10;
+        } else if (key == 'link') {
+            return a.split(path.sep).join('/').toLocaleLowerCase() == b.split(path.sep).join('/').toLocaleLowerCase();
+        } else if (key == 'resolved') {
+            return a.toLocaleLowerCase() == b.toLocaleLowerCase();
+        } else {
+            return undefined
+        }
+    })
+    expect(areEqual, 'expect file trees to be the same').to.be.true;
+}
+
 describe('Test fileHelper', () => {
     test('getFileTree', async () => {
         let tree = await fileHelper.getFileTree(minimal);
-        expect(tree).to.eql(minimalContents);
+        expectTree(tree, minimalContents);
 
         const empty = await writeFileTree({});
         tree = await fileHelper.getFileTree(empty);
-        expect(tree).to.eql({type: FileType.Directory, name: tree.name, children: []});
+        expectTree(tree, {type: FileType.Directory, name: tree.name, children: []});
 
         tree = await fileHelper.getFileTree(symlinks);
-        expect(tree).to.eql(symlinkContents);
+        expectTree(tree, symlinkContents);
     });
 
     test('listToFileTree', async () => {
         let fileList = await vscode.workspace.findFiles(new vscode.RelativePattern(minimal, '**/*'));
         let tree = await fileHelper.listToFileTree(minimal, fileList);
-        expect(tree).to.eql(minimalContents);
+        expectTree(tree, minimalContents);
 
         const empty = await writeFileTree({});
         tree = await fileHelper.listToFileTree(empty, []);
-        expect(tree).to.eql({type: FileType.Directory, name: tree.name, children: []});
+        expectTree(tree, {type: FileType.Directory, name: tree.name, children: []});
 
         fileList = [
             Uri.joinPath(minimal, 'A')
         ];
         tree = await fileHelper.listToFileTree(minimal, fileList);
-        expect(tree).to.eql({
+        expectTree(tree, {
             type: FileType.Directory,
             name: "minimal",
             children: [{type: FileType.Directory, name: "A", children: []}],
@@ -167,7 +199,7 @@ describe('Test fileHelper', () => {
             Uri.joinPath(minimal, 'A/E.txt')
         ];
         tree = await fileHelper.listToFileTree(minimal, fileList);
-        expect(tree).to.eql({
+        expectTree(tree, {
             type: FileType.Directory,
             name: "minimal",
             children: [{
@@ -178,16 +210,16 @@ describe('Test fileHelper', () => {
         });
 
         await expect(fileHelper.listToFileTree(minimal, [minimal]))
-            .to.be.rejectedWith(/".*\/sample-codebases\/minimal" is not under ".*\/sample-codebases\/minimal"/);
+            .to.be.rejectedWith(/".*sample-codebases[\\/]minimal" is not under ".*sample-codebases[\\/]minimal"/);
         await expect(fileHelper.listToFileTree(minimal, [samples]))
-            .to.be.rejectedWith(/".*\/sample-codebases" is not under ".*\/sample-codebases\/minimal"/);
+            .to.be.rejectedWith(/".*sample-codebases" is not under ".*sample-codebases[\\/]minimal"/);
 
         fileList = await vscode.workspace.findFiles(new vscode.RelativePattern(symlinks, '**/*'));
         const expected = _.cloneDeep(symlinkContents);
         const loop = expected.children.find(c => c.name == "loop")! as Directory;
         loop.children = loop.children!.filter(c => c.name != "loop"); // findFiles doesn't traverse the loop
         tree = await fileHelper.listToFileTree(symlinks, fileList);
-        expect(tree).to.eql(expected);
+        expectTree(tree, expected);
     });
 
     test('getFilteredFileList and getFilteredFileListTree', async () => {
@@ -208,10 +240,10 @@ describe('Test fileHelper', () => {
         expect(list.map(u => u.fsPath)).to.eql(minimalContentsList);
 
         let tree = await fileHelper.getFilteredFileTree(minimal, '**/*');
-        expect(tree).to.eql(minimalContents);
+        expectTree(tree, minimalContents);
 
         tree = await fileHelper.getFilteredFileTree(minimal, 'A/*');
-        expect(tree).to.eql({
+        expectTree(tree, {
             name: "minimal",
             type: FileType.Directory,
             children: [
@@ -230,7 +262,7 @@ describe('Test fileHelper', () => {
         tree = await fileHelper.getFilteredFileTree(minimal, '**/*', 'A');
 
         tree = await fileHelper.getFilteredFileTree(minimal, '**/*', 'A, *.txt');
-        expect(tree).to.eql({
+        expectTree(tree, {
             name: "minimal",
             type: FileType.Directory,
             children: [
@@ -250,7 +282,7 @@ describe('Test fileHelper', () => {
         // tree = await fileHelper.getFilteredFileList(minimal, 'A/*.{txt,md}, D.md')
 
         tree = await fileHelper.getFilteredFileTree(symlinks, 'A/**');
-        expect(tree).to.eql({
+        expectTree(tree, {
             name: "symlinks",
             type: FileType.Directory,
             children: [
@@ -265,7 +297,7 @@ describe('Test fileHelper', () => {
         });
 
         tree = await fileHelper.getFilteredFileTree(symlinks, 'A/**, link/**');
-        expect(tree).to.eql({
+        expectTree(tree, {
             name: "symlinks",
             type: FileType.Directory,
             children: [
