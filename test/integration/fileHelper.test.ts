@@ -4,9 +4,8 @@ chai.use(chaiAsPromised);
 import { describe, test } from "mocha";
 import * as vscode from 'vscode';
 import { Uri } from 'vscode';
-import * as fs from 'fs';
 import _ from 'lodash';
-import * as path from "path"
+import * as path from "path";
 
 import { AnyFile, Directory, FileType } from '../../src/types';
 import * as fileHelper from '../../src/fileHelper';
@@ -138,13 +137,13 @@ function expectTree(actual: AnyFile, expected: AnyFile) {
             return {
                 ...file,
                 children: file.children.map(c => stripFields(c)),
-            }
+            };
         } else if (file.type == FileType.File) {
             return _.omit(file, "size");
         } else {
             return _.omit(file, ['link', 'resolved']);
         }
-    }
+    };
     // do a normal expect so we get nice error messages for simple errors
     expect(stripFields(actual)).to.eql(stripFields(expected));
 
@@ -157,9 +156,9 @@ function expectTree(actual: AnyFile, expected: AnyFile) {
         } else if (key == 'resolved') {
             return a.toLocaleLowerCase() == b.toLocaleLowerCase();
         } else {
-            return undefined
+            return undefined;
         }
-    })
+    });
     expect(areEqual, 'expect file trees to be the same').to.be.true;
 }
 
