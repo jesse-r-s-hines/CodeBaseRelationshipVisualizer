@@ -57,7 +57,7 @@
         "watch:extension": "tsc -w -p ./src",
         "watch:webview": "webpack --env dev --watch",
         "test": "npm-run-all test:*",
-        "test:unit": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'test/**/*.test.ts' --exclude test/integration/**/*.ts --exclude test/sample-codebases/**/*.ts",
+        "test:unit": "mocha -r ts-node/register 'test/**/*.test.ts' --exclude test/integration/**/*.ts --exclude test/sample-codebases/**/*.ts",
         "test:integration": "npm run pretest && node ./dist/test/test/integration/run.js",
         "pretest": "tsc --project test/integration"
     },

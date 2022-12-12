@@ -9,16 +9,13 @@ import _ from 'lodash';
 
 import { Directory, FileType } from '../../src/types';
 import * as fileHelper from '../../src/fileHelper';
+import { writeFileTree } from "./integrationHelpers";
 
 // I can't find a built-in way to get workspaceFolder. __dirname is .../CBRV/dist/test/test/integration
 const workspaceFolder = Uri.file(__dirname.split("/").slice(0, -4).join("/"));
 const samples = Uri.joinPath(workspaceFolder, '/test/sample-codebases');
 const minimal = Uri.joinPath(samples, 'minimal');
 const symlinks = Uri.joinPath(samples, 'symlinks');
-const empty = Uri.joinPath(samples, 'empty');
-if (!fs.existsSync(empty.fsPath)) {
-    fs.mkdirSync(empty.fsPath); // git can't track an empty dir
-}
 
 const minimalContents: Directory = {
     name: "minimal",
@@ -138,8 +135,9 @@ describe('Test fileHelper', () => {
         let tree = await fileHelper.getFileTree(minimal);
         expect(tree).to.eql(minimalContents);
 
+        const empty = await writeFileTree({});
         tree = await fileHelper.getFileTree(empty);
-        expect(tree).to.eql({type: FileType.Directory, name: "empty", children: []});
+        expect(tree).to.eql({type: FileType.Directory, name: tree.name, children: []});
 
         tree = await fileHelper.getFileTree(symlinks);
         expect(tree).to.eql(symlinkContents);
@@ -150,8 +148,9 @@ describe('Test fileHelper', () => {
         let tree = await fileHelper.listToFileTree(minimal, fileList);
         expect(tree).to.eql(minimalContents);
 
+        const empty = await writeFileTree({});
         tree = await fileHelper.listToFileTree(empty, []);
-        expect(tree).to.eql({type: FileType.Directory, name: "empty", children: []});
+        expect(tree).to.eql({type: FileType.Directory, name: tree.name, children: []});
 
         fileList = [
             Uri.joinPath(minimal, 'A')
