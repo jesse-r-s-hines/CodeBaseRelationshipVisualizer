@@ -20,6 +20,9 @@ async function testGetDependencyGraph(dir: Uri, files?: string[]) {
     }));
 }
 
+// NOTE: need to have pydeps installed to run these. Just run
+// python -m pip install pydeps
+
 describe("Test getDependencyGraph", () => {
     it('test basic', async () => {
         const dir = await writeFileTree({
