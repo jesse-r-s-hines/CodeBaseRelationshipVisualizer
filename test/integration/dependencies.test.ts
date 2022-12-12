@@ -15,8 +15,8 @@ async function testGetDependencyGraph(dir: Uri, files?: string[]) {
         fileUris = await workspace.findFiles(new RelativePattern(dir, '**/*'));
     }
     return (await getDependencyGraph(dir, fileUris)).map(c => ({
-        from: path.relative(dir.fsPath, (c.from as any).fsPath),
-        to: path.relative(dir.fsPath, (c.to as any).fsPath),
+        from: path.relative(dir.fsPath, (c.from as any).fsPath).split(path.sep).join("/"),
+        to: path.relative(dir.fsPath, (c.to as any).fsPath).split(path.sep).join("/"),
     }));
 }
 

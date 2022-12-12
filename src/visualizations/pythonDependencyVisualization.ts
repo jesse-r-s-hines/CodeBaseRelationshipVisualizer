@@ -100,8 +100,9 @@ export async function getDependencyGraph(codebase: Uri, files: Uri[]): Promise<C
 
     while (stack.length > 0) {
         const uri = stack.pop()!;
+        const ext = path.extname(uri.fsPath).toLocaleLowerCase();
         // Only get deps for non-symlink python files that have not already been done
-        if (path.extname(uri.fsPath) == ".py" && !dependencyGraph.has(uri.fsPath) && !(await isSymlink(uri))) {
+        if (ext == ".py" && !dependencyGraph.has(uri.fsPath) && !(await isSymlink(uri))) {
             let graph: any;
             try {
                 // Get dep JSON, with infinite bacon "depth"
@@ -118,17 +119,19 @@ export async function getDependencyGraph(codebase: Uri, files: Uri[]): Promise<C
             if (graph) {
                 for (const [moduleName, info] of Object.entries<any>(graph)) {
                     if (typeof info.path == 'string') {
-                        if (allFiles.has(info.path) && !dependencyGraph.has(info.path)) {
+                        const depPath = Uri.file(info.path).fsPath; // normalize the file path
+                        if (allFiles.has(depPath) && !dependencyGraph.has(depPath)) {
                             const dependencies = (info.imports ?? [])
                                 .flatMap((m: string) => {
-                                    const modulePath = graph[m].path;
-                                    if (typeof modulePath == 'string' && allFiles.has(modulePath)) {
-                                        return [modulePath];
-                                    } else {
-                                        return [];
+                                    if (typeof graph[m].path == 'string') {
+                                        const modulePath = Uri.file(graph[m].path).fsPath; // normalize
+                                        if (allFiles.has(modulePath)) {
+                                            return [modulePath];
+                                        }
                                     }
+                                    return [];
                                 });
-                            dependencyGraph.set(info.path, dependencies);
+                            dependencyGraph.set(depPath, dependencies);
                         }
                     }
                 }
