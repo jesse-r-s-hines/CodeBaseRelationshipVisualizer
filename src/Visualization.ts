@@ -586,7 +586,6 @@ export class Visualization {
     private getWebviewContent(webview: Webview): string {
         const extPath = vscode.Uri.file(this.context.extensionPath);
         const scriptUri = webview.asWebviewUri(Uri.joinPath(extPath, "dist", "webview", "webview.js"));
-        const stylesUri = webview.asWebviewUri(Uri.joinPath(extPath, "src", "webview", "CBRVStyles.css"));
 
         return `
             <!DOCTYPE html>
@@ -595,7 +594,6 @@ export class Visualization {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>CodeBase Relationship Visualizer</title>
-                <link rel="stylesheet" href="${stylesUri}">
             </head>
             <body>
                 <div id="filters">

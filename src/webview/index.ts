@@ -1,5 +1,6 @@
 import CBRVWebview from "./CBRVWebview";
 import { CBRVMessage, CBRVWebviewMessage } from "../types";
+import './CBRVStyles.css';
 
 const vscode = acquireVsCodeApi();
 
