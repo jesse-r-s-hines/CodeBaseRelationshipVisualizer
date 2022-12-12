@@ -36,21 +36,6 @@ export function filterFileTree<T extends AnyFile>(
     }
 }
 
-/** Gets a path and all its ancestors, e.g. "/a/b/c" will return ["/a/b/c", "/a/b", "/a", "/"] */
-export function pathAncestors(path: string): string[] {
-    if (path == "") {
-        return [""];
-    } else {
-        const parts = path.split(/[/\\]/).filter((p, i) => !!p || i == 0);
-        return parts
-            .map((s, i, arr) => {
-                const slice = arr.slice(0, i + 1);
-                return (slice.length == 1 && slice[0] == "") ? "/" : slice.join("/");
-            })
-            .reverse();
-    }
-}
-
 /**
  * Converts a value to a normalized JSON string, sorting object keys.
  */

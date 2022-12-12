@@ -161,19 +161,6 @@ describe("Test utils.ts", () => {
 
         expect(util.loopIndex(0, 0)).to.be.NaN;
     });
-
-    it('test pathAncestors', () => {
-        expect(util.pathAncestors("/a/b/c")).to.eql(["/a/b/c", "/a/b", "/a", "/"]);
-        expect(util.pathAncestors("/path/to/file")).to.eql(["/path/to/file", "/path/to", "/path", "/"]);
-        expect(util.pathAncestors("/a")).to.eql(["/a", "/"]);
-        expect(util.pathAncestors("a/b/c")).to.eql(["a/b/c", "a/b", "a"]);
-        expect(util.pathAncestors("a/b/c/")).to.eql(["a/b/c", "a/b", "a"]);
-        expect(util.pathAncestors("a")).to.eql(["a"]);
-        expect(util.pathAncestors("/")).to.eql(["/"]);
-        expect(util.pathAncestors("")).to.eql([""]);
-        expect(util.pathAncestors("/a/b//c")).to.eql(["/a/b/c", "/a/b", "/a", "/"]);
-        expect(util.pathAncestors("a\\b\\c")).to.eql(["a/b/c", "a/b", "a"]);
-    });
 });
 
 

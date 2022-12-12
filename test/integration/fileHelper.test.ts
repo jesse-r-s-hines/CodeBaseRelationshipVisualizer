@@ -6,13 +6,14 @@ import * as vscode from 'vscode';
 import { Uri } from 'vscode';
 import * as fs from 'fs';
 import _ from 'lodash';
+import * as path from "path"
 
 import { Directory, FileType } from '../../src/types';
 import * as fileHelper from '../../src/fileHelper';
 import { writeFileTree } from "./integrationHelpers";
 
 // I can't find a built-in way to get workspaceFolder. __dirname is .../CBRV/dist/test/test/integration
-const workspaceFolder = Uri.file(__dirname.split("/").slice(0, -4).join("/"));
+const workspaceFolder = Uri.file(_.range(4).reduce(p => path.dirname(p), __dirname))
 const samples = Uri.joinPath(workspaceFolder, '/test/sample-codebases');
 const minimal = Uri.joinPath(samples, 'minimal');
 const symlinks = Uri.joinPath(samples, 'symlinks');
