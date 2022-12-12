@@ -2,6 +2,7 @@ import { expect } from 'chai';
 import { describe, test, it } from "mocha";
 import { workspace, Uri, RelativePattern } from 'vscode';
 import * as path from 'path';
+import _ from "lodash";
 
 import { writeFileTree } from "./integrationHelpers";
 import { getHyperlinks } from '../../src/visualizations/hyperlinkVisualization';
@@ -9,12 +10,12 @@ import { getHyperlinks } from '../../src/visualizations/hyperlinkVisualization';
 async function testGetHyperlinks(dir: Uri) {
     const files = await workspace.findFiles(new RelativePattern(dir, '**/*'));
     return (await getHyperlinks(dir, files)).map(c => ({
-        from: path.relative(dir.fsPath, (c.from as any).fsPath),
-        to: path.relative(dir.fsPath, (c.to as any).fsPath),
+        from: path.relative(dir.fsPath, (c.from as any).fsPath).split(path.sep).join('/'),
+        to: path.relative(dir.fsPath, (c.to as any).fsPath).split(path.sep).join('/'),
     }));
 }
 
-const workspaceFolder = Uri.file(__dirname.split("/").slice(0, -4).join("/"));
+const workspaceFolder = Uri.file(_.range(4).reduce(p => path.dirname(p), __dirname))
 const samples = Uri.joinPath(workspaceFolder, '/test/sample-codebases');
 
 describe("Test getHyperlinks", () => {
