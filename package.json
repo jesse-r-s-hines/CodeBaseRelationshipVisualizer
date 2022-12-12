@@ -3,6 +3,7 @@
     "description": "Visualize relationships between source code files.",
     "version": "0.0.1",
     "publisher": "jesse-r-s-hines",
+    "repository": "https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer",
     "private": true,
     "license": "MIT",
     "engines": {
@@ -45,7 +46,8 @@
     },
     "main": "./dist/extension.js",
     "scripts": {
-        "vscode:prepublish": "npm run build",
+        "vscode:prepublish": "npm run build-prod",
+        "package": "vsce package",
         "build": "npm-run-all build:*",
         "build:extension": "webpack --config ./webpack.config.js --env dev",
         "build:webview": "webpack --config ./webpack.webview.config.js --env dev",
@@ -81,6 +83,7 @@
         "@typescript-eslint/eslint-plugin": "^4.16.0",
         "@typescript-eslint/parser": "^4.16.0",
         "@vscode/test-electron": "^2.2.0",
+        "@vscode/vsce": "^2.15.0",
         "chai": "^4.3.7",
         "chai-as-promised": "^7.1.1",
         "css-loader": "^6.7.1",

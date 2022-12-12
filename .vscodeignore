@@ -1,0 +1,13 @@
+.vscode
+.vscode-test
+node_modules
+notes
+src
+test
+.eslintrc.js
+.gitignore
+babel.config.js
+jest.config.ts
+tsconfig.json
+webpack.config.js
+webpack.webview.config.js
