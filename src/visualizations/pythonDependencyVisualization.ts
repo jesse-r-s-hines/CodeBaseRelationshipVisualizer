@@ -9,10 +9,9 @@ import { API, Visualization, VisualizationSettings, Connection } from "../api";
 export async function activate(context: vscode.ExtensionContext) {
     const cbrvAPI = new API(context);
 
-    await installPyDepsIfNeeded();
-
     context.subscriptions.push(
         vscode.commands.registerCommand('pythonDependencyVisualization.start', async () => {
+            await installPyDepsIfNeeded();
             const visualization = await createPythonDependencyVisualization(cbrvAPI);
         }),
     );
