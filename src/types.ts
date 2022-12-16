@@ -155,7 +155,7 @@ type MappedOmit<T, Keys> = {
 
 /**
  * Types for specifying rules on how to merge connections in the visualization.
- * See `VisualizationSettings.mergeRules` for more info.
+ * See {@link VisualizationSettings.mergeRules} for more info.
  */
 export type VisualizationMergeRules = {
     file?: SameRule | IgnoreRule

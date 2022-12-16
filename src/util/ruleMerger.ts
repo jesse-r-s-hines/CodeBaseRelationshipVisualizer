@@ -121,13 +121,13 @@ export class RuleMerger {
 
 /** Merge rules that can be used for merging objects with `RuleMerger` */
 
-/** Base interface for any rule for RuleMerger */
+/** Base interface for any rule for `RuleMerger` */
 export type MergeRule<Name extends string = string> = {rule: Name, [key: string]: any} | string
 
-/** Type for a MergeRule with no arguments that can be represented as just a string, or in the object form. */
+/** Type for a {@link MergeRule} with no arguments that can be represented as just a string, or in the object form. */
 export type SimpleMergeRule<Name extends string = string> = {rule: Name} | string
 
-/** An object mapping property names to MergeRule */
+/** An object mapping property names to {@link MergeRule} */
 export type MergeRules = Record<string, MergeRule>
 
 /** Mergers object contains the implementation of the rules */
@@ -173,6 +173,6 @@ export type JoinRule = SimpleMergeRule<"join"> | {rule: "join", sep: string};
 /** Combine the values for this prop into an array on the merged connection. */
 export type GroupRule = SimpleMergeRule<'group'>;
 
-/** Union type for any merge rule that RuleMerger types understands by default. */
+/** Union type for any merge rule that `RuleMerger` types understands by default. */
 export type BuiltinMergeRule = SameRule | IgnoreRule | First | Last | LeastRule | GreatestRule | LeastCommonRule |
                                MostCommonRule | GroupRule | AddRule | ValueRule | JoinRule

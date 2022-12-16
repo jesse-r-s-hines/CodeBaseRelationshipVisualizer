@@ -10,7 +10,7 @@ import * as fileHelper from "./util/fileHelper";
 
 /**
  * A mutable "view" on a Visualization that can be used to update it.
- * This is used in the `Visualization.update` callback.
+ * This is used in the {@link Visualization.update} callback.
  */
 
 export type VisualizationState = InstanceType<typeof Visualization.VisualizationState>;
@@ -64,8 +64,8 @@ export interface VisualizationSettings {
 
         /**
          * A function to return a HTML tooltip string for each connection. If the function returns falsy, no tooltip
-         * will shown. Default is to return. Default is to use `connection.tooltip` or no tooltip if not present and to
-         * join unique tooltips with <br> when merging.
+         * will shown. Default is to return. Default is to use {@link Connection.tooltip} or no tooltip if not present
+         * and to join unique tooltips with <br> when merging.
          */
         tooltip?: ((conn: MergedConnection, vis: Visualization) => string|false|undefined)
     }
@@ -78,8 +78,8 @@ export interface VisualizationSettings {
      * If false, connections will never be merged. By default, all connections between the same two files or folders
      * will be merged. Setting to true is the same as using all the default merge options.
      * 
-     * Pass an object where each key is a custom property name or path to a property in your `Connection`s and each
-     * value is one of:
+     * Pass an object where each key is a custom property name or path to a property in your {@link Connection}s and
+     * each value is one of:
      * - `"same"`: Only merge connections with equal values for this prop.
      * - `"ignore"`: Ignore this prop when merging connections, i.e. merged connections can have different values for
      *               the prop. This prop won't appear on the `MergedConnection` This is the default.
@@ -146,10 +146,10 @@ export type ContextMenuItem = {
 }
 
 /**
- * Represents a connection or relationship between files. A `Connection` connects two file:line locations in the
- * workspace. `Connections` will be rendered as a line or arrow in the visualization. `line` is optional, in which case
- * the `Connection` will just connect the files and can be passed just the file `Uri`. `Connections` can be between two
- * different files, different lines in the same file, or even connect a file to itself. `Connections` can only connect
+ * Represents a connection or relationship between files. A {@link Connection} connects two file:line locations in the
+ * workspace. `Connection`s will be rendered as a line or arrow in the visualization. `line` is optional, in which case
+ * the `Connection` will just connect the files and can be passed just the file `Uri`. `Connection`s can be between two
+ * different files, different lines in the same file, or even connect a file to itself. `Connection`s can only connect
  * files, not folders. If `from` or `to` is undefined, the connection will start or end "outside" the visualization.
  * 
  * E.g.
@@ -181,20 +181,20 @@ export type ContextMenuItem = {
     tooltip?: string
 
     /**
-     * Other properties can be defined on the `Connection` and referenced in the tooltip callback or `MergeRules`.
+     * Other properties can be defined on `Connection` and referenced in the tooltip callback or {@link MergeRules}.
      */
     [key: string]: any
 }
 
 /**
- * Represents one endpoint of a `Connection`. Can be a path to the file or an object containing a path and an optional
- * line number.
+ * Represents one endpoint of a {@link Connection}. Can be a path to the file or an object containing a path and an
+ * optional line number.
  */
 export type Endpoint = Uri | { file: Uri, line?: number }
 
 /**
- * Represents a merged group of connections, that will be rendered as one line in the visualization. The connections are
- * grouped together based on the merge rules.
+ * Represents a merged group of {@link Connection}s, that will be rendered as one line in the visualization.
+ * The connections are grouped together based on the merge rules.
  */
 export interface MergedConnection {
     /**
@@ -222,7 +222,7 @@ export interface MergedConnection {
     */
     connections: Connection[]
 
-    /** Freeform custom properties on your `Connection`s that are kep by your merge rules. */
+    /** Freeform custom properties on your {@link Connection}s that are kep by your merge rules. */
     [key: string]: any
 }
 
@@ -302,7 +302,7 @@ export class Visualization {
         }
     };
 
-    /** Construct a Visualization. You shouldn't call this directly, instead use `API.create` */
+    /** Construct a Visualization. You shouldn't call this directly, instead use {@link API.create} */
     constructor(
         context: vscode.ExtensionContext,
         codebase: Uri,
@@ -378,7 +378,7 @@ export class Visualization {
 
     /**
      * Set the callback to update the visualization whenever the files change. Shortcut for setting up a custom
-     * FileSystemWatcher on the codebase that calls `Visualization.update`.
+     * FileSystemWatcher on the codebase that calls {@link Visualization.update}.
      * 
      * You can pass `{immediate: true}` if you want it to trigger immediately as well.
      */
@@ -520,7 +520,7 @@ export class Visualization {
         return settings as DeepRequired<VisualizationSettings>;
     }
 
-        /** Returns a complete settings object with defaults filled in an normalized a bit.  */
+    /** Returns a complete settings object with defaults filled in an normalized a bit.  */
     private getWebviewSettings(): WebviewVisualizationSettings {
         const webviewSettings = {
             ..._.omit(this.settings, ["iconPath", "title", "connectionDefaults.tooltip", "contextMenu"]),

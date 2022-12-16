@@ -34,7 +34,7 @@ export class API {
      * @param settings Settings for the visualization
      * @param connections List of connections between files that will be.
      *                    rendered. Defaults to `[]`.
-     * @returns The `Visualization` object which can be used to update the visualization.
+     * @returns The {@link Visualization} object which can be used to update the visualization.
      */
     async create(
         settings: VisualizationSettings,
