@@ -22,7 +22,7 @@ import { getExtension, filterFileTree, loopIndex, OptionalKeys } from './util';
 import * as geo from './geometry';
 import { Point, Box } from './geometry';
 import { ellipsisText, getRect } from './rendering';
-import { RuleMerger } from './ruleMerger';
+import { RuleMerger } from '../ruleMerger';
 
 type Node = d3.HierarchyCircularNode<AnyFile>;
 type ConnPath = {id: string, conn: WebviewMergedConnection, path: string}

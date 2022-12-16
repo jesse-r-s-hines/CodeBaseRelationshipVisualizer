@@ -1,7 +1,6 @@
 import _, { isEqual } from "lodash";
 
-import { normalizedJSONStringify as normJSON } from "./util";
-import { MergeRules, Mergers } from "./ruleMergerTypes";
+import { normalizedJSONStringify as normJSON } from "./webview/util";
 
 type ParsedMergeRule = {
     prop: string,
@@ -120,3 +119,60 @@ export class RuleMerger {
     }
 }
 
+/** Merge rules that can be used for merging objects with `RuleMerger` */
+
+/** Base interface for any rule for RuleMerger */
+export type MergeRule<Name extends string = string> = {rule: Name, [key: string]: any} | string
+
+/** Type for a MergeRule with no arguments that can be represented as just a string, or in the object form. */
+export type SimpleMergeRule<Name extends string = string> = {rule: Name} | string
+
+/** An object mapping property names to MergeRule */
+export type MergeRules = Record<string, MergeRule>
+
+/** Mergers object contains the implementation of the rules */
+export type Mergers = Record<string, (items: any[], rule: any) => any>
+
+
+/** Only merge objects with equal values for this prop. */
+export type SameRule = SimpleMergeRule<'same'>;
+
+/**
+ * Ignore this prop when merging objects, i.e. merged objects can have different values for the prop. This prop won't
+ * appear on the merged object. This is the default.
+ */
+export type IgnoreRule = SimpleMergeRule<'ignore'>;
+
+/** Use the first value for this prop. */
+export type First = SimpleMergeRule<'first'>;
+
+/** Use the last value for this prop. */
+export type Last = SimpleMergeRule<'last'>;
+
+/** Use the smallest value of this prop. */
+export type LeastRule = SimpleMergeRule<'least'>;
+
+/** Use the greatest value of this prop. */
+export type GreatestRule = SimpleMergeRule<'greatest'>;
+
+/** Use the least common value of this prop. */
+export type LeastCommonRule = SimpleMergeRule<'leastCommon'>;
+
+/** Use the most common value of this prop. */
+export type MostCommonRule = SimpleMergeRule<'mostCommon'>;
+
+/** Sum the values of this prop up to a max. */
+export type AddRule = SimpleMergeRule<"add"> | {rule: "add", max: number}
+
+/** Use this value if there's more than one object to merge, but if there's only one object keep its value. */
+export type ValueRule = {rule: "value", value: any}
+
+/** Join the values of this prop as strings with a separator */
+export type JoinRule = SimpleMergeRule<"join"> | {rule: "join", sep: string};
+
+/** Combine the values for this prop into an array on the merged connection. */
+export type GroupRule = SimpleMergeRule<'group'>;
+
+/** Union type for any merge rule that RuleMerger types understands by default. */
+export type BuiltinMergeRule = SameRule | IgnoreRule | First | Last | LeastRule | GreatestRule | LeastCommonRule |
+                               MostCommonRule | GroupRule | AddRule | ValueRule | JoinRule

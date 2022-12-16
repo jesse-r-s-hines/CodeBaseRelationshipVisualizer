@@ -1,5 +1,5 @@
 /** Contains interfaces and classes internal to CBRV that are can be used both inside and outside the webview */
-import { SameRule, IgnoreRule, BuiltinMergeRule } from "./webview/ruleMergerTypes";
+import { SameRule, IgnoreRule, BuiltinMergeRule } from "./ruleMerger";
 import { DeepPartial } from "ts-essentials";
 
 /**
