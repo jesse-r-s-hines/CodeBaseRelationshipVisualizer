@@ -3,7 +3,7 @@ import { describe, test } from "mocha";
 import _ from "lodash";
 
 import { AnyFile, FileType } from '../src/types';
-import * as util from '../src/webview/util';
+import * as util from '../src/util/util';
 
 describe("Test utils.ts", () => {
     it('test getExtension', () => {

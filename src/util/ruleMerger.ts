@@ -1,6 +1,6 @@
 import _, { isEqual } from "lodash";
 
-import { normalizedJSONStringify as normJSON } from "./webview/util";
+import { normalizedJSONStringify as normJSON } from "./util";
 
 type ParsedMergeRule = {
     prop: string,

@@ -6,7 +6,7 @@ import _, { isEqual, cloneDeep } from 'lodash';
 
 import { WebviewVisualizationSettings, WebviewConnection, WebviewEndpoint, CBRVMessage, CBRVWebviewMessage, Directory,
          VisualizationMergeRules, Direction } from "./types";
-import * as fileHelper from "./fileHelper";
+import * as fileHelper from "./util/fileHelper";
 
 /**
  * A mutable "view" on a Visualization that can be used to update it.
@@ -78,7 +78,8 @@ export interface VisualizationSettings {
      * If false, connections will never be merged. By default, all connections between the same two files or folders
      * will be merged. Setting to true is the same as using all the default merge options.
      * 
-     * Pass an object where each key is a custom property in your `Connection`s and each value is one of:
+     * Pass an object where each key is a custom property name or path to a property in your `Connection`s and each
+     * value is one of:
      * - `"same"`: Only merge connections with equal values for this prop.
      * - `"ignore"`: Ignore this prop when merging connections, i.e. merged connections can have different values for
      *               the prop. This prop won't appear on the `MergedConnection` This is the default.
@@ -91,6 +92,7 @@ export interface VisualizationSettings {
      * - `{rule: "add", max: number}`: Sum the values of this prop up to a max.
      * - `{rule: "value", value: number}`: Show merged connections with a different value than single ones.
      * - `{rule: "join", sep: string}`: Join the values of this prop as strings with a separator
+     * - `group`: Combine the values for this prop into an array on the merged connection.
      * 
      * The following special keys are recognized, in addition to custom props on `Connection`.
      * - `file`: One of `"same"` or `"ignore"`. Whether to merge connections that go to different files (this can happen

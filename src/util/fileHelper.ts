@@ -4,7 +4,7 @@ import * as path from 'path';
 import { promises as fsp } from 'fs';
 import _ from "lodash";
 
-import { AnyFile, Directory, FileType } from "./types";
+import { AnyFile, Directory, FileType } from "../types";
 
 
 /** Creates a AnyFile object of type. */

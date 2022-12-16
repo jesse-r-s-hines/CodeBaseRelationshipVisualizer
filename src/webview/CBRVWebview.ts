@@ -18,11 +18,11 @@ import { DeepPartial } from 'ts-essentials';
 
 import { AnyFile, FileType, Directory, SymbolicLink, WebviewVisualizationSettings, CBRVWebviewMessage,
          WebviewMergedConnection, WebviewConnection, WebviewEndpoint } from '../types';
-import { getExtension, filterFileTree, loopIndex, OptionalKeys } from './util';
-import * as geo from './geometry';
-import { Point, Box } from './geometry';
+import { getExtension, filterFileTree, loopIndex, OptionalKeys } from '../util/util';
+import * as geo from '../util/geometry';
+import { Point, Box } from '../util/geometry';
 import { ellipsisText, getRect } from './rendering';
-import { RuleMerger } from '../ruleMerger';
+import { RuleMerger } from '../util/ruleMerger';
 
 type Node = d3.HierarchyCircularNode<AnyFile>;
 type ConnPath = {id: string, conn: WebviewMergedConnection, path: string}

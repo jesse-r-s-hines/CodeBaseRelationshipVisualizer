@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { Visualization, VisualizationSettings, MergedConnection, ContextMenuItem, Connection, Endpoint } from './Visualization';
 import { VisualizationMergeRules } from "./types";
 import { SameRule, IgnoreRule, LeastRule, GreatestRule, LeastCommonRule, MostCommonRule, GroupRule, AddRule, ValueRule,
-         JoinRule, BuiltinMergeRule } from "./ruleMerger";
+         JoinRule, BuiltinMergeRule } from "./util/ruleMerger";
 
 /**
  * This is the API that the CBRV VSCode extension will expose.
