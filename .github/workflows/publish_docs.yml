@@ -1,0 +1,24 @@
+# Generates api docs and places the results in the "gh-pages" branch, which will be shown by github.io
+name: Publish API Documentation
+on:
+  push:
+    branches:
+      - main
+jobs:
+  publish-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Tools
+        run: npm ci
+
+      - name: Generate API Documentation
+        run: npm run generate-docs
+
+      - name: Publish
+        uses: JamesIves/github-pages-deploy-action@4.1.4
+        with:
+          branch: gh-pages
+          folder: docs
