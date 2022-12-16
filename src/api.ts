@@ -4,10 +4,11 @@
 
 import * as vscode from 'vscode';
 
-import { Visualization, VisualizationSettings, MergedConnection, ContextMenuItem, Connection, Endpoint } from './Visualization';
-import { VisualizationMergeRules } from "./types";
-import { SameRule, IgnoreRule, LeastRule, GreatestRule, LeastCommonRule, MostCommonRule, GroupRule, AddRule, ValueRule,
-         JoinRule, BuiltinMergeRule } from "./util/ruleMerger";
+import { Visualization, VisualizationSettings, MergedConnection, ContextMenuItem, VisualizationState, Connection,
+         Endpoint } from './Visualization';
+import { VisualizationMergeRules, Direction } from "./types";
+import { SameRule, IgnoreRule, First, Last, LeastRule, GreatestRule, LeastCommonRule, MostCommonRule, AddRule,
+         ValueRule, JoinRule, GroupRule, MergeRule, SimpleMergeRule, BuiltinMergeRule } from "./util/ruleMerger";
 
 /**
  * This is the API that the CBRV VSCode extension will expose.
@@ -51,7 +52,13 @@ export class API {
 // Re-export public types
 export {
     type Visualization,
-    VisualizationSettings, Connection, Endpoint, MergedConnection, VisualizationMergeRules,
-    SameRule, IgnoreRule, LeastRule, GreatestRule, LeastCommonRule, MostCommonRule, GroupRule, AddRule, ValueRule,
-    JoinRule, BuiltinMergeRule, ContextMenuItem,
+    VisualizationSettings,
+    VisualizationMergeRules,
+    ContextMenuItem,
+    VisualizationState,
+    Direction,
+    Connection, Endpoint,
+    MergedConnection,
+    SameRule, IgnoreRule, First, Last, LeastRule, GreatestRule, LeastCommonRule, MostCommonRule, AddRule, ValueRule,
+    JoinRule, GroupRule, MergeRule, SimpleMergeRule, BuiltinMergeRule,
 };

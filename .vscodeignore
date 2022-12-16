@@ -1,5 +1,6 @@
 .vscode
 .vscode-test
+docs
 node_modules
 notes
 src

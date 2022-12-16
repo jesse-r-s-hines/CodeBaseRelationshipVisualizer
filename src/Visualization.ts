@@ -13,7 +13,7 @@ import * as fileHelper from "./util/fileHelper";
  * This is used in the `Visualization.update` callback.
  */
 
-type VisualizationState = InstanceType<typeof Visualization.VisualizationState>;
+export type VisualizationState = InstanceType<typeof Visualization.VisualizationState>;
 
 /**
  * Settings and configuration for a Visualization.
