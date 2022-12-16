@@ -23,7 +23,7 @@
 <ul class="tsd-hierarchy">
 <li><span class="target">VisualizationSettings</span></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/b845371/src/Visualization.ts#L21">src/Visualization.ts:21</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/38e7ad3/src/Visualization.ts#L21">src/Visualization.ts:21</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -61,8 +61,8 @@
 <li class="tsd-signature" id="__type.__type-1.__type-2"><span class="tsd-signature-symbol">(</span>conn<span class="tsd-signature-symbol">: </span><a href="MergedConnection.html" class="tsd-signature-type" data-tsd-kind="Interface">MergedConnection</a>, vis<span class="tsd-signature-symbol">: </span><a href="../classes/Visualization.html" class="tsd-signature-type" data-tsd-kind="Class">Visualization</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">false</span></li>
 <li class="tsd-description">
 <div class="tsd-comment tsd-typography"><p>A function to return a HTML tooltip string for each connection. If the function returns falsy, no tooltip
-will shown. Default is to return. Default is to use <code>connection.tooltip</code> or no tooltip if not present and to
-join unique tooltips with <br> when merging.</p>
+will shown. Default is to return. Default is to use <a href="Connection.html#tooltip">tooltip</a> or no tooltip if not present
+and to join unique tooltips with <br> when merging.</p>
 </div>
 <div class="tsd-parameters">
 <h4 class="tsd-parameters-title">Parameters</h4>
@@ -77,7 +77,7 @@ join unique tooltips with <br> when merging.</p>
 <div class="tsd-comment tsd-typography"><p>Default width of the SVG path for connections. Can be overridden per connection via <code>Connection.width</code></p>
 </div></li></ul></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/b845371/src/Visualization.ts#L58">src/Visualization.ts:58</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/38e7ad3/src/Visualization.ts#L58">src/Visualization.ts:58</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="contextMenu" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>context<wbr/>Menu</span><a href="#contextMenu" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">context<wbr/>Menu<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">{ </span><br/><span>    </span>directory<span class="tsd-signature-symbol">?: </span><a href="../types/ContextMenuItem.html" class="tsd-signature-type" data-tsd-kind="Type alias">ContextMenuItem</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>file<span class="tsd-signature-symbol">?: </span><a href="../types/ContextMenuItem.html" class="tsd-signature-type" data-tsd-kind="Type alias">ContextMenuItem</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span></div>
@@ -92,14 +92,14 @@ contains a title and a callback that will be called with the Uri of the selected
 <li class="tsd-parameter">
 <h5><code class="tsd-tag ts-flagOptional">Optional</code> file<span class="tsd-signature-symbol">?: </span><a href="../types/ContextMenuItem.html" class="tsd-signature-type" data-tsd-kind="Type alias">ContextMenuItem</a><span class="tsd-signature-symbol">[]</span></h5></li></ul></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/b845371/src/Visualization.ts#L137">src/Visualization.ts:137</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/38e7ad3/src/Visualization.ts#L137">src/Visualization.ts:137</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="directed" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>directed</span><a href="#directed" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">directed<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div>
 <div class="tsd-comment tsd-typography"><p>Whether each connection is directed (an arrow) or not (a line). Default false.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/b845371/src/Visualization.ts#L35">src/Visualization.ts:35</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/38e7ad3/src/Visualization.ts#L35">src/Visualization.ts:35</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="filters" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>filters</span><a href="#filters" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">filters<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">{ </span><br/><span>    </span>exclude<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>hideUnconnected<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>include<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span></div>
@@ -125,14 +125,14 @@ Can be overridden by the user via the controls.</p>
 Can be overridden by the user via the controls.</p>
 </div></li></ul></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/b845371/src/Visualization.ts#L113">src/Visualization.ts:113</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/38e7ad3/src/Visualization.ts#L113">src/Visualization.ts:113</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="iconPath" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>icon<wbr/>Path</span><a href="#iconPath" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">icon<wbr/>Path<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">null</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">Uri</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-symbol">{ </span><br/><span>    </span>dark<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uri</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>light<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uri</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span></div>
 <div class="tsd-comment tsd-typography"><p>Icon for the webview panel. See <a href="https://code.visualstudio.com/api/references/vscode-api#WebviewPanel">https://code.visualstudio.com/api/references/vscode-api#WebviewPanel</a></p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/b845371/src/Visualization.ts#L25">src/Visualization.ts:25</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/38e7ad3/src/Visualization.ts#L25">src/Visualization.ts:25</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="mergeRules" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>merge<wbr/>Rules</span><a href="#mergeRules" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">merge<wbr/>Rules<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> | </span><a href="../types/VisualizationMergeRules.html" class="tsd-signature-type" data-tsd-kind="Type alias">VisualizationMergeRules</a></div>
@@ -141,8 +141,8 @@ if you have duplicate connections in the connection list, or because of dynamic 
 to hide a folder&#39;s contents, all the connections to it will render to the folder instead of the contents.</p>
 <p>If false, connections will never be merged. By default, all connections between the same two files or folders
 will be merged. Setting to true is the same as using all the default merge options.</p>
-<p>Pass an object where each key is a custom property name or path to a property in your <code>Connection</code>s and each
-value is one of:</p>
+<p>Pass an object where each key is a custom property name or path to a property in your <a href="Connection.html">Connection</a>s and
+each value is one of:</p>
 <ul>
 <li><code>&quot;same&quot;</code>: Only merge connections with equal values for this prop.</li>
 <li><code>&quot;ignore&quot;</code>: Ignore this prop when merging connections, i.e. merged connections can have different values for
@@ -171,7 +171,7 @@ value is one of:</p>
 </ul>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/b845371/src/Visualization.ts#L107">src/Visualization.ts:107</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/38e7ad3/src/Visualization.ts#L107">src/Visualization.ts:107</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="showOnHover" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>show<wbr/>On<wbr/>Hover</span><a href="#showOnHover" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">show<wbr/>On<wbr/>Hover<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> | </span><a href="../types/Direction.html" class="tsd-signature-type" data-tsd-kind="Type alias">Direction</a></div>
@@ -188,7 +188,7 @@ the user via the controls.</p>
 <p>If connections are undirected, &quot;in&quot;, &quot;out&quot;, and &quot;both&quot; behave the same.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/b845371/src/Visualization.ts#L50">src/Visualization.ts:50</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/38e7ad3/src/Visualization.ts#L50">src/Visualization.ts:50</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="showSelfLoops" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>show<wbr/>Self<wbr/>Loops</span><a href="#showSelfLoops" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">show<wbr/>Self<wbr/>Loops<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -196,14 +196,14 @@ the user via the controls.</p>
 Default true.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/b845371/src/Visualization.ts#L56">src/Visualization.ts:56</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/38e7ad3/src/Visualization.ts#L56">src/Visualization.ts:56</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="title" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>title</span><a href="#title" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">title<span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div>
 <div class="tsd-comment tsd-typography"><p>Title for the internal webview. See <a href="https://code.visualstudio.com/api/references/vscode-api#WebviewPanel">https://code.visualstudio.com/api/references/vscode-api#WebviewPanel</a></p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/b845371/src/Visualization.ts#L30">src/Visualization.ts:30</a></li></ul></aside></section></section></div>
+<li>Defined in <a href="https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer/blob/38e7ad3/src/Visualization.ts#L30">src/Visualization.ts:30</a></li></ul></aside></section></section></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 <div class="tsd-navigation settings">
 <details class="tsd-index-accordion"><summary class="tsd-accordion-summary">
