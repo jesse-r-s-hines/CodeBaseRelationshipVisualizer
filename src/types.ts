@@ -153,6 +153,10 @@ type MappedOmit<T, Keys> = {
     [K in keyof T as (K extends Keys ? never : K)]: T[K]
 }
 
+/**
+ * Types for specifying rules on how to merge connections in the visualization.
+ * See `VisualizationSettings.mergeRules` for more info.
+ */
 export type VisualizationMergeRules = {
     file?: SameRule | IgnoreRule
     line?: SameRule | IgnoreRule

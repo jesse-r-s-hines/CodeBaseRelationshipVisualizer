@@ -8,6 +8,11 @@ import { WebviewVisualizationSettings, WebviewConnection, WebviewEndpoint, CBRVM
          VisualizationMergeRules, Direction } from "./types";
 import * as fileHelper from "./fileHelper";
 
+/**
+ * A mutable "view" on a Visualization that can be used to update it.
+ * This is used in the `Visualization.update` callback.
+ */
+
 type VisualizationState = InstanceType<typeof Visualization.VisualizationState>;
 
 /**
@@ -25,14 +30,13 @@ export interface VisualizationSettings {
     title?: string
 
     /**
-     * Whether each connection is directed (an arrow) or not (a line).
-     * Default false.
+     * Whether each connection is directed (an arrow) or not (a line). Default false.
      */
     directed?: boolean
 
     /**
      * Settings to limit which connections are shown based on the hovered file by default. These can be overridden by
-     * the use via the controls.
+     * the user via the controls.
      * 
      * Can be set to:
      * - `"in"`: Show only directed connections into the hovered file.
@@ -77,7 +81,16 @@ export interface VisualizationSettings {
      * Pass an object where each key is a custom property in your `Connection`s and each value is one of:
      * - `"same"`: Only merge connections with equal values for this prop.
      * - `"ignore"`: Ignore this prop when merging connections, i.e. merged connections can have different values for
-     *               the prop. This is the default.
+     *               the prop. This prop won't appear on the `MergedConnection` This is the default.
+     * - `"first"`: Use the value of the first connection for this prop.
+     * - `"last"`: Use the value of the last merged connection for this prop.
+     * - `"least"`: Use the smallest value of this prop on the merged connection.
+     * - `"greatest"`: Use the greatest value of this prop on the merged connection.
+     * - `"leastCommon"`: Use the least common value of this prop on the merged connection.
+     * - `"mostCommon"`: Use the most common value of this prop on the merged connection.
+     * - `{rule: "add", max: number}`: Sum the values of this prop up to a max.
+     * - `{rule: "value", value: number}`: Show merged connections with a different value than single ones.
+     * - `{rule: "join", sep: string}`: Join the values of this prop as strings with a separator
      * 
      * The following special keys are recognized, in addition to custom props on `Connection`.
      * - `file`: One of `"same"` or `"ignore"`. Whether to merge connections that go to different files (this can happen
@@ -86,23 +99,8 @@ export interface VisualizationSettings {
      *           file. Only applicable when `file` is `"same"`. Default `"ignore"`.
      * - `direction`: One of `"same"` or `"ignore"`.Whether to merge opposite direction connections into one
      *                double-headed arrow. Only applicable if connections are directed. Default `"ignore"`.
-     * - `width`: How to render the width of merged connections. Can be one of the following values:
-     *      - `"same"`: Do not merge connections with different widths.
-     *      - `"first"`: Use the width of the first connection.
-     *      - `"last"`: Use the width of the last connection.
-     *      - `"least"`: Use the smallest width of the merged connections.
-     *      - `"greatest"`: Use the greatest width of the merged connections.
-     *      - `"leastCommon"`: Use the least common width among the merged connections.
-     *      - `"mostCommon"`: Use the most common width among the merge connections.
-     *      - `{rule: "add", max: number}`: Add the widths of the merged connections up to a max. This is the default.
-     *      - `{rule: "value", value: number}`: Show merged connections with a different width than single ones.
-     * - `color`: How to render the color of merged connections. Can be one of the following values:
-     *      - `"same"`: Do not merge connections with different colors.
-     *      - `"first"`: Use the color of the first connection.
-     *      - `"last"`: Use the color of the last connection.
-     *      - `"leastCommon"`: Use the least common color among the merged connections.
-     *      - `"mostCommon"`: Use the most common color among the merge connections. This is the default
-     *      - `{rule: "value", value: string}`: Show merged connections with a different color than single ones.
+     * - `width`: How to merge the width of merged connections. Default is `"add"`.
+     * - `color`: How to merge the color of merged connections. Default is `"mostCommon"`.
      */
     mergeRules?: VisualizationMergeRules|boolean
 
@@ -131,7 +129,8 @@ export interface VisualizationSettings {
     }
 
     /**
-     * Context menu options that will show for files and folders in addition to the default ones.
+     * Context menu options that will show for files and folders in addition to the default ones. Each `ContextMenuItem`
+     * contains a title and a callback that will be called with the Uri of the selected file or folder.
      */
     contextMenu?: {
         file?: ContextMenuItem[]
@@ -192,22 +191,19 @@ export type ContextMenuItem = {
 export type Endpoint = Uri | { file: Uri, line?: number }
 
 /**
- * Represents a merged group of connections, that will be rendered as one
- * line in the visualization. The connections are grouped together based
- * on the merge rules.
+ * Represents a merged group of connections, that will be rendered as one line in the visualization. The connections are
+ * grouped together based on the merge rules.
  */
 export interface MergedConnection {
     /**
-    * The file/folder the rendered connection will show from. This can be a
-    * folder when there are deeply nested files which are hidden until the
-    * user zooms in. Then connections to those files will show connected to
-    * the visible parent folder.
+    * The file/folder the rendered connection will show from. This can be a folder when there are deeply nested files
+    * which are hidden until the user zooms in. Then connections to those files will show connected to the visible
+    * parent folder.
     */
     from?: { file: Uri, line?: number }
 
     /**
-    * The file or folder the rendered connection will show to. Can be a
-    * folder just like `from`.
+    * The file or folder the rendered connection will show to. Can be a folder just like `from`.
     */
     to?: { file: Uri, line?: number }
 
@@ -224,15 +220,18 @@ export interface MergedConnection {
     */
     connections: Connection[]
 
+    /** Freeform custom properties on your `Connection`s that are kep by your merge rules. */
     [key: string]: any
 }
 
 /**
- * Handles the visualization, allowing you to update the visualization.
+ * Creates, launches, and allows updating a CBRV visualization.
  */
 export class Visualization {
-    private context: vscode.ExtensionContext;
+    /** The URI of the root of the codebase this Visualization is visualizing. */
     public readonly codebase: Uri
+
+    private context: vscode.ExtensionContext;
     private originalSettings: VisualizationSettings;
     private settings: DeepRequired<VisualizationSettings>
     private connections: Connection[] = []
@@ -301,6 +300,7 @@ export class Visualization {
         }
     };
 
+    /** Construct a Visualization. You shouldn't call this directly, instead use `API.create` */
     constructor(
         context: vscode.ExtensionContext,
         codebase: Uri,
@@ -399,6 +399,10 @@ export class Visualization {
         this.webviewPanel!.reveal(viewColumn, preserveFocus);
     }
 
+    /**
+     * Open up the visualizing in the webview.
+     * You shouldn't call this directly, `API.create` launches automatically.
+     */
     async launch() {
         if (this.webviewPanel) {
             throw new Error("Visualization launched twice");
@@ -487,7 +491,7 @@ export class Visualization {
     }
 
     /**
-     * Updates stuff after the codebase or include/exclude settings have changed.
+     * Updates the Visualization after the codebase or include/exclude settings have changed.
      */
     private async updateFileList(): Promise<void> {
         const {include, exclude} = this.settings.filters;

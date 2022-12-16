@@ -1,3 +1,5 @@
+/** Merge rules that can be used for merging connections */
+
 export type MergeRule<Name extends string = string> = {rule: Name, [key: string]: any} | string
 export type SimpleMergeRule<Name extends string = string> = {rule: Name} | string
 export type MergeRules = Record<string, MergeRule>

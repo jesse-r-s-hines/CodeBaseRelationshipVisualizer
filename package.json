@@ -1,13 +1,14 @@
 {
     "name": "codebase-relationship-visualizer",
-    "description": "Visualize relationships between source code files.",
+    "displayName": "CodeBase Relationship Visualizer",
+    "description": "Visualize relationships between files and the codebase file system structure.",
     "version": "0.0.1",
     "publisher": "jesse-r-s-hines",
     "repository": "https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer",
     "private": true,
-    "license": "MIT",
+    "license": " GPL-3.0-or-later",
     "engines": {
-        "vscode": "^1.47.0"
+        "vscode": "^1.70.0"
     },
     "categories": [
         "Visualization",
