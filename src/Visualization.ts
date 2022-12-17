@@ -253,7 +253,7 @@ export class Visualization {
         showSelfLoops: true,
         connectionDefaults: {
             width: 2,
-            color: 'yellow',
+            color: 'green',
             tooltip: (conn) => conn.tooltip,
         },
         mergeRules: {
