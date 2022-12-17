@@ -1,17 +1,18 @@
 import b.c
 import threading
+from b.fact import fact
 
 def thread1():
-    for i in range(10):
-        print(i)
+    print(fact(6))
+
 
 def thread2():
-    for i in range(10):
-        print(i)
+    print(b.c.deep("thread2"))
+
 
 if __name__ == "__main__":
     print('Test basic recursion within a single file')
-    print(b.c.fact(6))
+    print(fact(6))
     print()
     
     print('Test recursion between two files')
