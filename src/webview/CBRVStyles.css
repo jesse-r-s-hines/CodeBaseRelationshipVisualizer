@@ -78,3 +78,8 @@ body {
 #filters .form-input label {
     padding-right: 5px;
 }
+#filters .form-input input {
+    flex-grow: 1;
+    min-width: 4em;
+    width: 0; /** Have to override default width */
+}
