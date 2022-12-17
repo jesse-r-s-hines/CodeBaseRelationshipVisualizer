@@ -15,7 +15,7 @@ import { SameRule, IgnoreRule, First, Last, LeastRule, GreatestRule, LeastCommon
  * 
  * To use, add CBRV to your packge.json `extensionDependencies` and then import the api like so:
  *  ```ts
- * let cbrvAPI = extensions.getExtension('CBRV').exports;
+ * let cbrvAPI = vscode.extensions.getExtension('CBRV').exports;
  * let visualization = await cbrvAPI.create({
  *   // ...
  * })
