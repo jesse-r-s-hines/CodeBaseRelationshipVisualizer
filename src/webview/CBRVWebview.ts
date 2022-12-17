@@ -319,7 +319,7 @@ export default class CBRVWebview {
                     // on it for the folder name
                     all.append("path")
                         .classed("circle", true)
-                        .attr("id", d => this.filePath(d));
+                        .attr("id", d => `file-${this.filePath(d)}`);
 
                     const files = all.filter(d => this.resolvedType(d) == FileType.File);
                     const directories = all.filter(d => this.resolvedType(d) == FileType.Directory);
@@ -344,7 +344,7 @@ export default class CBRVWebview {
                     directories.append("text")
                         .append("textPath")
                             .classed("label", true)
-                            .attr("href", d => `#${encodeURIComponent(this.filePath(d))}`)
+                            .attr("href", d => `#file-${encodeURIComponent(this.filePath(d))}`)
                             .attr("startOffset", "50%")
                             .attr("font-size", d => Math.max(this.s.label.fontMax - d.depth, this.s.label.fontMin));
   
@@ -560,7 +560,7 @@ export default class CBRVWebview {
             .join(
                 enter => enter.append('marker')
                     .classed("arrow", true)
-                    .attr("id", color => color)
+                    .attr("id", color => `arrow-head-${color}`)
                     .attr("viewBox", "0 0 8 6")
                     .attr("refX", 4)
                     .attr("refY", 3)
@@ -613,9 +613,11 @@ export default class CBRVWebview {
                 .attr("data-bidirectional", ({conn}) => conn.bidirectional)
                 .attr("stroke-width", ({conn}) => conn.width)
                 .attr("stroke", ({conn}) => conn.color)
-                .attr("marker-end", ({conn}) => this.settings.directed ? `url("#${encodeURIComponent(conn.color)}")` : null)
-                .attr("marker-start", ({conn}) =>
-                    this.settings.directed && conn.bidirectional ? `url("#${encodeURIComponent(conn.color)}")` : null
+                .attr("marker-end", ({conn}) =>
+                    this.settings.directed ? `url("#arrow-head-${encodeURIComponent(conn.color)}")` : null
+                )
+                .attr("marker-start", ({conn}) => this.settings.directed && conn.bidirectional ?
+                    `url("#arrow-head-${encodeURIComponent(conn.color)}")` : null
                 )
                 .attr("d", ({path}) => path)
                 .attr("data-tippy-content", null) // set this on tooltip creation
