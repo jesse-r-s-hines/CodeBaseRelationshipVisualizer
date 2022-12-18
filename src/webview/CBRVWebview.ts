@@ -505,9 +505,18 @@ export default class CBRVWebview {
     filteredCodebase() {
         let connected: Set<string> = new Set();
         if (this.settings.filters.hideUnconnected) {
-            connected = new Set(_(this.connections)
-                .flatMap(conn => [conn.from?.file, conn.to?.file].filter(e => e) as string[])
-                .uniq().value()
+            let connections: WebviewConnection[];
+            if (this.settings.filters.showSelfLoops) {
+                connections = this.connections;
+            } else {
+                connections = this.connections.filter(conn => conn.from?.file != conn.to?.file);
+            }
+
+            connected = new Set(
+                _(connections)
+                    .flatMap(conn => [conn.from?.file, conn.to?.file].filter(e => e) as string[])
+                    .uniq()
+                    .value()
             );
         }
 
