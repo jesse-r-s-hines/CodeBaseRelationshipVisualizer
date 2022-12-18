@@ -119,7 +119,7 @@ export type WebviewContextMenuItem = {title: string, action: string}
 export type CBRVMessage = SetMessage|TooltipSetMessage
 /** Messages the webview will send to the Visualization class */
 export type CBRVWebviewMessage = ReadyMessage|OpenMessage|RevealInExplorerMessage|TooltipRequestMessage|
-                                 TooltipSetMessage|ContextMenuActionMessage|UpdateSettings
+                                 ContextMenuActionMessage|UpdateSettings
 
 export type TooltipSetMessage = { type: "tooltip-set", id: string, content: string }
 export type SetMessage = {
