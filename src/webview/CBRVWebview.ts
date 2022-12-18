@@ -99,7 +99,7 @@ export default class CBRVWebview {
     }
    
     // Parts of the d3 diagram
-    diagram: Selection<Element>
+    diagram: Selection<SVGSVGElement>
     defs: Selection<SVGDefsElement>
     zoomWindow: Selection<SVGGElement>
     fileLayer: Selection<SVGGElement>
@@ -113,7 +113,7 @@ export default class CBRVWebview {
     showOnHoverSelect: Selection<HTMLSelectElement>
     showSelfLoopsInput: Selection<HTMLInputElement>
 
-    zoom: d3.ZoomBehavior<Element, unknown>
+    zoom: d3.ZoomBehavior<SVGSVGElement, unknown>
 
     // Some d3 generation objects
     // See https://observablehq.com/@d3/spline-editor to compare curves
@@ -139,7 +139,7 @@ export default class CBRVWebview {
         this.connections = connections;
 
         // Create the SVG
-        this.diagram = d3.select<Element, unknown>('#diagram')
+        this.diagram = d3.select<SVGSVGElement, unknown>('#diagram')
             .attr("viewBox", this.getViewbox());
         this.defs = this.diagram.append("defs");
         this.zoomWindow = this.diagram.append("g")
@@ -167,7 +167,7 @@ export default class CBRVWebview {
 
         const [x, y, width, height] = this.getViewbox();
         const extent: [Point, Point] = [[x, y], [x + width, y + height]];
-        this.zoom = d3.zoom()
+        this.zoom = d3.zoom<SVGSVGElement, unknown>()
             .on('zoom', (e) => this.onZoom(e))
             .extent(extent)
             .scaleExtent([1, Infinity])
@@ -235,6 +235,8 @@ export default class CBRVWebview {
                 },
             });
         });
+
+        this.diagram.node()!.focus(); // focus svg so keyboard shortcuts for zoom and pan work immediately
 
         this.update(this.settings, this.codebase, this.connections);
     }
