@@ -418,14 +418,8 @@ export default class CBRVWebview {
                         })
                         .on("contextmenu", d3ContextMenu((d: Node) => this.contextMenu(d)));
 
-                    files.each((d, i, nodes) => tippy(nodes[i], {
-                        content: this.filePath(d),
-                        delay: [1000, 0], // [show, hide]
-                        followCursor: true,
-                    }));
-                    directories
-                        .filter(d => d.depth > 0)
-                        .select<SVGElement>(".label")
+                    all
+                        .filter(d => d.depth > 0) // don't tooltip to root folder
                         .each((d, i, nodes) => tippy(nodes[i], {
                             content: this.filePath(d),
                             delay: [1000, 0], // [show, hide]
