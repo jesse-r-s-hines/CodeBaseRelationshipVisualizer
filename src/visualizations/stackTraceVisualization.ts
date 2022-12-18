@@ -3,7 +3,7 @@ import { Uri, DebugAdapterTracker, DebugSession } from 'vscode';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import _ from "lodash";
 
-import { API, Visualization, VisualizationSettings, Connection } from "../api";
+import { API, Visualization, VisualizationSettings, Connection, VisualizationState } from "../api";
 
 const colorScheme = [
     "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"
@@ -21,7 +21,7 @@ export async function activate(context: vscode.ExtensionContext) {
                     "No active debug session, start a VSCode debug session to start the visualization."
                 );
             }
-            stackTraceVisualization.visualization = await createStackTraceVisualization(cbrvAPI);
+            stackTraceVisualization.setVisualization(await createStackTraceVisualization(cbrvAPI));
             stackTraceVisualization.updateVisualization();
         }),
     );
@@ -53,7 +53,9 @@ async function createStackTraceVisualization(cbrvAPI: API): Promise<Visualizatio
         },
     };
 
-    return await cbrvAPI.create(settings);
+    const visualization = await cbrvAPI.create(settings);
+
+    return visualization;
 }
 
 
@@ -108,26 +110,33 @@ class StackTraceVisualization implements vscode.DebugAdapterTrackerFactory {
         };
     }
 
+    setVisualization(visualization: Visualization) {
+        this.visualization = visualization;
+        visualization.onFSChange(this.updateCallback.bind(this), {immediate: false});
+    }
+
     updateVisualization() {
-        this.visualization?.update(async visState => {
-            visState.connections = [...this.stackTraces.entries()]
-                .flatMap(([threadId, frames], threadIndex) =>
-                    frames
-                        .filter(frame => visState.files.some(uri => frame.file.fsPath == uri.fsPath))
-                        .map((frame, i, arr) => ({
-                            from: (i == 0) ? undefined : {
-                                file: arr[i - 1].file,
-                                line: arr[i - 1].line,
-                            },
-                            to: {
-                                file: frame.file,
-                                line: frame.line,
-                            },
-                            toName: frame.name,
-                            threadId: threadId,
-                            color: colorScheme[threadIndex % this.stackTraces.size],
-                        }))
-                );
-        });
+        this.visualization?.update(this.updateCallback.bind(this));
+    }
+
+    async updateCallback(visState: VisualizationState) {
+        visState.connections = [...this.stackTraces.entries()]
+            .flatMap(([threadId, frames], threadIndex) =>
+                frames
+                    .filter(frame => visState.files.some(uri => frame.file.fsPath == uri.fsPath))
+                    .map((frame, i, arr) => ({
+                        from: (i == 0) ? undefined : {
+                            file: arr[i - 1].file,
+                            line: arr[i - 1].line,
+                        },
+                        to: {
+                            file: frame.file,
+                            line: frame.line,
+                        },
+                        toName: frame.name,
+                        threadId: threadId,
+                        color: colorScheme[threadIndex % this.stackTraces.size],
+                    }))
+            );
     }
 }

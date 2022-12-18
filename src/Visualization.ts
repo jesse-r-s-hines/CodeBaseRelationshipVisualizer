@@ -378,7 +378,7 @@ export class Visualization {
 
     /**
      * Set the callback to update the visualization whenever the files change. Shortcut for setting up a custom
-     * FileSystemWatcher on the codebase that calls {@link Visualization.update}.
+     * FileSystemWatcher on the codebase that calls {@link Visualization.update} or when the filters change.
      * 
      * You can pass `{immediate: true}` if you want it to trigger immediately as well.
      */
@@ -463,6 +463,9 @@ export class Visualization {
                     if (filters?.include != undefined || filters?.exclude != undefined) {
                         await this.updateFileList();
                         await this.sendSet({codebase: true});
+                        if (this.onFSChangeCallback) {
+                            this.update(this.onFSChangeCallback);
+                        }
                     }
                 } else if (message.type == "context-menu") {
                     const [menu, i] = message.action.split("-");
