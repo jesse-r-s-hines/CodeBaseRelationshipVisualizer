@@ -112,7 +112,7 @@ class StackTraceVisualization implements vscode.DebugAdapterTrackerFactory {
 
     setVisualization(visualization: Visualization) {
         this.visualization = visualization;
-        visualization.onFSChange(this.updateCallback.bind(this), {immediate: false});
+        visualization.onFilesChange(this.updateCallback.bind(this), {immediate: false});
     }
 
     updateVisualization() {

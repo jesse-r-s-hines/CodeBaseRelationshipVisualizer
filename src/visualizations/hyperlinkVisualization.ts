@@ -39,7 +39,7 @@ async function createHyperlinkVisualization(cbrvAPI: API): Promise<Visualization
 
     const visualization = await cbrvAPI.create(settings);
 
-    visualization.onFSChange(async (visState) => {
+    visualization.onFilesChange(async (visState) => {
         visState.connections = await getHyperlinks(visState.codebase, visState.files);
     }, {immediate: true});
 

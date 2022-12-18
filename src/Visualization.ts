@@ -243,7 +243,7 @@ export class Visualization {
 
     private files: Uri[] = [];
 
-    private onFSChangeCallback?: (visState: VisualizationState) => Promise<void>
+    private onFilesChangeCallback?: (visState: VisualizationState) => Promise<void>
 
     private static readonly defaultSettings: DeepRequired<VisualizationSettings> = {
         iconPath: null,
@@ -377,15 +377,16 @@ export class Visualization {
     }
 
     /**
-     * Set the callback to update the visualization whenever the files change. Shortcut for setting up a custom
-     * FileSystemWatcher on the codebase that calls {@link Visualization.update} or when the filters change.
+     * Set the callback to update the visualization whenever the filelist change. It will trigger if a file is created,
+     * modified, or deleted, or if the filters change. Most the time, you'll want to use this instead of using
+     * {@link update} directly.
      * 
      * You can pass `{immediate: true}` if you want it to trigger immediately as well.
      */
-    onFSChange(func: (visState: VisualizationState) => Promise<void>, options?: {immediate?: boolean}): void {
-        this.onFSChangeCallback = func;
+    onFilesChange(func: (visState: VisualizationState) => Promise<void>, options?: {immediate?: boolean}): void {
+        this.onFilesChangeCallback = func;
         if (options?.immediate ?? false) {
-            this.update(this.onFSChangeCallback);
+            this.update(this.onFilesChangeCallback);
         }
     }
 
@@ -463,8 +464,8 @@ export class Visualization {
                     if (filters?.include != undefined || filters?.exclude != undefined) {
                         await this.updateFileList();
                         await this.sendSet({codebase: true});
-                        if (this.onFSChangeCallback) {
-                            this.update(this.onFSChangeCallback);
+                        if (this.onFilesChangeCallback) {
+                            this.update(this.onFilesChangeCallback);
                         }
                     }
                 } else if (message.type == "context-menu") {
@@ -546,8 +547,8 @@ export class Visualization {
 
         const callback = async () => {
             await this.sendSet({codebase: true});
-            if (this.onFSChangeCallback) {
-                this.update(this.onFSChangeCallback);
+            if (this.onFilesChangeCallback) {
+                this.update(this.onFilesChangeCallback);
             }
         };
 
