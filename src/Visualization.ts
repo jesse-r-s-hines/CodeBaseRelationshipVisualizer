@@ -49,12 +49,6 @@ export interface VisualizationSettings {
      */
     showOnHover?: Direction|boolean
 
-    /**
-     * Whether to show connections between lines within a single file as a self loop or to just ignore them.
-     * Default true.
-     */
-    showSelfLoops?: boolean
-
     connectionDefaults?: {
         /** Default width of the SVG path for connections. Can be overridden per connection via `Connection.width` */
         width?: number
@@ -128,6 +122,12 @@ export interface VisualizationSettings {
          * Can be overridden by the user via the controls.
          */
         hideUnconnected?: boolean,
+
+        /**
+         * Whether to show connections between lines within a single file as a self loop or to just ignore them.
+         * Default true.
+         */
+        showSelfLoops?: boolean
     }
 
     /**
@@ -250,7 +250,6 @@ export class Visualization {
         title: 'CodeBase Relationship Visualizer',
         directed: false,
         showOnHover: false,
-        showSelfLoops: true,
         connectionDefaults: {
             width: 2,
             color: 'green',
@@ -268,6 +267,7 @@ export class Visualization {
             include: "",
             exclude: "",
             hideUnconnected: false,
+            showSelfLoops: true,
         },
         contextMenu: {
             file: [
@@ -623,6 +623,10 @@ export class Visualization {
                             <option value="in">In only</option>
                             <option value="out">Out only</option>
                         </select> 
+                    </div>
+                    <div class="form-input">
+                        <label for="show-self-loops">Show self loops</label>
+                        <input id="show-self-loops" type="checkbox"></input>
                     </div>
                 </div>
                 <svg id="diagram"></svg>

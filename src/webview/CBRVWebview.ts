@@ -111,6 +111,7 @@ export default class CBRVWebview {
     excludeInput: Selection<HTMLInputElement>
     hideUnconnectedInput: Selection<HTMLInputElement>
     showOnHoverSelect: Selection<HTMLSelectElement>
+    showSelfLoopsInput: Selection<HTMLInputElement>
 
     zoom: d3.ZoomBehavior<Element, unknown>
 
@@ -202,6 +203,7 @@ export default class CBRVWebview {
         this.excludeInput = d3.select<HTMLInputElement, unknown>("#exclude");
         this.hideUnconnectedInput = d3.select<HTMLInputElement, unknown>("#hide-unconnected");
         this.showOnHoverSelect = d3.select<HTMLSelectElement, unknown>("#show-on-hover");
+        this.showSelfLoopsInput = d3.select<HTMLInputElement, unknown>("#show-self-loops");
 
         const updateFilters = () => {
             this.emitUpdateSettings({
@@ -224,6 +226,13 @@ export default class CBRVWebview {
             const value = this.showOnHoverSelect.property('value');
             this.emitUpdateSettings({
                 showOnHover: value == "off" ? false : value,
+            });
+        });
+        this.showSelfLoopsInput.on('change', () => {
+            this.emitUpdateSettings({
+                filters: {
+                    showSelfLoops: !!this.showSelfLoopsInput.property('checked'),
+                },
             });
         });
 
@@ -268,6 +277,7 @@ export default class CBRVWebview {
         this.excludeInput.property('value', this.settings.filters.exclude);
         this.hideUnconnectedInput.property('checked', this.settings.filters.hideUnconnected);
         this.showOnHoverSelect.property('value', this.settings.showOnHover || "off");
+        this.showSelfLoopsInput.property('checked', this.settings.filters.showSelfLoops);
     }
 
     updateCodebase(fullRerender = true) { // rename to filesChanged
@@ -627,7 +637,7 @@ export default class CBRVWebview {
                 const raised: WebviewConnection = {from, to};
                 return {conn, raised};
             });
-        if (!this.settings.showSelfLoops) {
+        if (!this.settings.filters.showSelfLoops) {
             raised = raised.filter(({raised}) => raised.from?.file != raised.to?.file);
         }
 
