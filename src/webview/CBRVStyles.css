@@ -78,7 +78,7 @@ body {
 #filters .form-input label {
     padding-right: 5px;
 }
-#filters .form-input input {
+#filters .form-input input:not([type]), #filters .form-input input[type='text'] {
     flex-grow: 1;
     min-width: 4em;
     width: 0; /** Have to override default width */
