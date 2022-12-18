@@ -396,7 +396,7 @@ export default class CBRVWebview {
                         .on("mouseout", (event, d) => showConnectedConns(d, false))
                         .on("dblclick", (event, d) => {
                             if (d.data.type == FileType.Directory) {
-                                this.emit({type: "reveal-in-explorer", file: this.filePath(d)});
+                                this.emit({type: "reveal", file: this.filePath(d)});
                             } else if (d.data.type == FileType.File) {
                                 this.emit({type: "open", file: this.filePath(d)});
                             } else if (d.data.type == FileType.SymbolicLink) {
@@ -1112,7 +1112,7 @@ export default class CBRVWebview {
         return this.settings.contextMenu[fileType].map((item, i) => ({
             title: item.title,
             action: (d: Node) => this.emit({
-                type: "context-menu-action",
+                type: "context-menu",
                 action: `${fileType}-${i}`,
                 file: this.filePath(d),
             })

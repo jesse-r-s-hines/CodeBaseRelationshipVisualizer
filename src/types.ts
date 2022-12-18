@@ -131,7 +131,7 @@ export type SetMessage = {
 
 export type ReadyMessage = { type: "ready" }
 export type OpenMessage = { type: "open", file: string }
-export type RevealInExplorerMessage = { type: "reveal-in-explorer", file: string }
+export type RevealInExplorerMessage = { type: "reveal", file: string }
 export type TooltipRequestMessage = {
     type: "tooltip-request",
     id: string,
@@ -139,7 +139,7 @@ export type TooltipRequestMessage = {
     conn: MappedOmit<WebviewMergedConnection, 'connections'> & {connections: number[]},
 }
 export type ContextMenuActionMessage = {
-    type: "context-menu-action",
+    type: "context-menu",
     action: string,
     file: string,
 }

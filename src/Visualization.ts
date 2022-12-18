@@ -436,7 +436,7 @@ export class Visualization {
                 } else if (message.type == "open") {
                     // NOTE: we could do these and Command URIs inside the webview instead. That might be simpler
                     await vscode.commands.executeCommand("vscode.open", this.getUri(message.file));
-                } else if (message.type == "reveal-in-explorer") {
+                } else if (message.type == "reveal") {
                     await vscode.commands.executeCommand("revealInExplorer", this.getUri(message.file));
                 } else if (message.type == "tooltip-request") {
                     const convEndpoint = (e: WebviewEndpoint|undefined) =>
@@ -464,7 +464,7 @@ export class Visualization {
                         await this.updateFileList();
                         await this.sendSet({codebase: true});
                     }
-                } else if (message.type == "context-menu-action") {
+                } else if (message.type == "context-menu") {
                     const [menu, i] = message.action.split("-");
                     const uri = this.getUri(message.file);
                     this.settings.contextMenu[menu as 'file'|'directory'][Number(i)].action(uri, this);
