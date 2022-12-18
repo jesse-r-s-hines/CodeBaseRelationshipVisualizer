@@ -18,7 +18,7 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('stackTraceVisualization.start', async () => {
             if (stackTraceVisualization.stackTraces.size == 0) {
                 vscode.window.showInformationMessage(
-                    "No debug active session, start a VSCode debug session to start the visualization."
+                    "No active debug session, start a VSCode debug session to start the visualization."
                 );
             }
             stackTraceVisualization.visualization = await createStackTraceVisualization(cbrvAPI);
