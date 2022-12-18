@@ -45,7 +45,7 @@ async function createStackTraceVisualization(cbrvAPI: API): Promise<Visualizatio
             }
         },
         mergeRules: {
-            file: "ignore",
+            file: "same",
             line: "ignore",
             direction: "same",
             width: { rule: "add", max: 4 },
