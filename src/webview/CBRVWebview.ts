@@ -402,22 +402,7 @@ export default class CBRVWebview {
                             } else if (d.data.type == FileType.SymbolicLink) {
                                 const jumpTo = this.pathMap.get(d.data.resolved);
                                 if (jumpTo) {
-                                    this.zoom.translateTo(this.diagram, jumpTo.x, jumpTo.y);
-                                    if (2*jumpTo.r * this.transform.k > this.s.diagramSize) {
-                                        this.zoom.scaleTo(this.diagram, this.s.diagramSize / (2*jumpTo.r));
-                                    }
-                                    this.allFilesSelection!
-                                        .filter(d => d == jumpTo)
-                                        .select(".circle") // flash the linked file
-                                            .style("stroke", "cyan")
-                                            .style("stroke-width", d => d.data.type == FileType.Directory ? 1 : 0)
-                                            .transition().duration(1000)
-                                                .style("stroke-width", 5)
-                                            .transition().duration(1000)
-                                                .style("stroke-width", d => d.data.type == FileType.Directory ? 1 : 0)
-                                            .transition().duration(0)
-                                                .style("stroke", null)
-                                                .style("stroke-width", null);
+                                    this.emphasizeFile(jumpTo);
                                 }
                             }
                         })
@@ -1156,6 +1141,32 @@ export default class CBRVWebview {
                     .transition().duration(0)
                     .style("display", "none");
             }
+        }
+    }
+
+    /** Jump the view to a file, and make it flash */
+    emphasizeFile(node: Node) {
+        // Zoom triggers update which clears transition, so add one-time handler to start animation after zoom jumps
+        this.zoom.on('zoom.emphasize', e => {
+            this.allFilesSelection!
+                .filter(d => d == node)
+                .select(".circle") // flash the file or folder
+                    .style("stroke", "cyan")
+                    .style("stroke-width", d => d.data.type == FileType.Directory ? 1 : 0)
+                    .transition().duration(1000)
+                        .style("stroke-width", 5)
+                    .transition().duration(1000)
+                        .style("stroke-width", d => d.data.type == FileType.Directory ? 1 : 0)
+                    .transition().duration(0)
+                        .style("stroke", null)
+                        .style("stroke-width", null);
+            this.zoom.on('zoom.emphasize', null); // remove handler
+        });
+        
+        // Zoom to center and fit
+        this.zoom.translateTo(this.diagram, node.x, node.y);
+        if (2*node.r * this.transform.k > this.s.diagramSize) {
+            this.zoom.scaleTo(this.diagram, this.s.diagramSize / (2*node.r));
         }
     }
 }
