@@ -605,11 +605,11 @@ export class Visualization {
                 <div id="filters">
                     <div class="form-input" style="flex-grow: 1; max-width: 20em">
                         <label for="include">Files to include</label>
-                        <input id="include" title="e.g. *.ts, src/**/include"></input>
+                        <input id="include" title="e.g. **/*.ts, src/**/include"></input>
                     </div>
                     <div class="form-input" style="flex-grow: 1; max-width: 20em">
                         <label for="exclude">File to exclude</label>
-                        <input id="exclude" title="e.g. *.ts, src/**/include"></input>
+                        <input id="exclude" title="e.g. **/*.ts, src/**/include"></input>
                     </div>
                     <div class="form-input">
                         <label for="hide-unconnected">Hide Unconnected</label>
