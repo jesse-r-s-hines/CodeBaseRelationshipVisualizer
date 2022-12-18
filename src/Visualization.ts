@@ -612,11 +612,11 @@ export class Visualization {
                         <input id="include" title="e.g. **/*.ts, src/**/include"></input>
                     </div>
                     <div class="form-input" style="flex-grow: 1; max-width: 20em">
-                        <label for="exclude">File to exclude</label>
+                        <label for="exclude">Files to exclude</label>
                         <input id="exclude" title="e.g. **/*.ts, src/**/include"></input>
                     </div>
                     <div class="form-input">
-                        <label for="hide-unconnected">Hide Unconnected</label>
+                        <label for="hide-unconnected">Hide unconnected</label>
                         <input id="hide-unconnected" type="checkbox"></input>
                     </div>
                     <div class="form-input">
