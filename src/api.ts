@@ -13,7 +13,9 @@ import { SameRule, IgnoreRule, First, Last, LeastRule, GreatestRule, LeastCommon
 /**
  * This is the API that the CBRV VSCode extension will expose.
  * 
- * To use, add CBRV to your packge.json `extensionDependencies` and then import the api like so:
+ * To use, add `jesse-r-s-hines.codebase-relationship-visualizer` to your package.json `extensionDependencies` and then
+ * import the api like so:
+ * 
  *  ```ts
  * let cbrvAPI = vscode.extensions.getExtension('CBRV').exports;
  * let visualization = await cbrvAPI.create({
