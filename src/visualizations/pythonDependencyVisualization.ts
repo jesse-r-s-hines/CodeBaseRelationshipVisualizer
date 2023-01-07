@@ -6,6 +6,7 @@ import { promises as fsp } from 'fs';
 import _ from 'lodash';
 
 import { API, Visualization, VisualizationSettings, Connection } from "../api";
+import { dependencies } from 'webpack';
 
 export async function activate(context: vscode.ExtensionContext) {
     const cbrvAPI = new API(context);
@@ -95,23 +96,26 @@ export async function getDependencyGraph(codebase: Uri, files: Uri[]): Promise<C
     const pythonPath = vscode.workspace.getConfiguration('python').get<string>('defaultInterpreterPath', 'python');
     const codebasePath = await fsp.realpath(codebase.fsPath);
 
-    const stack = await Promise.all(files.map(f => fsp.realpath(f.fsPath))); // normalize and resolve symlinks in path
-    const allFiles = new Set(stack);
-    const dependencyGraph: Map<string, string[]> = new Map();
+    // normalize and resolve symlinks in path
+    const fsPaths = await Promise.all(files.map(f => fsp.realpath(f.fsPath)));
+    const fsPathsSet = new Set(fsPaths);
 
-    while (stack.length > 0) {
-        const fsPath = stack.pop()!;
-        const ext = path.extname(fsPath).toLocaleLowerCase();
-        // Only get deps for non-symlink python files that have not already been done
-        if (ext == ".py" && !dependencyGraph.has(fsPath) && !(await isSymlink(Uri.file(fsPath)))) {
-            let graph: any;
-            try {
-                // Get dep JSON, with infinite bacon "depth"
+    // NOTE: We can use `--max-bacon 0` to recurse the tree in one process call and make it a lot faster. See 74c02cd
+    // for an implementation of this. But pydeps treats module imports slightly differently depending on how the module
+    // was reached, causing inconsistent results based on file order. E.g if `b.c` is the root file, or if its reached
+    // via a relative import `from .b import c`, it will depend on the root package `__init__.py`. But if we reach it
+    // via `import b.c` it won't depend on the root `__init__.py`. Just naively calling pydeps on each file fixes this.
+
+    const promises = _(fsPaths)
+        .map<Promise<[string, string[]]>>(async (fsPath) => {
+            const ext = path.extname(fsPath).toLocaleLowerCase();
+
+            if (ext == ".py" && !(await isSymlink(Uri.file(fsPath)))) {
                 const result = await child_process_promise.spawn(pythonPath,
-                    ['-m', 'pydeps', '--show-deps', '--no-output', '--max-bacon', '0', fsPath],
+                    ['-m', 'pydeps', '--show-deps', '--no-output', '--max-bacon', '2', fsPath],
                     { capture: ['stdout', 'stderr'], cwd: codebasePath }
                 );
-                graph = JSON.parse(result.stdout);
+                const graph = JSON.parse(result.stdout);
 
                 // Resolve all links in graph (I could probably skip this, pydeps seems to do it already)
                 const realPaths = await Promise.all(_(graph)
@@ -122,37 +126,24 @@ export async function getDependencyGraph(codebase: Uri, files: Uri[]): Promise<C
                 for (const [moduleName, realPath] of realPaths) {
                     graph[moduleName].path = realPath;
                 }
-            } catch (e) {
-                console.log('Error', e);
-                graph = undefined;
+
+                const modules: string[] = _(graph).find(info => info.path == fsPath)?.imports ?? [];
+                const imports = modules
+                    .map(m => graph[m].path)
+                    .filter(p => typeof p == 'string' && fsPathsSet.has(p));
+                return [fsPath, imports];
+            } else {
+                return [fsPath, []];
             }
 
-            if (graph) {
-                for (const [moduleName, info] of Object.entries<any>(graph)) {
-                    if (typeof info.path == 'string') {
-                        if (allFiles.has(info.path) && !dependencyGraph.has(info.path)) {
-                            const dependencies = (info.imports ?? [])
-                                .flatMap((m: string) => {
-                                    if (typeof graph[m].path == 'string') {
-                                        if (allFiles.has(graph[m].path)) {
-                                            return [graph[m].path];
-                                        }
-                                    }
-                                    return [];
-                                });
-                            dependencyGraph.set(info.path, dependencies);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    return [...dependencyGraph.entries()]
+        })
+        .value();
+        
+    return (await Promise.all(promises))
         .flatMap(([source, dependencies]) =>
             dependencies.map(dep => ({
                 from: Uri.file(source),
                 to: Uri.file(dep),
-            }))
+            })) 
         );
 }
