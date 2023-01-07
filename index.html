@@ -60,23 +60,37 @@ handy <a href="https://github.com/thebjorn/pydeps">pydeps</a> package to extract
 </a>
 <p><img src="screenshots/simple-hyperlink-graph.png" alt="A screenshot of the hyperlink visualization"></p>
 <p>The command &quot;Visualize a hyperlink graph&quot; brings up the Hyperlink Visualization. This visualization uses the CBRV API
-to display references between HTML and Markdown files. It displays a directed arrow for any <code>href</code> in an HTML document or links in a Markdown document that reference another file in the workspace. The visualization only shows connection to/from a file on hover over that file by default to prevent the visualization getting overly crowded.</p>
+to display references between HTML and Markdown files. It displays a directed arrow for any <code>href</code> in an HTML document
+or links in a Markdown document that reference another file in the workspace. The visualization only shows connection
+to/from a file on hover over that file by default to prevent the visualization getting overly crowded.</p>
 
 <a href="#extending-cbrv" id="extending-cbrv" style="color: inherit; text-decoration: none;">
   <h1>Extending CBRV</h1>
 </a>
-<p>CBRV exposes an API that can be used to create your own VSCode extensions with visualizations of different relationships between files. You can access the API in your extension by adding <code>jesse-r-s-hines.codebase-relationship-visualizer</code> to your <code>package.json</code> <code>extensionDependencies</code> and then import the api like so:</p>
+<p>CBRV exposes an API that can be used to create your own VSCode extensions with visualizations of different relationships
+between files. You can access the API in your extension by adding <code>jesse-r-s-hines.codebase-relationship-visualizer</code> to
+your <code>package.json</code> <code>extensionDependencies</code> and then import the api like so:</p>
 <pre><code class="language-ts"><span class="hl-0">let</span><span class="hl-1"> </span><span class="hl-2">cbrvAPI</span><span class="hl-1"> = </span><span class="hl-2">vscode</span><span class="hl-1">.</span><span class="hl-2">extensions</span><span class="hl-1">.</span><span class="hl-3">getExtension</span><span class="hl-1">(</span><span class="hl-4">&#39;jesse-r-s-hines.codebase-relationship-visualizer&#39;</span><span class="hl-1">).</span><span class="hl-2">exports</span><span class="hl-1">;</span><br/><span class="hl-0">let</span><span class="hl-1"> </span><span class="hl-2">visualization</span><span class="hl-1"> = </span><span class="hl-5">await</span><span class="hl-1"> </span><span class="hl-2">cbrvAPI</span><span class="hl-1">.</span><span class="hl-3">create</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-6">// ...</span><br/><span class="hl-1">})</span>
 </code></pre>
 <p>See <a href="https://code.visualstudio.com/api/references/vscode-api#extensions">https://code.visualstudio.com/api/references/vscode-api#extensions</a> for more info on importing extensions.</p>
-<p>API docs are available at <a href="https://jesse-r-s-hines.github.io/CodeBaseRelationshipVisualizer">https://jesse-r-s-hines.github.io/CodeBaseRelationshipVisualizer</a>. You can see examples of using the API in the <a href="./src/visualizations/">src/visualizations</a> folder.</p>
+<p>API docs are available at <a href="https://jesse-r-s-hines.github.io/CodeBaseRelationshipVisualizer">https://jesse-r-s-hines.github.io/CodeBaseRelationshipVisualizer</a>. You can see examples of
+using the API in the <a href="./src/visualizations/">src/visualizations</a> folder.</p>
 
 <a href="#development" id="development" style="color: inherit; text-decoration: none;">
   <h1>Development</h1>
 </a>
-<p>To run the project from source, just open it up in VSCode and press <code>F5</code> to run and debug it.</p>
-<p>On Windows, you&#39;ll want to enable git symlinks before you clone the repo, first enable &quot;Developer Mode&quot; in Windows settings and then run <code>git config --global core.symlinks true</code></p>
-<p>You can run the tests with <code>npm run test</code>.</p>
+<p>To run the project from source run</p>
+<pre><code class="language-bash"><span class="hl-1">npm ci</span>
+</code></pre>
+<p>then open it up in VSCode and press <code>F5</code> to run and debug it.</p>
+<p>To run the Python Dependency Graph visualization you&#39;ll need to have <a href="https://www.python.org">Python3</a> installed.</p>
+<p>On Windows, you&#39;ll want to enable git symlinks before you clone the repo, first enable &quot;Developer Mode&quot; in Windows
+settings and then run</p>
+<pre><code class="language-bash"><span class="hl-1">git config --global core.symlinks </span><span class="hl-3">true</span>
+</code></pre>
+<p>To build and run the tests run</p>
+<pre><code class="language-bash"><span class="hl-1">npm run </span><span class="hl-3">test</span>
+</code></pre>
 </div></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 <div class="tsd-navigation settings">
