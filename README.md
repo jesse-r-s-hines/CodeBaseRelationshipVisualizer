@@ -48,10 +48,14 @@ handy [pydeps](https://github.com/thebjorn/pydeps) package to extract the depend
 ![A screenshot of the hyperlink visualization](screenshots/simple-hyperlink-graph.png)
 
 The command "Visualize a hyperlink graph" brings up the Hyperlink Visualization. This visualization uses the CBRV API
-to display references between HTML and Markdown files. It displays a directed arrow for any `href` in an HTML document or links in a Markdown document that reference another file in the workspace. The visualization only shows connection to/from a file on hover over that file by default to prevent the visualization getting overly crowded.
+to display references between HTML and Markdown files. It displays a directed arrow for any `href` in an HTML document
+or links in a Markdown document that reference another file in the workspace. The visualization only shows connection
+to/from a file on hover over that file by default to prevent the visualization getting overly crowded.
 
 # Extending CBRV
-CBRV exposes an API that can be used to create your own VSCode extensions with visualizations of different relationships between files. You can access the API in your extension by adding `jesse-r-s-hines.codebase-relationship-visualizer` to your `package.json` `extensionDependencies` and then import the api like so:
+CBRV exposes an API that can be used to create your own VSCode extensions with visualizations of different relationships
+between files. You can access the API in your extension by adding `jesse-r-s-hines.codebase-relationship-visualizer` to
+your `package.json` `extensionDependencies` and then import the api like so:
 
 ```ts
 let cbrvAPI = vscode.extensions.getExtension('jesse-r-s-hines.codebase-relationship-visualizer').exports;
@@ -62,11 +66,25 @@ let visualization = await cbrvAPI.create({
 
 See https://code.visualstudio.com/api/references/vscode-api#extensions for more info on importing extensions.
 
-API docs are available at https://jesse-r-s-hines.github.io/CodeBaseRelationshipVisualizer. You can see examples of using the API in the [src/visualizations](./src/visualizations/) folder.
+API docs are available at https://jesse-r-s-hines.github.io/CodeBaseRelationshipVisualizer. You can see examples of
+using the API in the [src/visualizations](./src/visualizations/) folder.
 
 # Development
-To run the project from source, just open it up in VSCode and press `F5` to run and debug it.
+To run the project from source run
+```bash
+npm ci
+```
+then open it up in VSCode and press `F5` to run and debug it.
 
-On Windows, you'll want to enable git symlinks before you clone the repo, first enable "Developer Mode" in Windows settings and then run `git config --global core.symlinks true`
+To run the Python Dependency Graph visualization you'll need to have [Python3](https://www.python.org) installed.
 
-You can run the tests with `npm run test`.
+On Windows, you'll want to enable git symlinks before you clone the repo, first enable "Developer Mode" in Windows
+settings and then run
+```bash
+git config --global core.symlinks true
+```
+
+To build and run the tests run
+```bash
+npm run test
+```
