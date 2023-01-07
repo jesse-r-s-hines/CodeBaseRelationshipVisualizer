@@ -174,7 +174,7 @@ export default class CBRVWebview {
             .translateExtent(extent);
 
         this.diagram
-            .call(this.zoom as any)
+            .call(this.zoom)
             .on("dblclick.zoom", null) // double-click zoom interferes with clicking on files and folders
             .attr("tabindex", 0) // make svg focusable so it can receive keydown events
             .on("keydown", event => {
@@ -316,8 +316,8 @@ export default class CBRVWebview {
 
         const data = packLayout.descendants().filter(d => !d.parent || !this.shouldHideContents(d.parent));
 
-        const all = this.fileLayer.selectAll(".file, .directory")
-            .data(data, keyFunc as any) // the typings here seem to be incorrect
+        const all = this.fileLayer.selectAll<SVGGElement, Node>(".file, .directory")
+            .data(data, keyFunc)
             .join(
                 enter => {
                     const all = enter.append('g')
@@ -481,7 +481,7 @@ export default class CBRVWebview {
                 nodes[i].setAttribute('d', path.toString());
             });
 
-        this.allFilesSelection = all as Selection<SVGGElement, Node>;
+        this.allFilesSelection = all;
 
         // Store a map of paths to nodes for future use in connections
         const newPathMap = new Map<string, Node>();
@@ -555,8 +555,8 @@ export default class CBRVWebview {
         // If directed == false, we don't need any markers
         const markers = this.settings.directed ? _(merged).map(c => c.color).uniq().value() : [];
 
-        this.defs.selectAll("marker.arrow")
-            .data(markers, color => color as string)
+        this.defs.selectAll<SVGMarkerElement, string>("marker.arrow")
+            .data(markers, color => color)
             .join(
                 enter => enter.append('marker')
                     .classed("arrow", true)
@@ -572,8 +572,8 @@ export default class CBRVWebview {
                         .attr("fill", color => color),
             );
 
-        this.connectionSelection = this.connectionLayer.selectAll<SVGPathElement, unknown>(".connection")
-            .data(paths, ({id}: any) => id)
+        this.connectionSelection = this.connectionLayer.selectAll<SVGPathElement, ConnPath>(".connection")
+            .data(paths, ({id}) => id)
             .join(
                 enter => enter.append("path")
                     .classed("connection", true)
