@@ -17,7 +17,7 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 }
 
-async function installPyDepsIfNeeded() {
+export async function installPyDepsIfNeeded() {
     const pythonPath = vscode.workspace.getConfiguration('python').get<string>('defaultInterpreterPath', 'python');
 
     let installed = false;

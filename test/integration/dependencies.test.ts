@@ -1,10 +1,10 @@
 import { expect } from 'chai';
-import { describe, test, it } from "mocha";
+import { describe, test, it, before } from "mocha";
 import { workspace, Uri, RelativePattern } from 'vscode';
 import * as path from 'path';
 import dedent from "dedent-js";
 
-import { getDependencyGraph } from '../../src/visualizations/pythonDependencyVisualization';
+import { installPyDepsIfNeeded, getDependencyGraph } from '../../src/visualizations/pythonDependencyVisualization';
 import { writeFileTree } from "./integrationHelpers";
 
 async function testGetDependencyGraph(dir: Uri, files?: string[]) {
@@ -24,6 +24,8 @@ async function testGetDependencyGraph(dir: Uri, files?: string[]) {
 // python -m pip install pydeps
 
 describe("Test getDependencyGraph", () => {
+    before(async () => await installPyDepsIfNeeded());
+
     it('test basic', async () => {
         const dir = await writeFileTree({
             'mypkg/__init__.py': "",
