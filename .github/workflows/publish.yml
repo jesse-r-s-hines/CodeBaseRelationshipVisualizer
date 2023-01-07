@@ -1,0 +1,19 @@
+name: Publish Extension
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - run: npm ci
+
+      - name: Publish
+        # Will run build-prod in vscode:prepublish
+        run: npm run publish # Pulls version and name from package.json
+        env:
+          VSCE_PAT: ${{ secrets.AZURE_PERSONAL_ACCESS_TOKEN }}
