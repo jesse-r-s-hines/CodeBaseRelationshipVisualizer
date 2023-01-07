@@ -2,26 +2,25 @@ import { expect } from 'chai';
 import { describe, test, it, before } from "mocha";
 import { workspace, Uri, RelativePattern } from 'vscode';
 import * as path from 'path';
+import { promises as fsp } from 'fs';
 import dedent from "dedent-js";
 
 import { installPyDepsIfNeeded, getDependencyGraph } from '../../src/visualizations/pythonDependencyVisualization';
 import { writeFileTree } from "./integrationHelpers";
 
 async function testGetDependencyGraph(dir: Uri, files?: string[]) {
+    const dirPath = await fsp.realpath(dir.fsPath);
     let fileUris: Uri[];
     if (files) {
-        fileUris = files.map(f => Uri.file(path.resolve(dir.fsPath, f)));
+        fileUris = files.map(f => Uri.file(path.resolve(dirPath, f)));
     } else {
         fileUris = await workspace.findFiles(new RelativePattern(dir, '**/*'));
     }
     return (await getDependencyGraph(dir, fileUris)).map(c => ({
-        from: path.relative(dir.fsPath, (c.from as any).fsPath).split(path.sep).join("/"),
-        to: path.relative(dir.fsPath, (c.to as any).fsPath).split(path.sep).join("/"),
+        from: path.relative(dirPath, (c.from as any).fsPath).split(path.sep).join("/"),
+        to: path.relative(dirPath, (c.to as any).fsPath).split(path.sep).join("/"),
     }));
 }
-
-// NOTE: need to have pydeps installed to run these. Just run
-// python -m pip install pydeps
 
 describe("Test getDependencyGraph", () => {
     before(async () => await installPyDepsIfNeeded());

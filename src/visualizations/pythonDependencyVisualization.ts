@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { Uri, workspace, FileType } from 'vscode';
 import * as path from 'path';
 import * as child_process_promise from 'child-process-promise';
+import { promises as fsp } from 'fs';
 import _ from 'lodash';
 
 import { API, Visualization, VisualizationSettings, Connection } from "../api";
@@ -92,24 +93,35 @@ async function isSymlink(file: Uri) {
 
 export async function getDependencyGraph(codebase: Uri, files: Uri[]): Promise<Connection[]> {
     const pythonPath = vscode.workspace.getConfiguration('python').get<string>('defaultInterpreterPath', 'python');
+    const codebasePath = await fsp.realpath(codebase.fsPath);
 
-    const allFiles = new Set(files.map(uri => uri.fsPath));
+    const stack = await Promise.all(files.map(f => fsp.realpath(f.fsPath))); // normalize and resolve symlinks in path
+    const allFiles = new Set(stack);
     const dependencyGraph: Map<string, string[]> = new Map();
-    const stack = [...files];
 
     while (stack.length > 0) {
-        const uri = stack.pop()!;
-        const ext = path.extname(uri.fsPath).toLocaleLowerCase();
+        const fsPath = stack.pop()!;
+        const ext = path.extname(fsPath).toLocaleLowerCase();
         // Only get deps for non-symlink python files that have not already been done
-        if (ext == ".py" && !dependencyGraph.has(uri.fsPath) && !(await isSymlink(uri))) {
+        if (ext == ".py" && !dependencyGraph.has(fsPath) && !(await isSymlink(Uri.file(fsPath)))) {
             let graph: any;
             try {
                 // Get dep JSON, with infinite bacon "depth"
                 const result = await child_process_promise.spawn(pythonPath,
-                    ['-m', 'pydeps', '--show-deps', '--no-output', '--max-bacon', '0', uri.fsPath],
-                    { capture: ['stdout', 'stderr'], cwd: codebase.fsPath }
+                    ['-m', 'pydeps', '--show-deps', '--no-output', '--max-bacon', '0', fsPath],
+                    { capture: ['stdout', 'stderr'], cwd: codebasePath }
                 );
                 graph = JSON.parse(result.stdout);
+
+                // Resolve all links in graph (I could probably skip this, pydeps seems to do it already)
+                const realPaths = await Promise.all(_(graph)
+                    .map<Promise<[string, any]>>(async (info, moduleName: string) =>
+                        [moduleName, typeof info.path == 'string' ? await fsp.realpath(info.path) : info.path] 
+                    ).value()
+                );
+                for (const [moduleName, realPath] of realPaths) {
+                    graph[moduleName].path = realPath;
+                }
             } catch (e) {
                 console.log('Error', e);
                 graph = undefined;
@@ -118,19 +130,17 @@ export async function getDependencyGraph(codebase: Uri, files: Uri[]): Promise<C
             if (graph) {
                 for (const [moduleName, info] of Object.entries<any>(graph)) {
                     if (typeof info.path == 'string') {
-                        const depPath = Uri.file(info.path).fsPath; // normalize the file path
-                        if (allFiles.has(depPath) && !dependencyGraph.has(depPath)) {
+                        if (allFiles.has(info.path) && !dependencyGraph.has(info.path)) {
                             const dependencies = (info.imports ?? [])
                                 .flatMap((m: string) => {
                                     if (typeof graph[m].path == 'string') {
-                                        const modulePath = Uri.file(graph[m].path).fsPath; // normalize
-                                        if (allFiles.has(modulePath)) {
-                                            return [modulePath];
+                                        if (allFiles.has(graph[m].path)) {
+                                            return [graph[m].path];
                                         }
                                     }
                                     return [];
                                 });
-                            dependencyGraph.set(depPath, dependencies);
+                            dependencyGraph.set(info.path, dependencies);
                         }
                     }
                 }
