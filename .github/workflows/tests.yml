@@ -1,0 +1,39 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [18.x]
+        python-version: [3.9]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          # cache: 'pip' # Not caching pip dependencies so that we test if pydeps autoinstall works
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test:unit
+      # test-electron fails to launch on ubuntu and macos (ubuntu is headless, unsure why macos fails).
+      # integration tests do work on windows however
+      - if: ${{ startsWith(matrix.os, 'windows-') }}
+        run: npm run test:integration
