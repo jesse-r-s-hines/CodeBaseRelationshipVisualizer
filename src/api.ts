@@ -17,7 +17,7 @@ import { SameRule, IgnoreRule, First, Last, LeastRule, GreatestRule, LeastCommon
  * import the api like so:
  * 
  *  ```ts
- * let cbrvAPI = vscode.extensions.getExtension('CBRV').exports;
+ * let cbrvAPI = vscode.extensions.getExtension('jesse-r-s-hines.codebase-relationship-visualizer').exports;
  * let visualization = await cbrvAPI.create({
  *   // ...
  * })
