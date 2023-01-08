@@ -229,7 +229,7 @@ manually, though the unit tests will create it automically when run as well.
 
 ## Dependency Visualization
 - Open the `python` codebase in VSCode
-- Run the "Visualize the dependencies between python files" command
+- Run the "Visualize the dependencies between Python files" command
     - If this is your first time running the command, it should show an "Installing pydeps..." progress notification
     - Wait for any progress notifications to complete
 - Hover over `a.py`
@@ -246,5 +246,5 @@ manually, though the unit tests will create it automically when run as well.
     - Should just show an empty circle
 - Run the "Visualize the stack trace during a debugger session" command
     - Should just show an empty circle
-- Run the "Visualize the dependencies between python files" command
+- Run the "Visualize the dependencies between Python files" command
     - Should just show an empty circle

@@ -2,7 +2,7 @@
     "name": "codebase-relationship-visualizer",
     "displayName": "CodeBase Relationship Visualizer",
     "description": "Visualize relationships between files and the codebase file system structure.",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "publisher": "jesse-r-s-hines",
     "repository": "https://github.com/jesse-r-s-hines/CodeBaseRelationshipVisualizer",
     "private": false,
@@ -40,7 +40,7 @@
             },
             {
                 "command": "pythonDependencyVisualization.start",
-                "title": "Visualize the dependencies between python files",
+                "title": "Visualize the dependencies between Python files",
                 "category": "CodeBase Relationship Visualizer"
             }
         ]

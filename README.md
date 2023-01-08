@@ -38,7 +38,7 @@ VSCode debuggers.
 
 ![A screenshot of the dependency visualization (on ShellAdventure)](screenshots/dependency.png)
 
-The command "Visualize the dependencies between python files" brings up the Dependency Visualization. This
+The command "Visualize the dependencies between Python files" brings up the Dependency Visualization. This
 visualization displays dependencies between files in Python codebases. It displays a directed arrow for any `import`s in
 python files. It only show connections to/from a file on hover over that file by default. The visualization uses the
 handy [pydeps](https://github.com/thebjorn/pydeps) package to extract the dependencies from the source files.
