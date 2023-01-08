@@ -20,6 +20,7 @@ different relationships.
 ## Stack Trace Visualization
 
 ![A screenshot of the CBRV Stack Trace Visualization](screenshots/stack-trace.png)
+![A screenshot of the CBRV Stack Trace Visualization with recursion](screenshots/stack-trace-recursion.png)
 
 The command "Visualize the stack trace during a debugger session" brings up the Stack Trace Visualization.
 
